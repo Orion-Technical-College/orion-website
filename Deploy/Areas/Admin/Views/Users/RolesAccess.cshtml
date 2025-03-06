@@ -1,0 +1,146 @@
+﻿@{
+    ViewBag.Title = "RolesAccess";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    Int64 UserId = ViewBag.UserId;
+
+    CMS.Entities.Users objuser = ViewBag.objuser;
+}
+<script type="text/javascript">
+    function RolesBind() {
+        var keyword = $('#txtsearch').val();
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserAccess", "Users")', // the URL of the controller action method
+            data: { UserId: '@UserId', keyword: keyword }, // optional data
+            success: function (result) {
+                $('#divUserList').html(result);
+            }
+        });
+    }
+
+    function AssignRoleUsers(j, rid, pid) {
+      
+            var objuserroles = {};
+
+        objuserroles.UserId = @UserId;
+        objuserroles.UserRoleId = $('#UserRoleId-' + j).val();
+        objuserroles.RoleId = rid;
+        var isadds = document.getElementById('IsAdd-' + j);
+        if (isadds.checked) {
+            objuserroles.IsAdd = true;
+        }
+        else {
+            objuserroles.IsAdd = false;
+        }
+        var isedits = document.getElementById('IsEdit-' + j);
+        if (isedits.checked) {
+            objuserroles.IsEdit = true;
+        }
+        else {
+            objuserroles.IsEdit = false;
+        }
+        var isviews = document.getElementById('IsView-' + j);
+        if (isviews.checked) {
+            objuserroles.IsView = true;
+        }
+        else {
+            objuserroles.IsView = false;
+        }
+        var isdeletes = document.getElementById('IsDelete-' + j);
+        if (isdeletes.checked) {
+            objuserroles.IsDelete = true;
+        }
+        else {
+            objuserroles.IsDelete = false;
+        }
+        var isexports = document.getElementById('IsExport-' + j);
+        
+        if (isexports.checked) {
+            objuserroles.IsExport = true;
+        }
+        else {
+            objuserroles.IsExport = false;
+        }
+        objuserroles.ParentId = pid;
+
+            $.ajax({
+                url: '@Url.Action("RoleBasedAccess", "Users")',
+                type: 'POST',
+                data: JSON.stringify(objuserroles),
+                datatype: "JSON",
+                contentType: 'application/json',
+                success: function (result) {
+                    showLobiboxNotification(result.messageType, result.message);
+
+                    if (result.ok) {
+                        //$("#divmessage").html(result.data);
+                        RolesBind();
+
+                        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                    }
+                    else {
+                        $("#divmessage").html(result.data);
+                        RolesBind();
+                        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                    }
+                }
+            });
+       
+    }
+
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        RolesBind();
+    }
+
+</script>
+
+<div class="card">
+    <div class="card-header py-3 mb-3">
+        <div class="row  gx-2">
+            <div class="col-lg-3 col-md-6 col-8">
+                <div class="input-box">
+                    <label class="form-label">Search <span class="text-danger">*</span></label>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="txtsearch" id="txtsearch" placeholder="Name">
+                        <span class="input-group-text pointer" style="cursor:pointer" onclick="RolesBind(1);" id="txtsearch" name="txtsearch"><i class="bi bi-search"></i></span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="btn-align">
+                    <button type="button" class="btn btn-danger px-3" onclick="ClearSearch();">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row gy-4 justify-content-center">
+        <div class="col-5">
+            <div class="card border shadow-none radius-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-box bg-light-primary border-0">
+                            <i class="bi bi-person text-primary"></i>
+                        </div>
+                        <div class="info">
+                            <h5 class="mb-1">@objuser.UserName</h5>
+                            <p class="mb-1">(@objuser.Designation)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <div id="divUserList" class="clearfix">
+                @{Html.RenderAction("UserAccess", "Users", new { UserId = UserId });}
+            </div>
+        </div>
+    </div>
+</div>
+

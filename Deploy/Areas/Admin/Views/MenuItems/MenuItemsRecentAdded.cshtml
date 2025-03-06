@@ -1,0 +1,23 @@
+﻿@{
+    ViewBag.Title = "MenuItemsRecentAdded";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+}
+
+<div id="content-inner">
+    <div class="title">
+        <ul>
+            <li class="user">Recent Added MenuItems</li>
+        </ul>
+    </div>
+    <div class="clr">
+    </div>
+    @if (ViewBag.message != null)
+    { <div class="divmessage">@Html.Raw(ViewBag.message.ToString())</div>}
+    <div class="clr">
+    </div>
+    <div class="content_general">
+        <div class="order">
+            @{Html.RenderAction("MenuItemsDashBoardDetails", "MenuItems", new { Items = 0 });}
+        </div>
+    </div>
+</div>

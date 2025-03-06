@@ -1,0 +1,437 @@
+﻿@{
+    Layout = "~/Areas/User/Views/Shared/_MainLayout.cshtml";
+    ViewBag.Title = "Request Transcript";
+
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+
+    var capcha = objAppInfo.ShowCapcha;
+
+    string secreatkey = objAppInfo.CapchaSiteKey;
+}
+<script src='https://www.google.com/recaptcha/api.js' type="text/javascript"></script>
+
+<script>
+    grecaptcha.ready(function () {
+        grecaptcha.execute('@secreatkey', { action: 'contactus' }).then(function (token) {
+            document.getElementById("recaptchaToken").value = token;
+        });
+    });
+</script>
+<!-- Start inner banner Section -->
+<section class="">
+    <div class="innban-sec position-relative ">
+        <img class="w-100" src="Content/User/img/banner-image-2.jpg" alt="banner-image-2">
+        <div class="caption position-absolute top-50 start-0 text-start">
+            <div class="container">
+                <div class="">
+                    <h2 class="td_section_title td_fs_48 mb-0 text-white">Request a Transcript</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- end inner banner Section -->
+<!-- Start contact page Courses -->
+
+
+<section class="td_gray_bg_3 ss sec-gap  ">
+    <div class="container">
+        <div class="ab__topsec mt-0">
+            <div class="row justify-content-center mb-2">
+                <div class="col-md-8">
+                    <div class="inner__heading"><h2 class="head__title text-center">Request an Official or Unofficial Transcript, A Copy of your Diploma, or A Copy of your Degree</h2></div>
+                </div>
+            </div>
+            <div class="row  justify-content-center">
+
+                <div class="col-lg-8 col-md-12 col-sm-12">
+
+                    <div class="td_form_card pn td_style_1  bg-white td_form_card">
+                        @using (Html.BeginForm("InsertRequestTranscript", "Home", FormMethod.Post, new { id = "requesttranscriptform", @class = "common-form mt-4 mt-md-4" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <!-- Hidden input to store the generated code -->
+                            <input type="hidden" name="ValidationCode" value="@ViewBag.ValidationCode" />
+                            <input type="hidden" id="recaptchaToken" name="recaptchaToken" />
+
+                            <div class="td_form_card_in pn">
+                                <p class="coolor__span p__text p__text2  "><strong>Note:</strong> Transcript requests <span>CANNOT</span> be processed for former students with a balance owed to the College</p>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Current Full Name  *" name="FullName" id="FullName">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Former Name (if you attended under a different name)  *" name="FormerName" id="FormerName">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event); return Common.isNumberKey(event);">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="E-Mail * " name="Email" id="Email">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Last 4 of SSN *" name="SSN" id="SSN" maxlength="4">
+
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="frm-group">
+                                            <input type="date" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Date of Birth *" name="DOB" id="DOB">
+
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+                                            <select id="ProgramAttended" class="td_form_field field12 td_mb_20 td_medium " name="ProgramAttended">
+                                                <option value="">Program Attended*</option>
+                                                <option value="Electronics Engineering Technology">Electronics Engineering Technology</option>
+                                                <option value="Medical Insurance Coding">Medical Insurance Coding</option>
+                                                <option value="Medical Assisting">Medical Assisting</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="When did you attend Orion Tech (formerly known as Hamilton Tech)? * " name="PreviousAttended" id="PreviousAttended">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Current Address * " name="Address" id="Address">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="City  *" name="City" id="City">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="frm-group">
+                                            @*<input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="State  *" name="State" id="State">*@
+                                            <label for="State" style="display:none">State</label>
+                                            <select id="State" class="td_form_field field12 td_mb_20 td_medium" name="State">
+                                                <option value="">Select State *</option>
+                                                <option value="Alabama">Alabama</option>
+                                                <option value="Alaska">Alaska</option>
+                                                <option value="Arizona">Arizona</option>
+                                                <option value="Arkansas">Arkansas</option>
+                                                <option value="California">California</option>
+                                                <option value="Colorado">Colorado</option>
+                                                <option value="Connecticut">Connecticut</option>
+                                                <option value="Delaware">Delaware</option>
+                                                <option value="Florida">Florida</option>
+                                                <option value="Georgia">Georgia</option>
+                                                <option value="Hawaii">Hawaii</option>
+                                                <option value="Idaho">Idaho</option>
+                                                <option value="Illinois">Illinois</option>
+                                                <option value="Indiana">Indiana</option>
+                                                <option value="Iowa">Iowa</option>
+                                                <option value="Kansas">Kansas</option>
+                                                <option value="Kentucky">Kentucky</option>
+                                                <option value="Louisiana">Louisiana</option>
+                                                <option value="Maine">Maine</option>
+                                                <option value="Maryland">Maryland</option>
+                                                <option value="Massachusetts">Massachusetts</option>
+                                                <option value="Michigan">Michigan</option>
+                                                <option value="Minnesota">Minnesota</option>
+                                                <option value="Mississippi">Mississippi</option>
+                                                <option value="Missouri">Missouri</option>
+                                                <option value="Montana">Montana</option>
+                                                <option value="Nebraska">Nebraska</option>
+                                                <option value="Nevada">Nevada</option>
+                                                <option value="New Hampshire">New Hampshire</option>
+                                                <option value="New Jersey">New Jersey</option>
+                                                <option value="New Mexico">New Mexico</option>
+                                                <option value="New York">New York</option>
+                                                <option value="North Carolina">North Carolina</option>
+                                                <option value="North Dakota">North Dakota</option>
+                                                <option value="Ohio">Ohio</option>
+                                                <option value="Oklahoma">Oklahoma</option>
+                                                <option value="Oregon">Oregon</option>
+                                                <option value="Pennsylvania">Pennsylvania</option>
+                                                <option value="Rhode Island">Rhode Island</option>
+                                                <option value="South Carolina">South Carolina</option>
+                                                <option value="South Dakota">South Dakota</option>
+                                                <option value="Tennessee">Tennessee</option>
+                                                <option value="Texas">Texas</option>
+                                                <option value="Utah">Utah</option>
+                                                <option value="Vermont">Vermont</option>
+                                                <option value="Virginia">Virginia</option>
+                                                <option value="Washington">Washington</option>
+                                                <option value="West Virginia">West Virginia</option>
+                                                <option value="Wisconsin">Wisconsin</option>
+                                                <option value="Wyoming">Wyoming</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder=" Zip Code  *" name="ZipCode" id="ZipCode" maxlength="6" onkeypress="return Common.isNumberKey(event);">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+
+                                            <select id="TranscriptRequest" name="TranscriptRequest" class="td_form_field field12 td_mb_30 td_medium ">
+                                                <option class="av-placeholder" value="Which are you requesting:
+                            Transcript, Diploma, or Degree? (Choose One)">
+                                                    Which are you requesting:
+                                                    Transcript, Diploma, or Degree? (Choose One)*
+                                                </option>
+                                                <option value="Transcript Request">Transcript Request</option>
+                                                <option value="Diploma Request">Diploma Request</option>
+                                                <option value="Degree Request">Degree Request</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+
+                                            <select id="DocumentSent" name="DocumentSent" class="td_form_field field12 td_mb_30 td_medium ">
+                                                <option class="av-placeholder" value="How would you like your requested
+                          document to be sent?">
+                                                    How would you like your requested
+                                                    document to be sent?*
+                                                </option>
+                                                <option value="Send via mail in a sealed envelope (Official Transcript)">
+                                                    Send via mail in a sealed envelope
+                                                    (Official Transcript)
+                                                </option>
+                                                <option value="Email (Unofficial)">Email (Unofficial)</option>
+                                                <option value="Fax (Unofficial)">Fax (Unofficial)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <h4 class="td_fs_16 td_mb_20">If you need an Official Transcript sent to additional addresses, please list the additional addresses below. Addresses listed should be formatted similarly to the following example.</h4>
+                                        <div class="acc__li pt-0 pb-3">
+                                            <p class="p__text p__text2 text-start   acc__li mb-0 color__line2 pt-0 text-center">
+                                                First Name Last Name <br>
+                                                1234 Street Name <br>
+                                                City, State, Zip Code
+                                            </p>
+                                        </div>
+
+                                        <div class="frm-group">
+                                            <label for="program_start">Please be sure to include full addresses including who the document is to be addressed to, street address, city, state, and zip code for each additional address. Incorrectly formatted addresses or addresses missing information will not have a transcript sent.</label>
+                                            <textarea class="td_form_field no__boredr td_mb_30 td_medium td_white_bg" name="Description" id="Description" placeholder="" rows="4"></textarea>
+                                        </div>
+
+
+
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <p class="p__text p__text2 text-start">
+                                            <div class="frm-group d-flex gap-3 align-items-baseline ">
+                                                <input name="CheckBox1" class="input_checkbox is_empty" type="checkbox" id="CheckBox1" value="true">
+                                                <label class="input_checkbox_label" for="CheckBox1">
+                                                    Selecting this checkbox and entering your name below constitutes an electronic signature and confirmation that you wish to have your selected components of your academic records released to the designated addresses and individuals listed on this form.
+                                                    <abbr class="required" title="required">*</abbr>
+                                                </label>
+                                            </div>
+
+                                        </p>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="frm-group">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" name="Signature" id="Signature" placeholder="Please type your full name to serve as an electronic signature. *">
+
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+
+                                        <p class="p__text p__text2 text-start">
+                                            <div class="frm-group d-flex gap-3 align-items-baseline ">
+                                                <input name="CheckBox2" class="input_checkbox is_empty" type="checkbox" id="CheckBox2" value="true">
+                                                <label class="input_checkbox_label" for="CheckBox2">
+                                                    I here by certify and declare that this academic record belongs to me. Everything stated above is true and accurate to the best of my ability.
+                                                    <abbr class="required" title="required">*</abbr>
+                                                </label>
+                                            </div>
+
+                                        </p>
+
+                                    </div>
+                                </div>
+
+
+                                <div class="row align-items-center d-flex ">
+                                    <div class="col-md-6">
+                                        <div class="">
+                                            <div class="g-recaptcha"
+                                                 data-sitekey="@secreatkey"> </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="td_form_card_bottom py-3 d-block text-end">
+
+                                            <input type="hidden" id="Honeypot" name="Honeypot" />
+
+                                            <button type="submit" id="submit-button"  class="td_btn td_style_1 td_radius_10 td_medium sec__btn">
+                                                <span class="td_btn_in td_white_color  sec__btn2">Submit</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- End contact page Courses -->
+
+<script>
+    function phonenochange(event) {
+        if (event.keyCode == 8 || event.keyCode == 46) {
+        }
+        else {
+            var ph = $('#PhoneNo').val();
+            if (ph.length == 3) { $('#PhoneNo').val(ph + '-'); }
+            if (ph.length == 7) { $('#PhoneNo').val(ph + '-'); }
+        }
+    }
+    $(document).ready(function () {
+        $.validator.addMethod("validate_email", function (value, element) {
+            if (value === "") {
+                return true;
+            }
+            if (/^([a-zA-Z0-9_\.\-])+\@@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/.test(value)) {
+                return true;
+            } else {
+                return false;
+            }
+        }, "Please enter a valid Email.");
+
+        $.validator.addMethod("phoneFormat", function (value, element) {
+            return this.optional(element) || /^\d{3}-\d{3}-\d{4}$/.test(value);
+        }, "Please enter a valid phone number");
+
+        // Initialize validation for the form
+        $("#requesttranscriptform").validate({
+            rules: {
+                FullName: "required",
+                FormerName: "required",
+                PhoneNo: {
+                    required: true,
+                    phoneFormat: true
+                },
+                Email: {
+                    required: true,
+                    validate_email: true
+                },
+                SSN: "required",
+                DOB: "required",
+                ProgramAttended: "required",
+                PreviousAttended: "required",
+                Address: "required",
+                City: "required",
+                State: "required",
+                ZipCode: "required",
+                TranscriptRequest: "required",
+                DocumentSent: "required",
+                CheckBox1: "required",
+                CheckBox2: "required",
+                Signature: "required",
+
+            },
+            messages: {
+                FullName: "required",
+                FormerName: "required",
+                PhoneNo: {
+                    required: "required",
+                    phoneFormat: "Please enter valid phone number",
+                },
+                Email: {
+                    required: "required",
+                    validate_email: "Enter Valid Email",
+                },
+                SSN: "required",
+                DOB: "required",
+                CurrentJob: "required",
+                ProgramAttended: "required",
+                PreviousAttended: "required",
+                Address: "required",
+                City: "required",
+                State: "required",
+                ZipCode: "required",
+                TranscriptRequest: "required",
+                DocumentSent: "required",
+                CheckBox1: "required",
+                CheckBox2: "required",
+                Signature: "required",
+
+            },
+
+            submitHandler: function (form) {
+                var response = grecaptcha.getResponse();
+                if ('@capcha' == 'Yes') {
+                    if (response.length == 0) {
+                        alert('Please confirm that you are not a robot.');
+                    }
+                    else {
+                        form.submit();
+                    }
+                }
+                else {
+                    form.submit();
+                }
+            },
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                if (element.closest(".frm-group").length) {
+                    element.closest(".frm-group").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents(".frm-group").addClass("has-error").removeClass("has-success");
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents(".frm-group").addClass("has-success").removeClass("has-error");
+            }
+        });
+
+    });
+
+    $("#submit-button").on("click", function (e) {
+        e.preventDefault(); // Prevent default form submission
+        var form = $("#requesttranscriptform");
+
+        if (form.valid()) {
+            // Add a hidden field to indicate client-side validation success
+            $("<input>")
+                .attr({
+                    type: "hidden",
+                    name: "ClientValidationStatus",
+                    value: "true"
+                })
+                .appendTo(form);
+
+            form.submit(); // Submit the form
+        } else {
+            console.log("Please complete the form correctly.");
+        }
+    });
+</script>

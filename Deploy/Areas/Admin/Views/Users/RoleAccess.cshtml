@@ -1,0 +1,157 @@
+﻿@{
+    Int64 UserId = ViewBag.UserId;
+    ViewBag.Title = "RoleAccess";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+}
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#wUsers').addClass('active');
+        $('#AddUser').dialog
+           ({
+               autoOpen: false,
+               width: 450,
+               modal: true
+           });
+        $('#EditUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('#divuserroles').dialog
+         ({
+             autoOpen: false,
+             width: 450,
+             modal: true
+         });
+        $('#ViewUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button"></button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button"></button>');
+    });
+
+    function Add() {
+      /*  alert("test");*/
+        clearUser();
+        $("#Add-User").modal('show');
+        $('#lbltitle').html('Add Admin');
+    }
+
+    function clearUser() {
+
+        $('#UserName').val('');
+        $('#Email').val('');
+        $('#Password').val('');
+        $('#PhoneNo').val('');
+
+        $('#UserName').removeClass("validate");
+        $('#Email').removeClass("validate");
+        $("#AddUser").dialog("close");
+        $("#EditUser").dialog("close");
+    }
+    function clearEditUser() {
+        $("#EditUser").dialog("close");
+    }
+    $(document).ready(function () {
+        $('#selectrole').val('@ViewBag.RoleName');
+        if ('@ViewBag.RoleName' == 'Admin') {
+            $('#Administrators').addClass('red-t');
+        }
+        else { $('#Users').addClass('red-t'); }
+        PagerClickBind();
+        //print_country("Country");
+
+    });
+
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            UserBind($(this).text(), 'on');
+        });
+    }
+    function sortresult(sortcolumn) {
+
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        UserBind(1, 'on');
+    }
+
+
+    function UserBind(userid) {
+        var UserId = userid;
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("RoleAccessList", "Users")', // the URL of the controller action method
+            data: { UserId: UserId }, // optional data
+            success: function (result) {
+                $('#divUserList').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        $('#IsApproved').val('');
+        $('#RoleId').val('');
+        UserBind(1, 'on');
+    }
+
+    function GetUserRoles(userid) {
+        var UserId = userid;
+        $('#UserId1').val(UserId);
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserAccess", "Users")', // the URL of the controller action method
+            data: { UserId: UserId }, // optional data
+            success: function (result) {
+                $('#divuserroles1').html(result);
+
+                $("#add-user1").modal('show');
+
+                $('#Rlbltitle').html('User Access');
+            }
+        });
+    }
+    function UserClear() {
+        $('#txtUserName').val('');
+        $('#txtemail').val('');
+        $('#Country').val('');
+        $('#State').val('');
+        $('#hdnsortcolumn').val('');
+        $('#hdnsortorder').val('ASC');
+
+
+        UserBind(1, 'on');
+    }
+    
+</script>
+<div class="content-header">
+    <h1>Role Access</h1>
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-dashboard"></i>Home</a></li>
+        <li class="active">Role Access</li>
+    </ol>
+</div>
+<!--end breadcumb -->
+<div class="content">
+    <!-- Main content -->
+    <div id="divmessage" class="divmessage">
+        @if (TempData["message"] != null)
+        {@Html.Raw(TempData["message"].ToString())}
+    </div>
+    <div class="box">
+        <!-- /.box-header -->
+       
+        <div id="divUserList" class="box-body table-responsive">
+            @{Html.RenderAction("RoleAccessList", "Users", new { UserId = UserId });}
+        </div>
+    </div>
+</div>
+
+

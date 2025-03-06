@@ -1,0 +1,452 @@
+-------------------START-------------7/17/2023 7:25:07 AM
+Page :/NewTool/member-registration
+After reCAPTCHA Entered to the Process
+-------------------END-------------7/17/2023 7:25:07 AM
+-------------------START-------------7/17/2023 7:25:07 AM
+Page :/NewTool/member-registration
+Member Inserted Successfully
+-------------------END-------------7/17/2023 7:25:07 AM
+-------------------START-------------7/17/2023 7:39:59 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 7:39:59 AM
+-------------------START-------------7/17/2023 7:40:01 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 7:40:01 AM
+-------------------START-------------7/17/2023 7:40:03 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 7:40:03 AM
+-------------------START-------------7/17/2023 8:25:35 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:25:35 AM
+-------------------START-------------7/17/2023 8:25:37 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:25:37 AM
+-------------------START-------------7/17/2023 8:26:33 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:26:33 AM
+-------------------START-------------7/17/2023 8:26:38 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:26:38 AM
+-------------------START-------------7/17/2023 8:28:35 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:28:35 AM
+-------------------START-------------7/17/2023 8:28:37 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:28:37 AM
+-------------------START-------------7/17/2023 8:30:02 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:30:02 AM
+-------------------START-------------7/17/2023 8:30:05 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:30:05 AM
+-------------------START-------------7/17/2023 8:30:06 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:30:06 AM
+-------------------START-------------7/17/2023 8:33:15 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:33:15 AM
+-------------------START-------------7/17/2023 8:33:17 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:33:17 AM
+-------------------START-------------7/17/2023 8:34:54 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:34:54 AM
+-------------------START-------------7/17/2023 8:34:55 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:34:55 AM
+-------------------START-------------7/17/2023 8:34:57 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:34:57 AM
+-------------------START-------------7/17/2023 8:42:22 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:42:22 AM
+-------------------START-------------7/17/2023 8:42:22 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:42:22 AM
+-------------------START-------------7/17/2023 8:42:22 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:42:22 AM
+-------------------START-------------7/17/2023 8:42:29 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:42:29 AM
+-------------------START-------------7/17/2023 8:42:29 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:42:29 AM
+-------------------START-------------7/17/2023 8:42:29 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:42:29 AM
+-------------------START-------------7/17/2023 8:43:10 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:43:10 AM
+-------------------START-------------7/17/2023 8:43:10 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:43:10 AM
+-------------------START-------------7/17/2023 8:43:10 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:43:10 AM
+-------------------START-------------7/17/2023 8:43:37 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:43:37 AM
+-------------------START-------------7/17/2023 8:43:37 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:43:37 AM
+-------------------START-------------7/17/2023 8:43:37 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:43:37 AM
+-------------------START-------------7/17/2023 8:45:24 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:45:24 AM
+-------------------START-------------7/17/2023 8:45:24 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:45:24 AM
+-------------------START-------------7/17/2023 8:45:24 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 8:45:24 AM
+-------------------START-------------7/17/2023 8:45:28 AM
+Page :/NewTool/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------7/17/2023 8:45:28 AM
+-------------------START-------------7/17/2023 8:45:28 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-6)&TransactionId - A80A0F74E7BD
+-------------------END-------------7/17/2023 8:45:28 AM
+-------------------START-------------7/17/2023 8:45:28 AM
+Page :/NewTool/add-servicesdonation
+Reccuring Process for General Donation Cause
+-------------------END-------------7/17/2023 8:45:28 AM
+-------------------START-------------7/17/2023 8:45:28 AM
+Page :/NewTool/add-servicesdonation
+Individual Service Donations
+-------------------END-------------7/17/2023 8:45:28 AM
+-------------------START-------------7/17/2023 8:45:28 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 8:45:28 AM
+-------------------START-------------7/17/2023 8:45:29 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:45:29 AM
+-------------------START-------------7/17/2023 8:45:29 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:45:29 AM
+-------------------START-------------7/17/2023 8:45:29 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:45:29 AM
+-------------------START-------------7/17/2023 8:45:29 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:45:29 AM
+-------------------START-------------7/17/2023 8:45:29 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:45:29 AM
+-------------------START-------------7/17/2023 8:45:47 AM
+Page :/NewTool/User/Services/Acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:45:47 AM
+-------------------START-------------7/17/2023 8:45:47 AM
+Page :/NewTool/User/Services/Acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:45:47 AM
+-------------------START-------------7/17/2023 8:45:47 AM
+Page :/NewTool/User/Services/Acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:45:47 AM
+-------------------START-------------7/17/2023 8:48:40 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:48:40 AM
+-------------------START-------------7/17/2023 8:48:42 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:48:42 AM
+-------------------START-------------7/17/2023 8:48:44 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 8:48:44 AM
+-------------------START-------------7/17/2023 8:49:00 AM
+Page :/NewTool/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------7/17/2023 8:49:00 AM
+-------------------START-------------7/17/2023 8:49:11 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-7)&TransactionId - A80A0F74E7E2
+-------------------END-------------7/17/2023 8:49:11 AM
+-------------------START-------------7/17/2023 8:49:18 AM
+Page :/NewTool/add-servicesdonation
+Reccuring Process for General Donation Cause
+-------------------END-------------7/17/2023 8:49:18 AM
+-------------------START-------------7/17/2023 8:49:23 AM
+Page :/NewTool/add-servicesdonation
+Individual Service Donations
+-------------------END-------------7/17/2023 8:49:23 AM
+-------------------START-------------7/17/2023 8:49:28 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 8:49:28 AM
+-------------------START-------------7/17/2023 8:49:46 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:49:46 AM
+-------------------START-------------7/17/2023 8:50:09 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:50:09 AM
+-------------------START-------------7/17/2023 8:50:14 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:50:14 AM
+-------------------START-------------7/17/2023 8:50:16 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:50:16 AM
+-------------------START-------------7/17/2023 8:50:17 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:50:17 AM
+-------------------START-------------7/17/2023 8:53:42 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:53:42 AM
+-------------------START-------------7/17/2023 8:53:43 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:53:43 AM
+-------------------START-------------7/17/2023 8:53:45 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 8:53:45 AM
+-------------------START-------------7/17/2023 8:53:51 AM
+Page :/NewTool/add-servicesdonation
+Payment Responsive not Approved
+-------------------END-------------7/17/2023 8:53:51 AM
+-------------------START-------------7/17/2023 8:53:51 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations - Not Approved (Seema Shaik-8)
+-------------------END-------------7/17/2023 8:53:51 AM
+-------------------START-------------7/17/2023 8:53:51 AM
+Page :/NewTool/add-servicesdonation
+Payment Failed for Service Donations
+-------------------END-------------7/17/2023 8:53:51 AM
+-------------------START-------------7/17/2023 8:55:00 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:55:00 AM
+-------------------START-------------7/17/2023 8:55:01 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:55:01 AM
+-------------------START-------------7/17/2023 8:55:03 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 8:55:03 AM
+-------------------START-------------7/17/2023 8:55:14 AM
+Page :/NewTool/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------7/17/2023 8:55:14 AM
+-------------------START-------------7/17/2023 8:55:19 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-9)&TransactionId - A40A1AB5A7D2
+-------------------END-------------7/17/2023 8:55:19 AM
+-------------------START-------------7/17/2023 8:55:20 AM
+Page :/NewTool/add-servicesdonation
+Reccuring Process for General Donation Cause
+-------------------END-------------7/17/2023 8:55:20 AM
+-------------------START-------------7/17/2023 8:55:21 AM
+Page :/NewTool/add-servicesdonation
+Individual Service Donations
+-------------------END-------------7/17/2023 8:55:21 AM
+-------------------START-------------7/17/2023 8:55:27 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 8:55:27 AM
+-------------------START-------------7/17/2023 8:55:39 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:55:39 AM
+-------------------START-------------7/17/2023 8:55:48 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:55:48 AM
+-------------------START-------------7/17/2023 8:56:02 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:56:02 AM
+-------------------START-------------7/17/2023 8:56:05 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:56:05 AM
+-------------------START-------------7/17/2023 8:56:54 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:56:54 AM
+-------------------START-------------7/17/2023 8:59:47 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 8:59:47 AM
+-------------------START-------------7/17/2023 8:59:47 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 8:59:47 AM
+-------------------START-------------7/17/2023 8:59:47 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------7/17/2023 8:59:47 AM
+-------------------START-------------7/17/2023 8:59:50 AM
+Page :/NewTool/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------7/17/2023 8:59:50 AM
+-------------------START-------------7/17/2023 8:59:50 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-10)&TransactionId - A40A1AB5A898
+-------------------END-------------7/17/2023 8:59:50 AM
+-------------------START-------------7/17/2023 8:59:50 AM
+Page :/NewTool/add-servicesdonation
+Reccuring Process for General Donation Cause
+-------------------END-------------7/17/2023 8:59:50 AM
+-------------------START-------------7/17/2023 8:59:50 AM
+Page :/NewTool/add-servicesdonation
+Individual Service Donations
+-------------------END-------------7/17/2023 8:59:50 AM
+-------------------START-------------7/17/2023 8:59:50 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 8:59:50 AM
+-------------------START-------------7/17/2023 8:59:52 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:59:52 AM
+-------------------START-------------7/17/2023 8:59:53 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 8:59:53 AM
+-------------------START-------------7/17/2023 8:59:53 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 8:59:53 AM
+-------------------START-------------7/17/2023 8:59:53 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 8:59:53 AM
+-------------------START-------------7/17/2023 8:59:53 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 8:59:53 AM
+-------------------START-------------7/17/2023 9:00:18 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 9:00:18 AM
+-------------------START-------------7/17/2023 9:00:20 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 9:00:20 AM
+-------------------START-------------7/17/2023 9:00:21 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 9:00:21 AM
+-------------------START-------------7/17/2023 9:00:47 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 9:00:47 AM
+-------------------START-------------7/17/2023 9:00:47 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 9:00:47 AM
+-------------------START-------------7/17/2023 9:00:47 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 9:00:47 AM
+-------------------START-------------7/17/2023 9:01:52 AM
+Page :/NewTool/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------7/17/2023 9:01:52 AM
+-------------------START-------------7/17/2023 9:01:52 AM
+Page :/NewTool/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------7/17/2023 9:01:52 AM
+-------------------START-------------7/17/2023 9:01:52 AM
+Page :/NewTool/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------7/17/2023 9:01:52 AM
+-------------------START-------------7/17/2023 9:02:39 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 9:02:39 AM
+-------------------START-------------7/17/2023 9:02:41 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 9:02:41 AM
+-------------------START-------------7/17/2023 9:02:45 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-11)&TransactionId - NA
+-------------------END-------------7/17/2023 9:02:45 AM
+-------------------START-------------7/17/2023 9:02:46 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 9:02:46 AM
+-------------------START-------------7/17/2023 9:02:55 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 9:02:55 AM
+-------------------START-------------7/17/2023 9:02:55 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 9:02:55 AM
+-------------------START-------------7/17/2023 9:03:30 AM
+Page :/NewTool/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------7/17/2023 9:03:30 AM
+-------------------START-------------7/17/2023 9:03:30 AM
+Page :/NewTool/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------7/17/2023 9:03:30 AM
+-------------------START-------------7/17/2023 9:03:30 AM
+Page :/NewTool/add-servicesdonation
+Updated Service Donations(Seema Shaik-12)&TransactionId - NA
+-------------------END-------------7/17/2023 9:03:30 AM
+-------------------START-------------7/17/2023 9:03:30 AM
+Page :/NewTool/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------7/17/2023 9:03:30 AM
+-------------------START-------------7/17/2023 9:03:31 AM
+Page :/NewTool/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 9:03:31 AM
+-------------------START-------------7/17/2023 9:03:32 AM
+Page :/NewTool/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------7/17/2023 9:03:32 AM

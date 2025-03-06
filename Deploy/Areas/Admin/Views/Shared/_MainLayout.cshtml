@@ -1,0 +1,702 @@
+﻿@using System.Configuration
+@{
+    Layout = null;
+    var objuser = new CMS.Entities.Users();
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+
+    List<CMS.Entities.AdminMenuItems> lstMainMenu = new List<CMS.Entities.AdminMenuItems>();
+    List<CMS.Entities.AdminMenuItems> lstSubMenu = new List<CMS.Entities.AdminMenuItems>();
+
+    List<CMS.Entities.AdminMenuItems> lstSubmenuCount = new List<CMS.Entities.AdminMenuItems>();
+    var Pageheading = ViewBag.Pageheading;
+
+    int status = 0;
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+    var userRole = "";
+    string url = objAppInfo.UserSiteUrl;
+
+
+    HttpContext ctx = HttpContext.Current;
+    HttpCookie authCookie = HttpContext.Current.Request.Cookies["UserCookie"];
+
+    FormsAuthenticationTicket authTicket;
+    if (Request.Cookies["UserCookie"] != null)
+    {
+        authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+        userRole = authTicket.UserData;
+
+        // Extract the email from the ticket (it was stored as the "user name" in the ticket)
+        string emailFromTicket = authTicket.Name;
+
+        CMS.BLL.Users _user = new CMS.BLL.Users();
+
+        objuser = _user.GetAdminUsersGetByEmail(emailFromTicket, ref status);
+
+        _AppInfo.GetAdminMenuData(objuser.UserId, objuser.RoleId, ref lstMainMenu, ref lstSubMenu, ref status);
+
+        if (objuser != null)
+        {
+            Session["username"] = objuser.UserName;
+            Session["userrole"] = userRole;
+            // Session["ChapterId"] = objuser.ChapterId;
+
+
+
+
+        }
+
+        Session["SiteName"] = objAppInfo.SiteName;
+        Session["CompanyAddress"] = objAppInfo.CompanyAddress;
+        Session["CompanyWebSite"] = objAppInfo.CompanyWebSite;
+        Session["CompanyEmail"] = objAppInfo.CompanyEmail;
+        Session["CompanyPhone"] = objAppInfo.CompanyPhone;
+        Session["BaseUrl"] = objAppInfo.BaseUrl;
+        Session["UploadPath"] = objAppInfo.UploadPath;
+        Session["UserSiteUrl"] = objAppInfo.UserSiteUrl;
+        Session["AdminImageUrl"] = objAppInfo.AdminImageUrl;
+        Session["AdminSiteUrl"] = objAppInfo.AdminSiteUrl;
+
+    }
+    Int32 ChapterId = (Session["ChapterId"] != null ? Convert.ToInt32(Session["ChapterId"].ToString()) : 0);
+
+    string URL = "";
+
+}
+<!doctype html>
+<html lang="en" class="minimal-theme">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @{var baseurl = objAppInfo.BaseUrl;}
+    <base href="@(baseurl)" />
+
+    <title>@objAppInfo.SiteName - Control Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    @*<link rel="icon" href="Content/Admin/images/favicon-32x32.png" type="image/png" />*@
+    <link rel="icon" href="Content/User/img/favicon.png">
+    <link href="Content/Admin/plugins/notifications/css/lobibox.min.css" rel="stylesheet" />
+    <!--plugins-->
+    <link href="Content/Admin/plugins/metismenu/css/metisMenu.min.css" rel="stylesheet" />
+    <link href="Content/Admin/plugins/select2/css/select2.min.css" rel="stylesheet" />
+    <link href="Content/Admin/plugins/select2/css/select2-bootstrap4.css" rel="stylesheet" />
+    <!-- Bootstrap CSS -->
+    <link href="Content/Admin/css/bootstrap.min.css" rel="stylesheet" />
+    @*<link href="Content/Admin/plugins/perfect-scrollbar/css/perfect-scrollbar.css" rel="stylesheet" />*@
+    <link href="Content/Admin/plugins/simplebar/css/simplebar.css" rel="stylesheet" />
+    <link href="Content/Admin/css/bootstrap-extended.css" rel="stylesheet" />
+    <link href="Content/Admin/css/style.css" rel="stylesheet" />
+    <link href="Content/Admin/css/icons.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.2/themes/smoothness/jquery-ui.css" />
+
+
+    <!-- loader-->
+    <link href="Content/Admin/css/pace.min.css" rel="stylesheet" />
+    <!-- Bootstrap bundle JS -->
+    <script src="Content/Admin/js/bootstrap.bundle.min.js"></script>
+    <!--plugins-->
+    <script src="Content/Admin/js/jquery.min.js"></script>
+
+
+    <script src="Content/Admin/js/jquery-validate.min.js"></script>
+
+    @*cropper*@
+    <link href="Content/Admin/css/croppie.css" rel="stylesheet" />
+    <script src="Scripts/Admin/croppers.js"></script>
+    <script src="Scripts/Admin/jquery.validate.js"></script>
+
+    @*<script src="Scripts/Admin/jquery.validate.js"></script>*@
+    @*cropper*@
+
+
+    <!--Theme Styles-->
+    <!-- <link href="Content/Admin/css/dark-theme.css" rel="stylesheet" />
+    <link href="Content/Admin/css/light-theme.css" rel="stylesheet" />
+    <link href="Content/Admin/css/semi-dark.css" rel="stylesheet" />
+    <link href="Content/Admin/css/header-colors.css" rel="stylesheet" /> -->
+
+    <script type="text/javascript">
+
+        function DropDown(el) {
+            this.dd = el;
+            this.initEvents();
+        }
+        DropDown.prototype = {
+            initEvents: function () {
+                var obj = this;
+
+                obj.dd.on('click', function (event) {
+                    $(this).toggleClass('active');
+                    event.stopPropagation();
+                });
+            }
+        }
+
+        $(function () {
+
+            var dd = new DropDown($('#dd'));
+
+            $(document).click(function () {
+                // all dropdowns
+                $('.wrapper-dropdown-3').removeClass('active');
+            });
+
+        });
+
+    </script>
+    <script type="text/javascript">
+        $(function () {
+            $(".ui-accordion").accordion({
+                collapsible: true,
+                heightStyle: "content"
+            });
+
+            // date picker
+            $(function () {
+                $(function () {
+                    $(".datepicker").datepicker({
+                        altField: "#alternate",
+                        altFormat: "DD, d MM, yy"
+                    });
+                });
+            });
+        });
+        $(document).ready(function () {
+            $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+            $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+
+            $('.date, #DateOfBirth, #StartDate, #EndDate, #StartPaymentDate, #EndPaymentDate').keypress(function (evt) {
+                var charCode = (evt.which) ? evt.which : event.keyCode
+                if (charCode == 08 || charCode == 127) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            });
+        });
+    </script>
+
+</head>
+
+<body>
+    @if (TempData["messageType"] != null && TempData["message"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                showLobiboxNotification('@TempData["messageType"]', '@TempData["message"]');
+            });
+        </script>
+    }
+
+    <script>
+        function showLobiboxNotification(messageType, message) {
+            var iconClass;
+            switch (messageType.toLowerCase()) {
+                case 'success':
+                    iconClass = 'bx bx-check-circle';
+                    break;
+                case 'warning':
+                    iconClass = 'bx bx-warning-circle';
+                    break;
+                case 'error':
+                    iconClass = 'bx bx-x-circle';
+                    break;
+                default:
+                    iconClass = 'bx bx-info-circle';
+                    break;
+            }
+
+            Lobibox.notify(messageType, {
+                pauseDelayOnHover: true,
+                size: 'mini',
+                rounded: true,
+                icon: iconClass,
+                delayIndicator: false,
+                continueDelayOnInactiveTab: false,
+                position: 'top right',
+                msg: message
+            });
+        }
+    </script>
+
+    <!--start wrapper-->
+    <div class="wrapper">
+        <!--start top header-->
+        <header class="top-header">
+            <nav class="navbar navbar-expand justify-content-between">
+                <div class="mobile-toggle-icon d-xl-none">
+                    <i class="bi bi-list"></i>
+                </div>
+                <div class="breadcrumb-title pe-3 d-xl-block d-none">@Pageheading</div>
+                <div class="top-navbar-right ms-3">
+                    <ul class="navbar-nav align-items-center">
+                        <li class="nav-item dropdown dropdown-large">
+                            <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="#" data-bs-toggle="dropdown">
+                                <div class="user-setting d-flex align-items-center gap-1">
+                                    <img src="Content/Admin/images/avatars/avatar-1.png" class="user-img" alt="" />
+                                    <div class="user-name d-none d-sm-block">@objuser.UserName</div>
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @if (userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                {
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <div class="d-flex align-items-center">
+                                                <img src="Content/Admin/images/avatars/avatar-1.png" alt="" class="rounded-circle" width="60" height="60" />
+                                                <div class="ms-3">
+                                                    <h6 class="mb-0 dropdown-user-name">@objuser.UserName @*Admin*@</h6>
+                                                    <small class="mb-0 dropdown-user-designation text-secondary">Designation</small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Profile", "Account")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-person-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Profile</span></div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    @*<li>
+                                        <a class="dropdown-item" href="@Url.Action("Index", "Redirections")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-gear-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Redirections</span></div>
+                                            </div>
+                                        </a>
+                                    </li>*@
+                                    @*<li>
+                                        <a class="dropdown-item" href="@Url.Action("Index", "Users")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-speedometer"></i></div>
+                                                <div class="setting-text ms-3"><span>Admins</span></div>
+                                            </div>
+                                        </a>
+                                    </li>*@
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Index", "ApplicationSettings")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Application Settings</span></div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    @*<li>
+                                        <a class="dropdown-item" href="#">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-cloud-arrow-down-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Downloads</span></div>
+                                            </div>
+                                        </a>
+                                    </li>*@
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("LogOff", "Account")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-lock-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Logout</span></div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <div class="d-flex align-items-center">
+                                                <img src="Content/Admin/images/avatars/avatar-1.png" alt="" class="rounded-circle" width="60" height="60" />
+                                                <div class="ms-3">
+                                                    <h6 class="mb-0 dropdown-user-name">@objuser.UserName @*Admin*@</h6>
+                                                    <small class="mb-0 dropdown-user-designation text-secondary">Designation</small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Profile", "Account")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-person-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Profile</span></div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("LogOff", "Account")">
+                                            <div class="d-flex align-items-center">
+                                                <div class="setting-icon"><i class="bi bi-lock-fill"></i></div>
+                                                <div class="setting-text ms-3"><span>Logout</span></div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+
+
+                    </ul>
+                </div>
+            </nav>
+        </header>
+        <!--end top header-->
+        <!--start sidebar -->
+        <aside class="sidebar-wrapper" data-simplebar="true">
+            <div class="sidebar-header">
+                <div>
+                    <img src="Content/Admin/images/logo-icon.png" class="logo-icon" alt="logo icon" />
+                </div>
+                <div>
+                    <h4 class="logo-text">@*Arjunweb*@ Orion</h4>
+                </div>
+                <div class="toggle-icon ms-auto">
+                    <i class="bi bi-chevron-double-left"></i>
+                </div>
+            </div>
+            <!--navigation-->
+            <ul class="metismenu" id="menu">
+
+
+                @if (userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                {
+                    if (lstMainMenu != null && lstMainMenu.Count != 0)
+                    {
+                        foreach (var item in lstMainMenu)
+                        {
+
+                            lstSubmenuCount = lstSubMenu.FindAll(x => x.PageParentId == item.MenuItemId);
+                            if (lstSubmenuCount != null && lstSubmenuCount.Count != 0)
+                            {
+                <li class="treeview" id="w@(item.DisplayName.Replace(" ", ""))">
+
+
+                    @if (userRole.Contains("SuperAdmin") && item.DisplayName == "Developers")
+                    {
+
+                    }
+                    else
+                    {
+                        <a href="javascript:;" class="has-arrow">
+                            <div class="parent-icon"><i class="bi bi-list-task"></i></div>
+                            <div class="menu-title">@item.DisplayName</div>
+                        </a>
+
+
+
+                        <ul>
+                            @foreach (var submenu in lstSubmenuCount)
+                            {
+                                if (submenu.PageParentId == item.MenuItemId)
+                                {
+                                    if (submenu.DisplayName == "Active Members" || submenu.DisplayName == "Inactive Members" || submenu.DisplayName == "Pending Members")
+                                    {
+                                        <li id="w@(submenu.DisplayName.Replace(" ", ""))"> <a href="@submenu.PageUrl&mid=@submenu.MenuItemId"><i class="bi bi-arrow-right-short"></i>@submenu.DisplayName</a></li>
+
+
+
+
+
+                                    }
+                                    else
+                                    {
+                                        <li id="w@(submenu.DisplayName.Replace(" ", ""))"> <a href="@submenu.PageUrl?mid=@submenu.MenuItemId"><i class="bi bi-arrow-right-short"></i>@submenu.DisplayName</a></li>
+
+                                    }
+                                }
+                            }
+                        </ul>
+                    }
+
+
+
+
+                </li>
+                            }
+                            else
+                            {
+                                <li id="w@(item.DisplayName.Replace(" ", ""))">
+                                    @if (item.DisplayName == "Events")
+                                    {
+                                        <a href="@item.PageUrl&mid=@item.MenuItemId">
+                                            <div class="parent-icon"><i class="bi bi-list-task"></i></div>
+                                            <div class="menu-title">@item.DisplayName</div>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@item.PageUrl?mid=@item.MenuItemId">
+                                            <div class="parent-icon"><i class="bi bi-list-task"></i></div>
+                                            <div class="menu-title">@item.DisplayName</div>
+                                        </a>
+                                    }
+                                </li>
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (lstMainMenu != null && lstMainMenu.Count != 0)
+                    {
+                        foreach (var item in lstMainMenu)
+                        {
+                            if (userRole.Contains(item.DisplayName))
+                            {
+
+                                lstSubmenuCount = lstSubMenu.FindAll(x => x.PageParentId == item.MenuItemId);
+                                if (lstSubmenuCount != null && lstSubmenuCount.Count != 0)
+                                {
+                                    int i = 0;
+                                    i = lstSubMenu.Count(x => URL.Contains(x.PageUrl));
+
+                                <li class="treeview" id="w@(item.DisplayName.Replace(" ", ""))">
+                                    <a href="javascript:;" class="has-arrow">
+                                        <div class="parent-icon"><i class="bi bi-list-task"></i></div>
+                                        <div class="menu-title">@item.DisplayName</div>
+                                    </a>
+                                    <ul>
+                                        @foreach (var submenu in lstSubmenuCount)
+                                        {
+                                            if (submenu.PageParentId == item.MenuItemId)
+                                            {
+                                                if (userRole.Contains(submenu.DisplayName))
+                                                {
+                                                    if (submenu.DisplayName == "Active Members" || submenu.DisplayName == "Inactive Members" || submenu.DisplayName == "Pending Members")
+                                                    {
+                                                    <li id="w@(submenu.DisplayName.Replace(" ", ""))"> <a href="@submenu.PageUrl&mid=@submenu.MenuItemId"><i class="bi bi-arrow-right-short"></i>@submenu.DisplayName</a></li>
+
+
+                                                    }
+                                                    else
+                                                    {
+                                                    <li id="w@(submenu.DisplayName.Replace(" ", ""))"> <a href="@submenu.PageUrl?mid=@submenu.MenuItemId"><i class="bi bi-arrow-right-short"></i>@submenu.DisplayName</a></li>
+
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    </ul>
+                                </li>
+                                }
+                                else
+                                {
+                                <li id="w@(item.DisplayName.Replace(" ", ""))">
+                                    @if (item.DisplayName == "Events")
+                                    {
+                                        <a href="@item.PageUrl&mid=@item.MenuItemId"><i class="fa fa-bars"></i><span>&nbsp;&nbsp;@item.DisplayName</span></a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@item.PageUrl?mid=@item.MenuItemId"><i class="fa fa-bars"></i><span>&nbsp;&nbsp;@item.DisplayName</span></a>
+                                    }
+                                </li>
+                                }
+
+                            }
+                        }
+                    }
+
+                }
+            </ul>
+            <!--end navigation-->
+        </aside>
+        <!--end sidebar -->
+        <!--start content-->
+        <main class="page-content">
+            <!--breadcrumb-->
+            @RenderBody()
+
+        </main>
+        <!--end page main-->
+        <!--start overlay-->
+        <div class="overlay nav-toggle-icon"></div>
+        <!--end overlay-->
+        <!--Start Back To Top Button-->
+        <a href="javaScript:;" class="back-to-top"><i class='bx bxs-up-arrow-alt'></i></a>
+        <!--End Back To Top Button-->
+        <!--start switcher-->
+        <div class="switcher-body">
+            <button class="btn btn-primary btn-switcher shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasScrolling" aria-controls="offcanvasScrolling"><i class="bi bi-paint-bucket me-0"></i></button>
+            <div class="offcanvas offcanvas-end shadow border-start-0 p-2" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="offcanvasScrolling">
+                <div class="offcanvas-header border-bottom">
+                    <h5 class="offcanvas-title" id="offcanvasScrollingLabel">Theme Customizer</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <h6 class="mb-0">Theme Variation</h6>
+                    <hr />
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="inlineRadioOptions" id="LightTheme" value="option1" />
+                        <label class="form-check-label" for="LightTheme">Light</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="inlineRadioOptions" id="DarkTheme" value="option2" />
+                        <label class="form-check-label" for="DarkTheme">Dark</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="inlineRadioOptions" id="SemiDarkTheme" value="option3" />
+                        <label class="form-check-label" for="SemiDarkTheme">Semi Dark</label>
+                    </div>
+                    <hr />
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="inlineRadioOptions" id="MinimalTheme" value="option3" checked=checked />
+                        <label class="form-check-label" for="MinimalTheme">Minimal Theme</label>
+                    </div>
+                    <hr />
+                    <h6 class="mb-0">Header Colors</h6>
+                    <hr />
+                    <div class="header-colors-indigators">
+                        <div class="row row-cols-auto g-3">
+                            <div class="col">
+                                <div class="indigator headercolor1" id="headercolor1"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor2" id="headercolor2"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor3" id="headercolor3"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor4" id="headercolor4"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor5" id="headercolor5"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor6" id="headercolor6"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor7" id="headercolor7"></div>
+                            </div>
+                            <div class="col">
+                                <div class="indigator headercolor8" id="headercolor8"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--end switcher-->
+
+    </div>
+    <!--end wrapper-->
+    <div class="modal fade cropImageModal" id="cropImagePop" data-bs-backdrop="static" style="z-index: 11000;" tabindex="-1" aria-labelledby="CropImageModalLabel" aria-hidden="true">
+        <button type="button" class="close-modal-custom close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <div class="modal-header-bg"></div>
+                    <div class="up-photo-title">
+                        <h3 class="modal-title"> Photo Crop</h3>
+                    </div>
+                    <div class="up-photo-content pb-5">
+                        <div id="upload-demo" class="center-block">
+                            <h5><i class="fas fa-arrows-alt mr-1"></i> Drag your photo as you require</h5>
+                        </div>
+                        <div class="upload-action-btn text-center px-2">
+                            <button type="button" id="cropImageBtn" class="btn btn-success">Save Photo</button>
+                            <button type="button" class="btn btn-primary replacePhoto position-relative">Replace Photo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+    <script src="Content/Admin/js/jquery-ui-timepicker-addon.js"></script>
+    <script src="Content/Admin/plugins/simplebar/js/simplebar.min.js"></script>
+    <script src="Content/Admin/plugins/metismenu/js/metisMenu.min.js"></script>
+    <script src="Content/Admin/plugins/notifications/js/lobibox.min.js"></script>
+    <script src="Content/Admin/plugins/notifications/js/notifications.min.js"></script>
+    <script src="Content/Admin/plugins/notifications/js/notification-custom-script.js"></script>
+    @*<script src="Content/Admin/plugins/perfect-scrollbar/js/perfect-scrollbar.js"></script>*@
+    @*<script src="Content/Admin/js/pace.min.js"></script>*@
+    <script src="Content/Admin/plugins/select2/js/select2.min.js"></script>
+    <script src="Content/Admin/js/form-select2.js"></script>
+    <!--app-->
+    <script src="Content/Admin/js/app.js"></script>
+
+    <script src="Scripts/Admin/Common.js"></script>
+
+    <script>
+        var $uploadCrop,
+            tempFilename,
+            rawImg,
+            imageId;
+
+        function readFile(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('.upload-demo').addClass('ready');
+                    $('#cropImagePop').modal('show');
+                    rawImg = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                console.log("Sorry - your browser doesn't support the FileReader API");
+            }
+        }
+
+        $uploadCrop = $('#upload-demo').croppie({
+            viewport: {
+                width: 160,
+                height: 160,
+                type: 'square'
+            },
+            enforceBoundary: false,
+            enableExif: true
+        });
+
+        $('#cropImagePop').on('shown.bs.modal', function () {
+            //$('.cr-slider-wrap').prepend('<p>Image Zoom</p>');
+            $uploadCrop.croppie('bind', {
+                url: rawImg
+            }).then(function () {
+                //console.log('jQuery bind complete');
+            });
+        });
+
+        $('#cropImagePop').on('hidden.bs.modal', function () {
+            $('.item-img').val(rawImg);
+            $('.cr-slider-wrap p').remove();
+        });
+
+        $('.item-img').on('change', function () {
+            readFile(this);
+        });
+
+        $('.replacePhoto').on('click', function () {
+            $('#cropImagePop').modal('hide');
+            $('.item-img').trigger('click');
+        });
+
+        $('#cropImageBtn').on('click', function (ev) {
+            $('.ci-user-picture').show();
+            $uploadCrop.croppie('result', {
+                type: 'base64',
+                backgroundColor: "#000000",
+                format: 'png',
+                size: { width: 160, height: 160 }
+            }).then(function (resp) {
+                $('#item-img-output').attr('src', resp);
+                $('#Thumbimage').val(resp);  // Set the hidden input value
+                $('#cropImagePop').modal('hide');
+                $('.item-img').val(rawImg);
+            });
+        });
+    </script>
+
+
+</body>
+
+</html>

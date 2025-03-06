@@ -1,0 +1,575 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Roles> lstRoles = ViewBag.lstRoles;
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+
+    var RoleName = ViewBag.RoleName;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#wUsers').addClass('active');
+        $('#AddUser').dialog
+           ({
+               autoOpen: false,
+               width: 450,
+               modal: true
+           });
+        $('#EditUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('#divuserroles').dialog
+         ({
+             autoOpen: false,
+             width: 450,
+             modal: true
+         });
+        $('#ViewUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+    function Add() {
+        clearUser();
+        $("#Add-User").modal('show');
+        $('#lbltitle').html('Add Admin');
+    }
+
+    function clearUser() {
+
+        $('#UserName').val('');
+        $('#Email').val('');
+        $('#Password').val('');
+        $('#PhoneNo').val('');
+
+        $('#UserName').removeClass("validate");
+        $('#Email').removeClass("validate");
+        $("#AddUser").dialog("close");
+        $("#EditUser").dialog("close");
+    }
+    function clearEditUser() {
+        $("#EditUser").dialog("close");
+    }
+    $(document).ready(function () {
+        $('#selectrole').val('@ViewBag.RoleName');
+        if ('@ViewBag.RoleName' == 'Admin') {
+            $('#Administrators').addClass('red-t');
+        }
+        else { $('#Users').addClass('red-t'); }
+        PagerClickBind();
+        //print_country("Country");
+
+    });
+
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            UserBind($(this).text(), 'on');
+        });
+    }
+    function sortresult(sortcolumn) {
+
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        UserBind(1, 'on');
+    }
+
+
+    function UserBind(page, sort) {
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var Search = $('#txtsearch').val();
+        var pageno = Common.Pageno(page);
+        var IsApproved = $.trim($('#IsApproved').val());
+        var RoleId = $.trim($('#RoleId').val());
+
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserList", "Users")', // the URL of the controller action method
+            data: { Items: $('#pgitems').val(), IsApproved: IsApproved, RoleId: RoleId, Search: Search, PageNo: pageno, SortOrder: sortorder, SortColumn: sortcolumn, RoleName: '@RoleName' }, // optional data
+            success: function (result) {
+                $('#divUserList').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        $('#IsApproved').val('');
+        $('#RoleId').val('');
+        UserBind(1, 'on');
+    }
+
+    function GetUserRoles(userid) {
+        var UserId = userid;
+        $('#UserId1').val(UserId);
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserAccess", "Users")', // the URL of the controller action method
+            data: { UserId: UserId }, // optional data
+            success: function (result) {
+                $('#divuserroles1').html(result);
+
+                $("#add-user1").modal('show');
+
+                $('#Rlbltitle').html('User Access');
+            }
+        });
+    }
+    function UserClear() {
+        $('#txtUserName').val('');
+        $('#txtemail').val('');
+        $('#Country').val('');
+        $('#State').val('');
+        $('#hdnsortcolumn').val('');
+        $('#hdnsortorder').val('ASC');
+
+
+        UserBind(1, 'on');
+    }
+    function CheckEmailAvailability(email) {
+
+        var returnval = null;
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckEmailAvailability", "Users")', // the URL of the controller action method
+            data: { Email: email }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+    function CheckProfileEmailAvailability(email, userid) {
+        var returnval = null;
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckProfileEmailAvailability", "Users")', // the URL of the controller action method
+            data: { UserId: userid, Email: email }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+    function CheckUserNameAvailability(UserName) {
+
+        var returnval = null;
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckUserNameAvailability", "Users")', // the URL of the controller action method
+            data: { UserName: UserName }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+    function ValidateProfile() {
+
+        var return_val = true;
+
+        //Account Information
+        if ($.trim($('#UserName').val()) == '') { $('#UserName').addClass("validate"); return_val = false; } else { $('#UserName').removeClass("validate"); }
+        //if (!CheckUserNameAvailability($.trim($('#UserName').val()))) { document.getElementsByName('UserName')[0].placeholder = 'User Name already exist'; $('#UserName').addClass("validate"); return_val = false; } else { $('#UserName').removeClass("validate"); }
+        if ($.trim($('#Email').val()) == '') { $('#Email').val(''); $('#Email').addClass("validate"); return_val = false; }
+        else {
+            $('#Email').removeClass("validate");
+            if (!Common.CheckEmail($.trim($('#Email').val()))) { $('#Email').val(''); document.getElementsByName('Email')[0].placeholder = 'Please enter valid email.'; $('#Email').addClass("validate"); return_val = false; }
+            else {
+                $('#Email').removeClass("validate");
+                if (!CheckEmailAvailability($.trim($('#Email').val()))) { $('#Email').val(''); document.getElementsByName('Email')[0].placeholder = 'Email address already exist.'; $('#Email').addClass("validate"); return_val = false; } else { $('#Email').removeClass("validate"); }
+            }
+        }
+        if ($.trim($('#Designation').val()) == '') { $('#Designation').addClass("validate"); return_val = false; } else { $('#Designation').removeClass("validate"); }
+        //if ($('#NewPassword').val() == '') { $('#spanNewPassword').html('Required.'); $('#NewPassword').addClass("red-border"); return_val = false; } else { $('#spanNewPassword').html(''); }
+        //if (!Common.ValidatePassword($('#NewPassword').val())) { $('#spanPassword').html('Please enter minimum 8 charecters (atleast one special charecter & one numeric charecter).'); $('#NewPassword').addClass("red-border"); return_val = false; } else { $('#spanPassword').html(''); }
+
+        return return_val;
+    }
+    function ResetValidateClass() {
+        $('#UserName').removeClass("validate");
+        $('#Email').removeClass("validate");
+    }
+    function EValidateProfile() {
+        var return_val = true;
+        //Account Information
+        if ($.trim($('#EUserName').val()) == '') { $('#EUserName').addClass("validate"); return_val = false; } else { $('#EUserName').removeClass("validate"); }
+        if ($.trim($('#EEmail').val()) == '') { $('#EEmail').addClass("validate"); return_val = false; }
+        else {
+            $('#EEmail').removeClass("validate");
+            if (!Common.CheckEmail($.trim($('#EEmail').val()))) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Please enter valid email.'; $('#EEmail').addClass("validate"); return_val = false; }
+            else {
+                $('#EEmail').removeClass("validate");
+                if (!CheckProfileEmailAvailability($.trim($('#EEmail').val()), $('#UserId').val())) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Email address already exist.'; $('#EEmail').addClass("validate"); return_val = false; } else { $('#EEmail').removeClass("validate"); }
+            }
+        }
+        return return_val;
+    }
+    function EResetValidateClass() {
+        $('#EEmail').removeClass("validate");
+        $('#EUserName').removeClass("validate");
+    }
+    function UserEdit(UserId) {
+        $.ajax({
+            url: '@Url.Action("EditUser", "Users")',
+            type: 'POST',
+            data: { UserId: UserId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objUser = result.data;
+                    $('#EUserName').val(objUser.UserName);
+                    $('#EDesignation').val(objUser.Designation);
+                    $('#EEmail').val(objUser.Email);
+                    $('#EMobilePhone').val(objUser.MobilePhone);
+
+                    $('#UserId').val(objUser.UserId);
+                    $('#Edit-User').modal('show');
+                    $('#Elbltitle').html('Edit Admin');
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function UserView(UserId) {
+        $.ajax({
+            url: '@Url.Action("ViewUser", "Users")',
+            type: 'POST',
+            data: { UserId: UserId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objUser = result.data;
+                    $('#lblUserName').html(objUser.UserName);
+                    $('#lblEmail').html(objUser.Email);
+                    $('#lblMobilePhone').html((objUser.MobilePhone == "" ? "N/A" : objUser.MobilePhone));
+                    $('#lblDesignation').html((objUser.lblDesignation == "" ? "N/A" : (objUser.lblDesignation)));
+                    $('#lblDateOfBirth').html(objUser.SDateOfBirth);
+                    $('#lblAddress').html((objUser.Address == "" ? "N/A" : objUser.Address));
+
+                    var lstRoles = objUser.lstRoles;
+                    var sb = "";
+                    if (lstRoles != null) {
+                        for (var i = 0; i < lstRoles.length; i++) {
+                            sb = sb + "<input type=\"checkbox\" disabled=\"disabled\" checked=\"checked\" \"> " + lstRoles[i].RoleName + "";
+                        }
+                    }
+                    $('#divRoles1').html(sb);
+
+                    $('#View-User').modal('show');
+                    $('#Vlbltitle').html('View Admin');
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function GetMember() {
+        var ChapterId = $('#ChapterId').val();
+            $.ajax({
+            url: '@Url.Action("MembersData", "Users")',
+            type: 'POST',
+            data: { ChapterId: ChapterId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var lstMembers = result.data;
+                    var sb = "<label> Members </label><select id=\"MemberId\" class=\"form-control\" name=\"MemberId\" onchange=\"MembersEdit()\"><option value=\"\">Select Member *</option>";
+                    if (lstMembers != null) {
+                        for (var i = 0; i < lstMembers.length; i++) {
+                            sb = sb + "<option value=" + lstMembers[i].MemberId + "> " + lstMembers[i].FirstName + " " + lstMembers[i].LastName + "</option>";
+                        }
+                    }
+                    sb = sb + "</select>";
+                    $('#divMembers').html(sb);
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+ 
+    function MembersEdit() {
+        /*var MemberId = $('#MemberId').val();*/
+        var MemberEmail = $('#MemberEMail').val(); 
+        $.ajax({
+            url: '@Url.Action("MembersEdit", "Users")',
+            type: 'POST',
+            data: { Email : MemberEmail },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objMember = result.data;
+                    $('#UserName').val(objMember.FirstName + "" + objMember.LastName);
+                    $('#Email').val(objMember.Email);
+                    $('#MobilePhone').val(objMember.MobilePhone);
+                    $('#ChapterId').val(objMember.ChapterId);
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function ChangeRole() {
+        var Role = $('#Designation').val();
+        if (Role == 'ChapterAdmin') {
+            $('#ChaptersDrop').show();
+        }
+        else {
+            $('#ChaptersDrop').show();
+        }
+    }
+
+</script>
+
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="UserId" />
+<input id="hdnsortorder" type="hidden" value="ASC" />
+<input id="hdnuserid" type="hidden" value="0" />
+<!-- breadcumb -->
+<div class="content-header">
+    <h1>Admins</h1>
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-dashboard"></i>Home</a></li>
+        <li class="active">Admins</li>
+    </ol>
+</div>
+<!--end breadcumb -->
+<div class="content">
+    <!-- Main content -->
+    <div id="divmessage" class="divmessage">
+        @if (TempData["message"] != null)
+        {@Html.Raw(TempData["message"].ToString())}
+    </div>
+    <div class="box">
+        <!-- /.box-header -->
+        <div class="clearfix box-body">
+            <div class="clearfix row">
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>Search</label>
+                    <input type="text" name="txtsearch" id="txtsearch" class="form-control" placeholder="Search by name / email / phone no">
+                </div> 
+                <div class="col-xs-12 col-lg-8 col-sm-6">
+                    <div>
+                        <label>&nbsp;</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary" onclick="UserBind();">Search</button>
+                    <button type="button" class="btn btn-info" onclick="ClearSearch();">Clear</button>
+                    <a class="btn btn-danger pull-right" onclick="Add();">Add New Admin</a>
+                </div>
+            </div>
+        </div>
+        <div id="divUserList" class="box-body table-responsive">
+            @{Html.RenderAction("UserList", "Users", new { RoleName = RoleName });}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="add-user1" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title"><span id="Rlbltitle"></span></h4>
+            </div>
+            @using (Html.BeginForm("UpdateUserAccess", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+            {
+               <input id="UserId1" name="UserId" type="hidden" />
+                @Html.Hidden("RoleIds")
+               <div id="divuserroles1" class="modal-body">
+                  
+               </div>
+                <div class="modal-footer clearfix">
+                    <input type="submit" class="btn btn-danger" value="Update" onclick="return validateroles();" />
+                    <a class="btn btn-primary pull-left" data-dismiss="modal">Cancel</a>
+                </div>
+            }
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
+<div class="modal fade" id="Add-User" tabindex="-1" role="dialog" aria-hidden="true">
+    @using (Html.BeginForm("CreateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title"><span id="lbltitle"></span></h4>
+                </div>
+                <div class="modal-body validation">
+                    <div class="form-group">
+                        <label> Role </label>
+                        <select id="Designation" class="form-control" onchange="ChangeRole();" name="Designation">
+                            <option value="">Select Role *</option>
+                            <option value="ChapterAdmin"> ChapterAdmin </option>
+                            <option value="SiteAdmin"> SiteAdmin </option>
+                            <option value="Treasurer"> Treasurer </option>
+                            <option value="ProgramsManager"> ProgramsManager</option>
+                            <option value="Helpline"> Helpline </option>
+                            <option value="DeveloperAdmin"> Developer Admin </option>
+                        </select>
+                        @*<input type="text" class="form-control" onkeypress="ResetValidateClass();" onclick="ResetValidateClass();" id="Designation" name="Designation" placeholder="Designation *">*@
+                    </div>
+                    @*<div class="form-group" id="ChaptersDrop">
+            <label> Chapters </label>
+            <select id="ChapterId" class="form-control" name="ChapterId">
+                <option value="">Select Chapter *</option>
+                @if (lstChapters != null && lstChapters.Count != 0)
+                {
+                    foreach (var item in lstChapters)
+                    {
+                        <option value="@item.ChapterId">@item.ChapterName</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="form-group" id="divMembers">
+        </div>*@
+                    <div class="form-group">
+                        <label>Enter Member Email</label>
+                        <input type="text" class="form-control" onchange="MembersEdit();" onkeypress="ResetValidateClass();" onclick="ResetValidateClass();" id="MemberEMail" name="MemberEMail" placeholder="Member EMail *">
+                    </div>
+                    <div class="form-group">
+                        
+                    </div>
+                    <div class="form-group">
+                        <label>User Name</label>
+                        <input type="text" class="form-control" onkeypress="ResetValidateClass();" @*readonly="readonly"*@ onclick="ResetValidateClass();" id="UserName" name="UserName" placeholder="First Name *">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Id</label>
+                        <input type="text" class="form-control" onkeypress="ResetValidateClass();" @*readonly="readonly"*@ onclick="ResetValidateClass();" id="Email" name="Email" placeholder="Email Id *">
+                    </div>
+                    <div class="form-group">
+                        <label>Mobile</label>
+                        <input type="text" class="form-control" maxlength="12" onKeyPress="return Common.isNumberKey(event)" @*readonly="readonly"*@ id="MobilePhone" name="MobilePhone" placeholder="Mobile">
+                    </div>
+                </div>
+                <div class="modal-footer clearfix">
+                    <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Close</button>
+                    <input type="submit" class="btn btn-danger" value="Submit" onclick="return ValidateProfile();" /> 
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="Edit-User" tabindex="-1" role="dialog" aria-hidden="true">
+    @using (Html.BeginForm("UpdateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+       @Html.Hidden("UserId")
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title"><span id="Elbltitle"></span></h4>
+                </div>
+                <div class="modal-body validation">
+                    <div class="form-group">
+                        <label>User Name :</label>
+                        <input type="text" class="form-control" onkeypress="EResetValidateClass();" onclick="EResetValidateClass();" id="EUserName" name="UserName" placeholder="First Name *">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Id</label>
+                        <input type="text" class="form-control" onkeypress="EResetValidateClass();" onclick="EResetValidateClass();" id="EEmail" name="Email" placeholder="Email Id *">
+                    </div>
+                    @*<div class="form-group">
+                        <label>Designation</label>
+                        <input type="text" class="form-control" onkeypress="EResetValidateClass();" onclick="EResetValidateClass();" id="EDesignation" name="Designation" placeholder="Designation *">
+                    </div>*@
+                    <div class="form-group">
+                        <label>Mobile</label>
+                        <input type="text" class="form-control" id="EMobilePhone" name="MobilePhone" placeholder="Mobile">
+                    </div>
+                </div>
+                <div class="modal-footer clearfix">
+                    <button type="button" class="btn btn-primary pull-left" data-dismiss="modal">Close</button>
+                    <input type="submit" class="btn btn-danger" value="Submit" onclick="return EValidateProfile();" /> 
+                </div>
+            </div>
+        </div> 
+    }
+</div>
+
+<div class="modal fade" id="View-User" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            @using (Html.BeginForm("UpdateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                    {
+               @Html.Hidden("UserId")
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title"><span id="Vlbltitle"></span></h4>
+            </div>
+            <form action="#" method="post">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>User Name :</label>
+                        <span class="font13">: <span id="lblUserName"></span></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Id </label>
+                        <span class="font13">: <span id="lblEmail"></span></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Designation</label>
+                        <span class="font13">: <span id="lblDesignation"></span></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Mobile </label>
+                        <span class="font13">: <span id="lblMobilePhone"></span></span>
+                    </div>
+                    </div>
+                <div class="row"> 
+                    <div id="divRoles1"> 
+                    </div>
+                    </div>
+                    <div class="modal-footer clearfix">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                    </div>
+</form>
+            }
+        </div>
+        <!-- /.modal-content -->
+    </div>
+</div>

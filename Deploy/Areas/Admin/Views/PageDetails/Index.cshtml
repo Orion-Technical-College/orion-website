@@ -1,0 +1,158 @@
+﻿@{
+    ViewBag.Pageheading = "Pages";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    Int64 ChapterId = ViewBag.ChapterId;
+
+    bool IsEdit = Convert.ToBoolean(Session["IsEdit"]);
+    bool IsView = Convert.ToBoolean(Session["IsView"]);
+    bool IsDelete = Convert.ToBoolean(Session["IsDelete"]);
+    bool IsExport = Convert.ToBoolean(Session["IsExport"]);
+    bool IsAdd = Convert.ToBoolean(Session["IsAdd"]);
+    Int64 Mid = ViewBag.mid;
+    var userRole = "";
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        //$('#wPageDetails').addClass('active');
+        $('#wPages, #wWebPages').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        PagerClickBind();
+    });
+
+
+
+    function sortresult(sortcolumn) {
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        Onload(1);
+    }
+
+
+    function Onload(Pageno) {
+
+        var pageno = Common.Pageno(Pageno);
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var items = $('#txtitems').val();
+        var Search = $.trim($('#txtsearch').val());
+        var ChapterId = $('#ChapterId').val();
+        $.ajax({
+            url: '@Url.Action("PageDetailsList", "PageDetails")',
+            type: 'GET',
+            cache: false,
+            data: { ChapterId: ChapterId, Search: Search, PageNo: pageno, SortColumn: sortcolumn, SortOrder: sortorder, Items: items, Mid: '@Mid' },
+            success: function (result) {
+                $('#divDetails').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+
+    function DeletePageDetails(PageDetailId) {
+        var val2 = confirm("Do you want to delete this record?");
+        if (val2) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("DeletePageDetails", "PageDetails")',  // the URL of the controller action method
+                data: { PageDetailId: PageDetailId }, // optional data
+                success: function (result) {
+                    showLobiboxNotification(result.messageType, result.message);
+                    //$("#divmessage").html(result.data);
+                    //$('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                  Onload($('#hdnPageNo').val());
+                },
+                error: function (req, status, error) {
+                    $("#divmessage").html(result.data);
+                    $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                }
+            });
+        }
+    }
+
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            Onload($(this).text());
+        });
+    }
+
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        $('#hdnPageNo').val(1);
+        $('#ChapterId').val('');
+        Onload(1);
+    }
+</script>
+
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="UpdatedDate" />
+<input id="hdnsortorder" type="hidden" value="DESC" />
+
+<!-- breadcumb -->
+
+<div class="card">
+    <div class="card-header py-3 mb-3">
+        <div class="row  gx-2">
+
+
+            <div class="col-lg-3 col-md-6 col-8">
+                <div class="input-box">
+                    <label class="form-label">Search by <span class="text-danger"></span></label>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="txtsearch" id="txtsearch" placeholder="Heading">
+
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-lg-2 col-2" id="clearhide">
+                <div>
+                    <label>&nbsp;</label>
+                </div>
+                <button type="button" class="btn btn-primary px-3" onclick="Onload(1);">Search</button>
+
+                <button type="button" class="btn btn-danger px-3" onclick="ClearSearch();">Clear</button>
+            </div>
+
+
+
+
+
+
+
+
+
+            <div class="col-lg-2 col-4 text-end ms-auto">
+                <div class="btn-align">
+                    @if (IsAdd == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <a class="btn btn-primary" href="@Url.Action("AddPageDetails", "PageDetails", new { mid = Mid,ChapterId=ChapterId })">Add Page</a>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </div>
+
+
+    <div id="divDetails" class="clearfix">
+        @{Html.RenderAction("PageDetailsList", "PageDetails",new { ChapterId= ChapterId });}
+    </div>
+</div>

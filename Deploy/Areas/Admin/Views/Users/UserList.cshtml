@@ -1,0 +1,206 @@
+﻿@{ Layout = null;}
+@{
+    string sortcolumn = (string)ViewBag.sortcolumn;
+    string sortorder = (string)ViewBag.sortorder;
+    Int64 total = (Int64)ViewBag.total;
+
+    
+    var PageNo = (Int64)ViewBag.pageno;
+    var Items = (Int64)ViewBag.items;
+
+
+    <div class="card-body">
+        <div class="table-responsive">
+
+            @if (total == -1)
+            {
+                <div class="norecords">Sorry failed processing your request.</div>
+            }
+            else
+            {
+                <table class="table table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+
+                            <th width="40" class="text-center">S.No</th>
+
+                           
+                            <th>Email</th>
+                            <th>RoleType</th>
+                            <th>Mobile Phone</th>
+                            <th>#</th>
+                            <th>Status</th>
+                            <th class="text-center" width="80">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                            @foreach (var item in (List<CMS.Entities.Users>)ViewBag.lstuser)
+                            {
+                                if (item.Designation != "DeveloperAdmin")
+                                {
+                        <tr>
+                            <td align="center">@item.RId</td>
+
+
+
+                            <td>@item.Email</td>
+                            <td>@item.Designation</td>
+                            <td>@(item.MobilePhone != null && item.MobilePhone != "" ? item.MobilePhone : "N/A")</td>
+                          
+                            @if (!item.RoleName.Contains("SuperAdmin"))
+                            {
+                                <td><a href="@Url.Action("RolesAccess","Users", new { UserId = item.UserId })" @*onclick="GetUserRoles(@item.UserId);"*@>Access</a></td>
+                            }
+                            else
+                            {
+                                <td>&nbsp;</td>
+                            }
+                            <td>
+                                @if (!item.RoleName.Contains("SuperAdmin"))
+                                {
+
+                                    <div class="menu-hover">
+                                        @{ var isChecked = item.IsApproved ? "checked" : "";
+                                        }
+                                        <div>
+                                            <label class="switch">
+                                                <input type="checkbox" onclick="UserStatus(@item.UserId)" @isChecked>
+                                                <span class="slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                            <p>Active</p> 
+                            }
+                                </td>
+
+
+
+                                <td class="text-center">
+                                    <div class="table-actions d-flex align-items-center gap-3 fs-6">
+
+
+
+                                        @if (item.RoleName != "SuperAdmin")
+                                        {
+
+                                            <a class="text-warning cursor-pointer" onclick="UserEdit(@item.UserId);;" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+
+                                            <a class="text-danger cursor-pointer" onclick="javascript:UserDelete(@item.UserId, '@item.UserName');" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+
+                                        }
+
+                                        else
+                                        {
+                                            <a title="Edit" class="text-warning cursor-pointer" onclick="UserEdit(@item.UserId);"><i class="bi bi-pencil-fill"></i></a>
+
+                                        }
+
+
+
+                                    </div>
+
+
+                                </td>
+
+
+
+                            </tr>
+                                }
+                            }
+
+                    </tbody>
+                </table>
+            }
+
+
+
+        </div>
+
+        <div class="row pt-3">
+            <div class="col-sm-4 col-md-5">
+                <div class="dataTables_info" id="example_info" role="status" aria-live="polite">
+                    Showing @((PageNo * Items) - (Items - 1)) - @((PageNo * Items) > total ? total : (PageNo * Items)) of @total entries
+                </div>
+            </div>
+            <div class="col-sm-3 col-md-7 " @(total > 0 ? "" : "disable")>
+                <div class="d-flex flex-wrap gap-4 justify-content-end">
+                    <div class="dataTables_length" id="example_length">
+                        <div class="d-flex align-items-center gap-2 pt-1">
+                            <span>Show Items</span>
+                            <select id="txtitems" name="txtitems" aria-controls="example" onchange="ThemeBannerBind();" class="form-select form-select-sm w-auto">
+                                <option @(Items == 25 ? "selected=selected" : "") value="25">25</option>
+                                <option @(Items == 50 ? "selected=selected" : "") value="50">50</option>
+                                <option @(Items == 75 ? "selected=selected" : "") value="75">75</option>
+                                <option @(Items == 100 ? "selected=selected" : "") value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="dataTables_paginate paging_simple_numbers" id="example_paginate">
+                        @Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref total, (Int64)ViewBag.pageno, "pagination pb-0"))
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+}
+
+
+<script type="text/javascript">
+            function UserStatus(UserId) {
+                $.ajax({
+                            type: "POST",
+                    url: '@Url.Action("UserStatus", "Users")', // the URL of the controller action method
+                    data: { UserId: UserId }, // optional data
+                    datatype: "JSON",
+                    success: function (result) {
+                        showLobiboxNotification(result.messageType, result.message);
+                                    if (result.ok) {
+                            //$('#divmessage').html(result.data);
+                            //$('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                            //$('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                        UserBind(1, 'on');
+                                    }
+                                    else {
+                            $('#divmessage').html(result.data);
+                            $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                            $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                    }
+                                }
+                            });
+                        }
+
+                        function UserDelete(UserId, UserName) {
+
+                            var conf = confirm('Do you want to delete user ' + UserName + '?');
+
+                            if (conf) {
+                    $.ajax({
+                                type: "POST",
+                        url: '@Url.Action("UserDelete", "Users")', // the URL of the controller action method
+                        data: { UserId: UserId }, // optional data
+                        datatype: "JSON",
+                        success: function (result) {
+                            showLobiboxNotification(result.messageType, result.message);
+                                        if (result.ok) {
+                                //$('#divmessage').html(result.data);
+                                //$('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                //$('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                            UserBind(1, 'on');
+                                        }
+                                        else {
+                                $('#divmessage').html(result.data);
+                                $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                        }
+                                    }
+                                });
+                            }
+                        }
+</script>

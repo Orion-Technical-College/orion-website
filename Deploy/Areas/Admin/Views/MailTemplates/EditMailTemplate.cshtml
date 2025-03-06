@@ -1,0 +1,148 @@
+﻿@{
+    ViewBag.Title = "EditMailTemplate";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    ViewBag.Pageheading = "Edit MailTemplate";
+    CMS.Entities.MailTemplates objTemplates = ViewBag.objTemplates;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#wOthers,#wMailTemplates').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+    //function Validate() {
+
+    //    if ($.trim($('#Heading').val()) == '') { document.getElementsByName('Heading')[0].placeholder = 'Required'; $('#Heading').focus().addClass("validate"); return false; } else { $('#Heading').focus().removeClass("validate"); }
+    //    if ($.trim($('#Subject').val()) == '') { document.getElementsByName('Subject')[0].placeholder = 'Required'; $('#Subject').focus().addClass("validate"); return false; } else { $('#Subject').focus().removeClass("validate"); }
+    //    if (CKEDITOR.instances.Description.getData() == "") { $('#Description').focus().addClass("red-border"); $('#lblDescription').html('Required.'); return false; } else { $('#Description').val(CKEDITOR.instances.Description.getData()); $('#lblDescription').html(''); }
+
+    return true;
+    }
+</script>
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+
+<div class="content">
+
+    @using (Html.BeginForm("AddMailTemplate", "MailTemplates", FormMethod.Post, new { enctype = "multipart/form-data", @id = "SponsorForm", @name = "SponsorForm" }))
+    {
+        <input type="hidden" name="MailTemplateId" id="MailTemplateId" value="@objTemplates.MailTemplateId" />
+        <input type="hidden" name="mid" id="mid" value="@ViewBag.mid" />
+        <div class="box validation">
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Heading : <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="Heading" id="Heading" value="@objTemplates.Heading" onkeypress="return Common.isChar(event)">
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Subject : <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="Subject" id="Subject" value="@objTemplates.Subject" onkeypress="return Common.isChar(event)">
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Mail Type : </label>
+                                <select class="single-select" name="Target">
+                                    <option value="">-- Select Category --</option>
+                                    <option value="">Selct Mail Type</option>
+                                    <option @(objTemplates.MailType == "Auto" ? "selected=selected" : "") value="Auto">Auto</option>
+                                    <option @(objTemplates.MailType == "Manual" ? "selected=selected" : "") value="Manual">Manual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="box validation">
+                        <div class="box-header">
+                            <h3 class="box-title dis-in">Description <span class="text-danger">*</span></h3>
+                        </div>
+                        <div class="box-body">
+                            <div class="row  g-3">
+                                <div class="col-lg-12">
+                                    <div class="input-box">
+                                        <textarea rows="10" placeholder="Description *" name="Description" id="Description" cols="80" style="visibility: hidden; display: none;">@objTemplates.Description</textarea><br />
+                                        <span class="field-validation-error" id="Description"></span>
+                                        <script type="text/javascript">
+                                            var editor = CKEDITOR.replace('Description', { contentsCss: '../css/editor.css' });
+                                            CKFinder.setupCKEditor(editor, 'ckfinder/');
+                                        </script>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3 col-3 text-end ms-auto">
+                <button type="submit" class="btn btn-success px-3 " value="submit">Submit</button>
+                <a class="btn btn-primary px-3" href="@Url.Action("Index", "MailTemplates", new { mid = ViewBag.mid })">Cancel</a>
+            </div>
+        </div>
+    }
+</div>
+<script>
+    $(document).ready(function () {
+        $("#SponsorForm").validate({
+            rules: {
+                Heading: "required",
+                Subject: "required",
+                Description: "required",
+            },
+            messages: {
+                Heading: "Heading Is Required",
+                Subject: "Subject  Is Required",
+                Description: "Description  Is Required",
+            },
+
+            errorElement: "div",
+            errorPlacement: function (error, element) {
+                // Add the `invalid-feedback` class to the error element
+                error.addClass("invalid-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest(".input-box").length) {
+                    element.closest(".input-box").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                // Highlight the input, textarea, or select element with the `is-invalid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-invalid").removeClass("is-valid");
+                }
+
+
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                // Unhighlight the input, textarea, or select element by adding the `is-valid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-valid").removeClass("is-invalid");
+                }
+
+            },
+
+
+        });
+    });
+
+</script>

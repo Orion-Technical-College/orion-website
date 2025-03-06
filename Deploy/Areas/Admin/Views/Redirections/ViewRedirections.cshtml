@@ -1,0 +1,50 @@
+﻿@{
+    ViewBag.Title = "ViewRedirections";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    CMS.Entities.Redirections objRedirections = ViewBag.objRedirections;
+}
+
+
+<script>
+    $(document).ready(function () {
+        $('#wRedirections').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+</script>
+
+
+<input type="hidden" id="hdnimgvalidate" value="0" />
+
+<div class="card">
+
+    <div class="card-body">
+        
+        <div class="box-body">
+            <div class="row">
+                <div class="col-xs-12 col-lg-3 col-sm-6">
+                    <label>Source Url : </label>
+                    @objRedirections.FromUrl
+                </div>
+                <div class="col-xs-12 col-lg-3 col-sm-6">
+                    <label>Target Url : </label>
+                    @objRedirections.ToUrl
+                </div>
+                <div class="col-xs-12 col-lg-3 col-sm-6">
+                    <label>Target : </label>
+                    @(objRedirections.Target == "" ? "N/A" : (objRedirections.Target == "_parent"? "With in the tab" : "Out of the tab"))
+                </div>
+            </div>
+        </div>
+        <div class="box">
+            <!-- /.box-header -->
+            <div class="box-body text-right">
+                <a class="btn btn-info" href="@Url.Action("Index", "Redirections")">Cancel</a>
+            </div>
+            <!-- /.box-body -->
+        </div>
+    </div>
+</div>
+
+

@@ -1,0 +1,122 @@
+﻿@{
+    ViewBag.Pageheading = "Admin Menu";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    List<CMS.Entities.PageDetails> lstPageDetails = ViewBag.lstPageDetails;
+    // Int64 ChapterId = 0;
+    Int64 ChapterId = ViewBag.ChapterId;
+
+    var userRole = "";
+
+    bool IsEdit = Convert.ToBoolean(Session["IsEdit"]);
+    bool IsView = Convert.ToBoolean(Session["IsView"]);
+    bool IsDelete = Convert.ToBoolean(Session["IsDelete"]);
+    bool IsExport = Convert.ToBoolean(Session["IsExport"]);
+    bool IsAdd = Convert.ToBoolean(Session["IsAdd"]);
+    Int64 Mid = ViewBag.mid;
+
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+      //  $('#wAdminMenuItems').addClass('active');
+        $('#wOthers, #wAdminMenu').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+
+
+    function AdminMenuItemsBind() {
+        var ChapterId = $('#ChapterId').val();
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("AdminMenuItemsList", "AdminMenuItems")',
+            data: { ChapterId: ChapterId, IsEdit: '@IsEdit', IsView: '@IsView', IsDelete: '@IsDelete', IsExport: '@IsExport', IsAdd: '@IsAdd', Mid: '@Mid' }, // optional data
+            success: function (result) {
+                $('#divAdminMenuItemsList').html(result);
+            }
+        });
+    }
+
+    function EditMenuPages(MenuPagesId) {
+        $.ajax({
+            url: '@Url.Action("EditMenuPages", "MenuPages")',
+            type: 'POST',
+            data: { MenuPagesId: MenuPagesId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objMenuPages = result.data;
+                    $('#AMenuPageId').val(objMenuPages.MenuPageId);
+                    $('#AMenuItemId').val(objMenuPages.MenuItemId);
+                    $('#APageDetailId').val(objMenuPages.PageDetailId);
+                    $('#lbltitle').html('Change Page to Item');
+                    $('#hdnPageDetails').html('Change Page to Item');
+
+                    $("#AddMenuPages").modal("show");
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function AddPageToItem(itemid, ChapterId) {
+        $('#AMenuItemId').val(itemid);
+        $('#AChapterId').val(ChapterId);
+        $('#APageDetailId').val('');
+        $("#AddMenuPages").modal("show");
+        $('#hdnPageDetails').html('Add Page to Item');
+    }
+    function Validate() {
+
+        if ($('#APageDetailId').val() == '') { $('#spanAPageDetailId').html('Required.'); $('#APageDetailId').focus(); return false; } else { $('#spanAPageDetailId').html(''); $('#APageDetailId').focus(); }
+
+        return true;
+    }
+</script>
+<div class="card">
+    <div class="card-header py-3 mb-3">
+        <div class="row  gx-2">
+            
+            <div class="col-lg-2 col-4 text-end ms-auto">
+                <div class="btn-align">
+
+
+                    @if (IsAdd == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <a href="@Url.Action("CreateAdminMenuItems", "AdminMenuItems", new { ChapterId = ChapterId, mid = Mid })" class="btn btn-primary">Add Admin Menu</a>
+
+                    }
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+   
+
+
+    <div id="divAdminMenuItemsList" class="clearfix">
+        @{Html.RenderAction("AdminMenuItemsList", "AdminMenuItems", new { ChapterId = (ChapterId == 0 ? 1 : ChapterId), IsEdit = IsEdit, IsView = IsView, IsDelete = IsDelete, IsExport = IsExport, IsAdd = IsAdd, Mid = Mid });}
+    
+        <div class="clearfix text-right">
+            <a onclick="ScrollUp();" style="display:inline-block;  padding-top:10px;">Back to top <i class="fa fa-arrow-up"></i></a>
+        </div>
+    
+    </div>
+</div>
+
+<script type="text/javascript">
+    function ScrollUp() {
+        $('html, body').animate({
+            scrollTop: "0px"
+        }, 800);
+    }
+
+</script>

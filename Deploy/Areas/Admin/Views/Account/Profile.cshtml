@@ -1,0 +1,285 @@
+﻿@{
+    ViewBag.Title = "Profile - " + Session["SiteName"];
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    var objuser = (CMS.Entities.Users)ViewBag.objuser;
+
+    ViewBag.Pageheading = "Profile";
+}
+
+
+
+
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+
+        $(".date").inputmask("mm/dd/yyyy", { "placeholder": "mm/dd/yyyy" });
+        //Money Euro
+        $("[data-mask]").inputmask();
+    });
+    function CheckProfileEmailAvailability(email) {
+        var returnval = null;
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckProfileEmailAvailability", "Users")', // the URL of the controller action method
+            data: { UserId: $('#UserId').val(), Email: email }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+    function EValidateProfile() {
+        //Account Information
+        if ($.trim($('#EEmail').val()) == '') { document.getElementsByName('EEmail')[0].placeholder = 'Required'; $('#EEmail').focus().addClass("validate"); return false; } else { $('#EEmail').removeClass("validate"); }
+        if (!Common.CheckEmail($.trim($('#EEmail').val()))) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Please enter valid email.'; $('#EEmail').focus().addClass("validate"); return false; } else { $('#EEmail').removeClass("validate"); }
+
+        if (!CheckProfileEmailAvailability($.trim($('#EEmail').val()))) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Email address already exist.'; $('#EEmail').focus().addClass("validate"); return false; } else { $('#EEmail').removeClass("validate"); }
+
+        return true;
+    }
+    function EditProfile() {
+
+        $('#Edit').hide();
+        $('#ViewProfile').hide();
+        $('#EditProfile').show();
+        $('#btnEdit').hide();
+    }
+    function ShowProfile() {
+        $('#Edit').show();
+        $('#ViewProfile').show();
+        $('#EditProfile').hide();
+        $('#btnEdit').show();
+    }
+
+    //function ValidatePassword() {
+
+    //    if ($('#OldPassword').val() == "") { document.getElementsByName('OldPassword')[0].placeholder = 'Required'; $('#OldPassword').focus().addClass("validate"); return false; } else { $('#OldPassword').focus().removeClass("validate"); }
+    //    if ($('#NewPassword').val() == "") { document.getElementsByName('NewPassword')[0].placeholder = 'Required'; $('#NewPassword').focus().addClass("validate"); return false; } else { $('#NewPassword').focus().removeClass("validate"); }
+    //    if (!Common.ValidatePassword($('#NewPassword').val())) { $('#NewPassword').val(''); document.getElementsByName('NewPassword')[0].placeholder = 'Please enter minimum 8 charecters (atleast one special charecter & one numeric charecter).'; $('#NewPassword').focus().addClass("validate"); return false; } else { $('#NewPassword').focus().removeClass("validate"); }
+    //    if ($('#ConfPassword').val() == "") { document.getElementsByName('ConfPassword')[0].placeholder = 'Required'; $('#ConfPassword').focus().addClass("validate"); return false; } else { $('#ConfPassword').focus().removeClass("validate"); }
+    //    if ($('#NewPassword').val() != $('#ConfPassword').val()) { $('#ConfPassword').val(''); document.getElementsByName('ConfPassword')[0].placeholder = 'Password and confirm password do not match.'; $('#ConfPassword').focus().addClass("validate"); return false; } else { $('#ConfPassword').focus().removeClass("validate"); }
+
+    //    //if (!Common.ValidatePassword($('#NewPassword').val())) { $('#spanNewPassword').html('Please enter minimum 8 charecters (atleast one special charecter & one numeric charecter).'); $('#NewPassword').focus().addClass("red-border"); return false; } else { $('#spanPassword').html(''); $('#Password').focus().removeClass("red-border"); }
+
+    //    //if (!Common.ValidatePassword($('#OldPassword').val())) { $('#spanPassword').html('Please enter minimum 8 charecters (atleast one special charecter & one numeric charecter).'); $('#Password').focus().addClass("red-border"); return false; } else { $('#spanPassword').html(''); }
+    //    //if ($('#NewPassword').val() == '') { $('#spanNewPassword').html('Required.'); $('#NewPassword').focus().addClass("red-border"); return false; } else { $('#spanNewPassword').html(''); $('#NewPassword').focus().removeClass("red-border"); }
+    //    //if (!Common.ValidatePassword($('#NewPassword').val())) { $('#spanNewPassword').html('Please enter minimum 8 charecters (atleast one special charecter & one numeric charecter).'); $('#NewPassword').focus().addClass("red-border"); return false; } else { $('#spanPassword').html(''); $('#Password').focus().removeClass("red-border"); }
+    //    //if ($('#ConfPassword').val() == '') { $('#spanConfPassword').html('Required.'); $('#ConfPassword').focus().addClass("red-border"); return false; } else { $('#spanConfPassword').html(''); $('#ConfPassword').focus().removeClass("red-border"); }
+    //    //if ($('#NewPassword').val() != $('#ConfPassword').val()) { $('#spanPassword').html('Password and confirm password do not match.'); return false; } else { $('#spanPassword').html(''); }
+    //    return true;
+    //}
+
+    function resetclass() {
+        $('#OldPassword').removeClass("validate");
+        $('#NewPassword').removeClass("validate");
+        $('#ConfPassword').removeClass("validate");
+    }
+    $(function () {
+        $(".date").inputmask("mm/dd/yyyy", { "placeholder": "mm/dd/yyyy" });
+        //Money Euro
+        $("[data-mask]").inputmask();
+    });
+
+    function ResetValidateClass() {
+        $('#EEmail').removeClass("validate");
+    }
+
+
+
+</script>
+
+
+
+
+
+
+
+<div class="profile-cover bg-dark"></div>
+
+<div class="row">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="mb-0">My Account</h5>
+                <hr>
+                <div class="card shadow-none border">
+                    <div class="card-header">
+                        <h6 class="mb-0">User Profile</h6>
+                    </div>
+                    <div class="card-body ">
+
+                        @using (Html.BeginForm("UpdateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data", @class = "row g-3" }))
+                        {
+
+                            @Html.Hidden("UserId", @objuser.UserId)
+                            @Html.Hidden("Type", "Profile")
+
+
+                            <div class="col-6">
+                                <label class="form-label">User Name</label>
+                                <input type="text" class="form-control" value="@objuser.UserName">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Email address</label>
+                                <input type="text" class="form-control" id="EEmail" name="Email" value="@objuser.Email">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="EMobilePhone" name="MobilePhone" value="@objuser.MobilePhone">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Designation</label>
+                                <input type="text" class="form-control" id="EDesignation" name="Designation" value="@objuser.Designation">
+                            </div>
+
+
+                            <div class="text-start">
+                                <button type="submit" class="btn btn-primary px-4">Update</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="card shadow-none border">
+                    <div class="card-header">
+                        <h6 class="mb-0">Change Password</h6>
+                    </div>
+                    <div class="card-body row g-3">
+
+
+
+                        @using (Html.BeginForm("ChangePassword", "Account", FormMethod.Post, new { enctype = "multipart/form-data", @class = "row g-3", style = "margin-bottom:0", @id = "Formforget", @name = "Formforget" }))
+                        {
+
+
+                            @Html.Hidden("UserId", (Int64)@objuser.UserId)
+
+
+
+                            <div class="col-6">
+                                <label class="form-label">Old password</label>
+                                <input type="password" name="OldPassword" id="OldPassword" class="form-control">
+                            </div>
+
+                            <div class="col-6">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="NewPassword" id="NewPassword" class="form-control">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" name="ConfPassword" id="ConfPassword" class="form-control">
+                            </div>
+
+
+
+                            <div class="text-start">
+                                <button type="submit" class="btn btn-primary px-4">Submit</button>
+                            </div>
+
+
+                        }
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card shadow-sm border-0 overflow-hidden">
+            <div class="card-body">
+                <div class="profile-avatar text-center">
+                    <img src="Content/Admin/images/avatars/avatar-1.png" class="rounded-circle shadow" width="120" height="120" alt="">
+                </div>
+
+                <div class="text-center mt-4">
+                    <h4 class="mb-1">@objuser.UserName</h4>
+                    <p class="mb-0 text-secondary">@objuser.Designation</p>
+                   
+                </div>
+                <hr>
+
+            </div>
+
+        </div>
+    </div>
+</div><!--end row-->
+<script>
+
+    $(document).ready(function () {
+       
+        $("#Formforget").validate({
+            rules: {
+
+                OldPassword: "required",
+                NewPassword: {
+                    required: true,
+                    validpassword: true
+                },
+                ConfPassword: {
+                    required: true,
+                    minlength: 5,
+                    equalTo: "#OldPassword"
+                },
+            },
+            messages: {
+                OldPassword: "Please enter your oldpassword",
+                NewPassword: {
+                    required: "Please provide a password",
+                },
+                ConfPassword: {
+                    required: "Please provide a password",
+                    minlength: "Your password must be at least 5 characters long",
+                    equalTo: "Please enter the same password as above"
+                },
+            },
+
+
+
+            errorElement: "div",
+            errorPlacement: function (error, element) {
+                // Add the `invalid-feedback` class to the error element
+                error.addClass("invalid-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest(".input-box").length) {
+                    element.closest(".input-box").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                // Highlight the input, textarea, or select element with the `is-invalid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-invalid").removeClass("is-valid");
+                }
+
+
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                // Unhighlight the input, textarea, or select element by adding the `is-valid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-valid").removeClass("is-invalid");
+                }
+
+            },
+
+
+        });
+    });
+
+</script>

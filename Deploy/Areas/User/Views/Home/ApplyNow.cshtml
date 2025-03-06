@@ -1,0 +1,380 @@
+﻿@{
+    Layout = "~/Areas/User/Views/Shared/_MainLayout.cshtml";
+    ViewBag.Title = "Apply Now";
+
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+    var capcha = objAppInfo.ShowCapcha;
+
+    string secreatkey = objAppInfo.CapchaSiteKey;
+}
+
+<script src='https://www.google.com/recaptcha/api.js' type="text/javascript"></script>
+
+<script>
+    grecaptcha.ready(function () {
+        grecaptcha.execute('@secreatkey', { action: 'contactus' }).then(function (token) {
+            document.getElementById("recaptchaToken").value = token;
+        });
+    });
+</script>
+<!-- Start inner banner Section -->
+<section class="">
+    <div class="innban-sec position-relative ">
+        <img class="w-100" src="Content/User/img/banner-image-2.jpg" alt="banner-image-2">
+        <div class="caption position-absolute top-50 start-0 text-start">
+            <div class="container">
+                <div class="">
+                    <h2 class="td_section_title td_fs_48 mb-0 text-white">Apply Now</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- end inner banner Section -->
+<!-- Start contact page Courses -->
+<section class="td_gray_bg_3 ss sec-gap ">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="td_form_card pn td_style_1  bg-white td_form_card">
+                    @using (Html.BeginForm("InsertApplyNow", "Home", FormMethod.Post, new { id = "applynowform", @class = "common-form mt-4 mt-md-4" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <!-- Hidden input to store the generated code -->
+                        <input type="hidden" name="ValidationCode" value="@ViewBag.ValidationCode" />
+                        <input type="hidden" id="recaptchaToken" name="recaptchaToken" />
+
+                        <div class="td_form_card_in pn">
+                            <h2 class="h2__subhead">Request Information (complete the short form to get more information on your OTC degree programs)</h2>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="First Name *" name="FirstName" id="FirstName">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Last Name  *" name="LastName" id="LastName">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg"
+                                               placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event);return Common.isNumberKey(event);">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Email *" name="Email" id="Email">
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Address *" name="Address" id="Address">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="City *" name="City" id="City">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="frm-group">
+                                        @*<input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="State *" name="State" id="State">*@
+                                        <label for="State" style="display:none">State</label>
+                                        <select id="State" class="td_form_field field12 td_mb_20 td_medium" name="State">
+                                            <option value="">Select State *</option>
+                                            <option value="Alabama">Alabama</option>
+                                            <option value="Alaska">Alaska</option>
+                                            <option value="Arizona">Arizona</option>
+                                            <option value="Arkansas">Arkansas</option>
+                                            <option value="California">California</option>
+                                            <option value="Colorado">Colorado</option>
+                                            <option value="Connecticut">Connecticut</option>
+                                            <option value="Delaware">Delaware</option>
+                                            <option value="Florida">Florida</option>
+                                            <option value="Georgia">Georgia</option>
+                                            <option value="Hawaii">Hawaii</option>
+                                            <option value="Idaho">Idaho</option>
+                                            <option value="Illinois">Illinois</option>
+                                            <option value="Indiana">Indiana</option>
+                                            <option value="Iowa">Iowa</option>
+                                            <option value="Kansas">Kansas</option>
+                                            <option value="Kentucky">Kentucky</option>
+                                            <option value="Louisiana">Louisiana</option>
+                                            <option value="Maine">Maine</option>
+                                            <option value="Maryland">Maryland</option>
+                                            <option value="Massachusetts">Massachusetts</option>
+                                            <option value="Michigan">Michigan</option>
+                                            <option value="Minnesota">Minnesota</option>
+                                            <option value="Mississippi">Mississippi</option>
+                                            <option value="Missouri">Missouri</option>
+                                            <option value="Montana">Montana</option>
+                                            <option value="Nebraska">Nebraska</option>
+                                            <option value="Nevada">Nevada</option>
+                                            <option value="New Hampshire">New Hampshire</option>
+                                            <option value="New Jersey">New Jersey</option>
+                                            <option value="New Mexico">New Mexico</option>
+                                            <option value="New York">New York</option>
+                                            <option value="North Carolina">North Carolina</option>
+                                            <option value="North Dakota">North Dakota</option>
+                                            <option value="Ohio">Ohio</option>
+                                            <option value="Oklahoma">Oklahoma</option>
+                                            <option value="Oregon">Oregon</option>
+                                            <option value="Pennsylvania">Pennsylvania</option>
+                                            <option value="Rhode Island">Rhode Island</option>
+                                            <option value="South Carolina">South Carolina</option>
+                                            <option value="South Dakota">South Dakota</option>
+                                            <option value="Tennessee">Tennessee</option>
+                                            <option value="Texas">Texas</option>
+                                            <option value="Utah">Utah</option>
+                                            <option value="Vermont">Vermont</option>
+                                            <option value="Virginia">Virginia</option>
+                                            <option value="Washington">Washington</option>
+                                            <option value="West Virginia">West Virginia</option>
+                                            <option value="Wisconsin">Wisconsin</option>
+                                            <option value="Wyoming">Wyoming</option>
+                                        </select>
+
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="frm-group">
+                                        <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder=" Zip Code  *" name="ZipCode" id="ZipCode" maxlength="6" onkeypress="return Common.isNumberKey(event);">
+                                    </div>
+                                </div>
+                                <h4 class="td_fs_16 td_mb_20">Find your Program</h4>
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <label for="ProgramInterest">Program of Interest</label>
+                                        <select id="ProgramInterest" class="td_form_field field12 td_mb_20 td_medium " name="ProgramInterest">
+                                            <option value="">Select</option>
+                                            <option value="M.S. Artificial Intelligence"> M.S. Artificial Intelligence</option>
+                                            <option value="M.S. Business Analytics"> M.S. Business Analytics</option>
+                                            <option value="M.S. Computer Science"> M.S. Computer Science</option>
+                                            <option value="Medical Assisting"> Medical Assisting</option>
+                                            <option value="Medical Billing & Coding"> Medical Billing &amp; Coding</option>
+                                            <option value="Integrated Business Processes"> Integrated Business Processes</option>
+                                            <option value="Electronics Engineering Technology"> Electronics Engineering Technology</option>
+                                            <option value="Mechatronics"> Mechatronics</option>
+                                            @*<option value="Health Information Management"> Health Information Management</option>
+                                            <option value="Massage Therapy"> Massage Therapy</option>*@
+                                            <option value="Undecided"> Undecided</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="frm-group">
+                                        <label for="ProgramBegin">When do you want to begin your program? </label>
+                                        <select id="ProgramBegin" name="ProgramBegin" class="td_form_field field12 td_mb_30 td_medium ">
+                                            <option value="">Select</option>
+                                            <option value="Fall 2025">Fall 2025</option>
+                                            <option value="Spring 2025">Spring 2025</option>
+                                            <option value="Summer 2025">Summer 2025</option>
+                                            <option value="Fall 2025">Fall 2025</option>
+                                            <option value="As Soon as Possible">As Soon as Possible</option>
+                                            <option value="Unsure">Unsure</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="frm-group mb-2">
+                                        <label for="Description">
+                                            Have you previously attended another College/University? Please list all
+                                            previously attended Institutions
+                                        </label>
+                                        <textarea class="td_form_field no__boredr td_mb_30 td_medium td_white_bg" name="Description" id="Description" placeholder="" rows="4"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row align-items-center d-flex ">
+                                <div class="col-md-6">
+                                    <div class="">
+                                        <div class="g-recaptcha"
+                                             data-sitekey="@secreatkey"> </div>
+                                    </div>
+                                </div>
+                                <!--<div class="col-md-6">-->
+                                @*<div class="">
+                        <div class="g-recaptcha" data-sitekey="6LeFWE4qAAAAAH1l18h9hgAOFow3CoAU6duClRbi">
+                            <div style="width: 304px; height: 78px;">
+                                <div>
+                                    <iframe title="reCAPTCHA" width="304" height="78" role="presentation" name="a-2kccpsbyiaej"
+                                            frameborder="0" scrolling="no"
+                                            sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
+                                            src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6LeFWE4qAAAAAH1l18h9hgAOFow3CoAU6duClRbi&amp;co=aHR0cHM6Ly9nbG9iYWxyZWRkeXNhbmdhbS5vcmc6NDQz&amp;hl=en&amp;v=I0bG74fWAenNf3Z5ncHSz-bd&amp;size=normal&amp;cb=s1rwd1q2gsxq"></iframe>
+                                </div><textarea id="g-recaptcha-response" name="g-recaptcha-response"
+                                                class="g-recaptcha-response"
+                                                style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea>
+                            </div><iframe style="display: none;"></iframe>
+                        </div>
+                    </div>*@
+                                <!--</div>-->
+                                <div class="col-md-6">
+                                    <div class="td_form_card_bottom py-3 d-block text-end">
+                                        <input type="hidden" id="Honeypot" name="Honeypot" />
+
+                                        <button type="submit" id="submit-button" class="td_btn td_style_1 td_radius_10 td_medium sec__btn">
+                                            <span class="td_btn_in td_white_color  sec__btn2">Submit</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+            </div>
+
+            <div class="col-lg-4 ps-lg-5 ps-md-2">
+                <div class="spacing">
+                    <ul class="menu_list menu__us">
+                        <li class="border-0 menu__us2"><h3 class="">Graduate Programs</h3></li>
+                        <li><a href="artificialintelligence">Artificial Intelligence</a></li>
+                        <li><a href="businessanalytics">Business Analytics</a></li>
+                        <li><a href="computerscience">Computer Science</a></li>
+                    </ul>
+                </div>
+                <div class="spacing">
+                    <ul class="menu_list menu__us">
+                        <li class="border-0 menu__us2"><h3 class="">Undergraduate  Programs</h3></li>
+                        <li><a href="electronics-engineering-technology">Electronics Engineering Technology</a></li>
+                        <li><a href="integrated-business-processes">Integrated Business Processes</a></li>
+                        <li><a href="mechatronics">Mechatronics</a></li>
+                        <li><a href="medical-assisting">Medical Assisting</a></li>
+                        <li><a href="medical-billing-coding">Medical Billing &amp; Coding</a></li>
+                        <li><a href="2020-catalog-orion-technical">Academic Catalog</a></li>
+                        <li><a href="net-price-calculator-2">Net Price Calculator</a></li>
+                        <li><a href="student-services">Student Services</a></li>
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    @*</div>*@
+
+</section>
+<!-- End contact page Courses -->
+
+<script>
+    function phonenochange(event) {
+        if (event.keyCode == 8 || event.keyCode == 46) {
+        }
+        else {
+            var ph = $('#PhoneNo').val();
+            if (ph.length == 3) { $('#PhoneNo').val(ph + '-'); }
+            if (ph.length == 7) { $('#PhoneNo').val(ph + '-'); }
+        }
+    }
+    $(document).ready(function () {
+        $.validator.addMethod("validate_email", function(value, element) {
+            if (value === "") {
+              return true;
+          }
+          if (/^([a-zA-Z0-9_\.\-])+\@@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/.test(value)) {
+              return true;
+          } else {
+              return false;
+          }
+        }, "Please enter a valid Email.");
+
+        $.validator.addMethod("phoneFormat", function (value, element) {
+            return this.optional(element) || /^\d{3}-\d{3}-\d{4}$/.test(value);
+        }, "Enter a valid phone number");
+
+        // Initialize validation for the form
+        $("#applynowform").validate({
+            rules: {
+                FirstName: "required",
+                LastName: "required",
+                PhoneNo: {
+                    required: true,
+                    phoneFormat: true
+                },
+                Email: {
+                    required: true,
+                    validate_email: true
+                },
+                Address: "required",
+                City: "required",
+                State: "required",
+                ZipCode: "required",
+            },
+            messages: {
+                FirstName: "required",
+                LastName: "required",
+                PhoneNo: {
+                    required: "required",
+                    phoneFormat: "Enter valid phone number",
+                },
+                Email: {
+                    required: "required",
+                    validate_email: "Enter Valid Email",
+                },
+                Address: "required",
+                City: "required",
+                State: "required",
+                ZipCode: "required",
+
+            },
+
+
+              submitHandler: function (form) {
+                var response = grecaptcha.getResponse();
+                if ('@capcha' == 'Yes') {
+                    if (response.length == 0) {
+                        alert('Please confirm that you are not a robot.');
+                    }
+                    else {
+                        form.submit();
+                    }
+                }
+                else {
+                    form.submit();
+                }
+            },
+
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                if (element.closest(".frm-group").length) {
+                    element.closest(".frm-group").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents(".frm-group").addClass("has-error").removeClass("has-success");
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents(".frm-group").addClass("has-success").removeClass("has-error");
+            }
+        });
+
+    });
+
+    $("#submit-button").on("click", function (e) {
+        e.preventDefault(); // Prevent default form submission
+        var form = $("#applynowform");
+
+        if (form.valid()) {
+            // Add a hidden field to indicate client-side validation success
+            $("<input>")
+                .attr({
+                    type: "hidden",
+                    name: "ClientValidationStatus",
+                    value: "true"
+                })
+                .appendTo(form);
+
+            form.submit(); // Submit the form
+        } else {
+            console.log("Please complete the form correctly.");
+        }
+    });
+</script>

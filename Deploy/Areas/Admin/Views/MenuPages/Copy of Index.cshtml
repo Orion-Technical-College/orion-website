@@ -1,0 +1,273 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    var MenuItemId = ViewBag.MenuItemId;
+
+    List<CMS.Entities.MenuPages> lstPageDetails = ViewBag.lstMenuPages;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#MWebsite').addClass('active');
+        $('.closable').append('<span id="lblclose" class="closelink" title="Close"></span>');
+
+        $('#AddMenuPages').dialog
+           ({
+               autoOpen: false,
+               width: 450,
+               modal: true
+           });
+
+        $('#SponsorCategoryId').val(MenuItemId);
+        PagerClickBind();
+    });
+   
+
+    function sortresult(sortcolumn) {
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        Onload(1);
+    }
+
+    function Onload(Pageno) {
+        var pageno = Common.Pageno(Pageno);
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var items = $('#txtitems').val();
+        var Search = $('#keyword').val();
+        var MenuItemId = $('#MenuItemId').val();
+
+        $.ajax({
+            url: '@Url.Action("MenuPagesList", "MenuPages")',
+            type: 'GET',
+            cache: false,
+            data: { Search: Search, PageNo: pageno, SortColumn: sortcolumn, SortOrder: sortorder, Items: items,MenuItemId:MenuItemId },
+            success: function (result) {
+                $('#divPageDetails').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            Onload($(this).text());
+        });
+    }
+    function ClearSearch() {
+        $('#keyword').val('');
+        $('#MenuItemId').val('');
+        $('#hdnPageNo').val(1);
+        Onload(1);
+    }
+
+    function Add() {
+        clearMenuPages();
+        $('#hdnPageDetails').show();
+        $("#AddMenuPages").dialog("open");
+        $('#lbltitle').html('Add Page Details');
+    }
+
+    function EditMenuPages(MenuPagesId) {
+        $.ajax({
+            url: '@Url.Action("EditMenuPages", "MenuPages")',
+            type: 'POST',
+            data: { MenuPagesId: MenuPagesId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objMenuPages = result.data;
+                    $('#AMenuPageId').val(objMenuPages.MenuPageId);
+                    $('#AMenuItemId').val(objMenuPages.MenuItemId);
+                    $('#APageDetailId').val(objMenuPages.PageDetailId); 
+                    $('#lbltitle').html('Edit Page Details'); 
+                    $('#hdnPageDetails').hide();
+
+                    $("#AddMenuPages").dialog("open");
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function clearMenuPages() {
+        $('#PageDetailsId').val('');
+        $('#Designation').val('');
+        $('#spanPageDetailsId').html('');
+        $('#spanDesignation').html('');
+        $('#Designation').focus().focus().removeClass("red-border");
+    }
+
+    function Validate() {
+        if ($('#hdnMode').val() == 'add')
+        {
+            if ($('#PageDetailsId').val() == '') { $('#spanPageDetailsId').html('Required.'); $('#PageDetailsId').focus(); return false; } else { $('#spanPageDetailsId').html(''); $('#PageDetailsId').focus(); }
+        }
+        return true;
+    }
+
+    function AddEditValidate(mode, MenuPagesId) {       
+        $('#hdnMode').val(mode);
+        if (mode == 'add') {
+            Add();
+        }
+        else {
+            EditMenuPages(MenuPagesId);
+        }
+    }
+</script>
+<input id="hdnMode" type="hidden" value="add" />
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="PageDetailId" />
+<input id="hdnsortorder" type="hidden" value="ASC" />
+<!-- breadcumb -->
+<div class="clearfix breadcrumb-main"><ul class="breadcrumb  ">
+    <li><a href="@Url.Action("Index", "InnerPages")">Web Site</a> <span class="divider">/</span></li>
+    <li class="active">Add New Page</li>
+    <li class="fR sepV_c"><i class="icon-globe"></i><a href="@System.Configuration.ConfigurationManager.AppSettings["usersiteurl"]" target="_blank">View Mainsite</a></li>
+</ul></div>
+<!-- end breadcumb -->
+
+<div id="maincontainer">
+    <div class="mainContent">
+        <!--- TOPEBAR [start] ---->
+        @Html.Partial("MainMenu", "SuperAdmin")
+        <!--- TOPEBAR [end] ---->
+
+        <!--- SIDEBAR [start] ---->
+        @Html.Partial("LeftMenu")
+        <!--- SIDEBAR [en] ---->
+        <div class="pageHeadingBlock ">
+            <div class="grayBackground">
+                <div class="fR t-r spcT_c">
+                   
+                        <a class="btn btn-small btn-primary coursesMenu" onclick="AddEditValidate('add', 0);">Add Page to Menu Item</a>    
+                    
+                </div>
+                <h3 class="title">Page Details</h3>
+                <div class="sectionTabNav">
+                    <div class="btn-group">
+                        <a class="btn active" href="@Url.Action("Index", "PageDetails")">Page Details</a>
+                        <a class="btn" href="@Url.Action("Index", "MenuItems")">Menu Items</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="clearfix sepH_b"></div>
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" class="main-text">
+            <tbody>
+                <tr>
+                    <td>
+                        <div id="divmessage">
+                            @if (TempData["message"] != null)
+                            { @Html.Raw(TempData["message"].ToString())}
+
+                            @if (ViewBag.message != null)
+                            { @Html.Raw(ViewBag.message.ToString())}
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td height="50">
+                        <div class="grayBackground nobL nobR">
+            <div id="filterReg" class="ui-accordion">
+                <h4><b>Search</b></h4>
+                <div>
+                    <div class="filedsetInner clearfix">
+                        <div class="row-fluid">
+                            <div class="span4">
+                                <label>Search </label>
+                                <input type="text" name="keyword" id="keyword" class="input-block-level"  value="" placeholder="Heading" />
+                            </div>
+                            <div class="span4">
+                                                <label>Menu Item</label>
+                                                <select class="input-block-level" name="MenuItemId" id="MenuItemId">
+                                                    @if (lstMenuItems != null)
+                                                    {
+                                                        <option value="">Select</option>
+                                                        foreach (var item in lstMenuItems)
+                                                        { 
+                                                        <option @(item.MenuItemId==MenuItemId?"selected='selected'":"") value="@item.MenuItemId">@item.DisplayName</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                             <div class="span3">
+                                <button class="btn btn-primary filterAction" onclick="Onload(1);">Search</button>
+                                <a class="btn btn-inverse filterAction wC" onclick="ClearSearch();">Clear</a>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+                        
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id="divPageDetails">
+                            @{Html.RenderAction("MenuPagesList", "MenuPages");}
+                        </div>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+<div id="AddMenuPages" style="display: none;">
+    @using (Html.BeginForm("AddMenuPages", "MenuPages", FormMethod.Post))
+    { 
+        <input type="hidden" id="AMenuPageId" name="MenuPageId" value="0" />
+        <div class="dialog-title"><span id="lbltitle"></span></div>
+        <div class="dialog-content">
+            <div class="container-fluid">
+                <div class="row-fluid" id="hdnPageDetails">
+                    <div class="span5">Page :</div>
+                    <div class="span7">
+                        <select id="APageDetailId" class="input" name="PageDetailId">
+                            <option value="">Select</option>
+                            @if (lstPageDetails != null)
+                            {
+                                foreach (var item in lstPageDetails)
+                                { 
+                                <option value="@item.PageDetailId">@item.Heading</option>
+                                }
+                            }
+                        </select>
+                        <span class="field-validation-error" id="spanPageDetailsId"></span>
+                    </div>
+                </div>
+                <div class="row-fluid" id="hdnPageDetails1">
+                    <div class="span5">Page :</div>
+                    <div class="span7">
+                        <select id="AMenuItemId" class="input" name="MenuItemId">
+                            <option value="">Select</option>
+                            @if (lstMenuItems != null)
+                            {
+                                foreach (var item in lstMenuItems)
+                                { 
+                                <option value="@item.MenuItemId">@item.DisplayName</option>
+                                }
+                            }
+                        </select>
+                        <span class="field-validation-error" id="spanMenuItemId"></span>
+                    </div>
+                </div>
+                <div class="clearfix t-r t-p5">
+                    <input type="submit" onclick="return Validate()" class="btn btn-primary font-w7" value="Submit" />
+                    <a class="btn font-w7" onclick=" $('#AddMenuPages').dialog('close')">Cancel</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+

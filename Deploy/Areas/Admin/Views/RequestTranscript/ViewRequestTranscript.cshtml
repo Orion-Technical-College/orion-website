@@ -1,0 +1,141 @@
+﻿@{
+    ViewBag.Title = "Request Transcript";
+    ViewBag.Pageheading = "View RequestTranscript";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    CMS.Entities.RequestTranscript objRequestTranscript = ViewBag.objRequestTranscript;
+}
+<script>
+
+    $(document).ready(function () {
+        $('#wRequestTranscript, #wOthers').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+
+
+
+</script>
+
+<div class="content">
+    <!-- Main content -->
+
+    <div class="clearfix sepH_b"></div>
+    <div class="nav-tabs-custom">
+
+        <div class="tab-content">
+            <div class="tab-pane active">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="box validation">
+                            <div class="box-header">
+
+                                <h4 class="box-title dis-in">Request Transcript Details </h4>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Full Name : </label>
+                                        @objRequestTranscript.FullName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Former Name : </label>
+                                        @objRequestTranscript.FormerName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Phone No : </label>
+                                        @objRequestTranscript.PhoneNo
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Email : </label>
+                                        @objRequestTranscript.Email
+                                    </div>
+
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>SSN : </label>
+                                        @objRequestTranscript.SSN
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Date Of Birth : </label>
+                                        @objRequestTranscript.DOB.ToString("dd/MM/yyyy")
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Program Attended : </label>
+                                        @objRequestTranscript.ProgramAttended
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Previous Attended : </label>
+                                        @objRequestTranscript.PreviousAttended
+                                    </div>
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Address : </label>
+                                        @objRequestTranscript.Address
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>City : </label>
+                                        @objRequestTranscript.City
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>State : </label>
+                                        @objRequestTranscript.State
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Zip Code : </label>
+                                        @objRequestTranscript.ZipCode
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Transcript Request : </label>
+                                        @objRequestTranscript.TranscriptRequest
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Document Sent : </label>
+                                        @objRequestTranscript.DocumentSent
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Description : </label>
+                                        @objRequestTranscript.Description
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Signature : </label>
+                                        @objRequestTranscript.Signature
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Posted Date: </label>
+                                        @objRequestTranscript.InsertedDate.ToString("dd/MM/yyyy")
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              
+
+
+                <div class="box">
+                    <!-- /.box-header -->
+                    <div class="box-body text-end">
+                        <a class="btn btn-info" style="margin-left:500px;" href="@Url.Action("Index", "RequestTranscript", new { mid = ViewBag.Mid})">Cancel</a>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+

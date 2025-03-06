@@ -1,0 +1,92 @@
+﻿@{
+    Layout = "~/Areas/User/Views/Shared/_MainLayout.cshtml";
+    var heading = "";
+    var desc = "";
+    var dhd = "";
+    string ChapterName = "";
+
+    ChapterName = ViewBag.cname;
+
+    (Session["mrid"]) = ViewBag.MenuItemId;
+
+    Session["PageUrl"] = ViewBag.PageUrl;
+    var PageUrl = ViewBag.PageUrl;
+    CMS.Entities.PageDetails innerpage = ViewBag.objPageDetails;
+    CMS.Entities.PageDetails MenuPageDetails = ViewBag.objMenuPageDetails;
+
+    if (innerpage != null)
+    {
+        heading = innerpage.PageUrl;
+        desc = innerpage.Description;
+        dhd = CMS.BLL.Common.EncodeURL(heading);
+    }
+
+
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+    ViewBag.Title = heading;
+
+    if (innerpage != null)
+    {
+        ViewBag.Title = (innerpage.PageTitle == "" ? innerpage.Heading + " - " + /*System.Configuration.ConfigurationManager.AppSettings["ApplicationName"]*/objAppInfo.SiteName : innerpage.PageTitle);
+        ViewBag.MetaDescription = (innerpage.MetaDescription == "" ? innerpage.Heading : innerpage.MetaDescription);
+        ViewBag.MetaKeywords = (innerpage.MetaKeywords == "" ? innerpage.Heading : innerpage.MetaKeywords);
+        ViewBag.heading = innerpage.Heading;
+    }
+
+    Int64 ActiveId = 0;
+
+    if (MenuPageDetails.ParentName != null && MenuPageDetails.ParentName != "")
+    {
+        ActiveId = MenuPageDetails.PageParentId;
+    }
+    else
+    {
+        ActiveId = ViewBag.MenuItemId;
+    }
+
+    var pagename = ViewBag.heading;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#M-@ActiveId').addClass('active');
+    });
+
+</script>
+
+@*<div class="aws-title">
+    @CMS.BLL.Common.DecodeURL(ViewBag.heading)
+</div>*@
+
+        <div class="aws-bdr"></div>
+        <div class="inner-sec">
+            <div class="common_sec pt-0">
+                <div class="">
+                    <div class="aws-editior">
+                        @if (@desc != "")
+                        {
+                            @Html.Raw(desc.Replace("src=\"Content/images/", "src=\"Content/User/images/").Replace("src=\"/content/", "src=\"" + objAppInfo.AdminSiteUrl + "Content/").Replace("href=\"Content/images/", "href=\"" + objAppInfo.BaseUrl + "Content/User/images/").Replace("href=\"/content/", "href=\"" + objAppInfo.AdminSiteUrl + "Content/"))
+                        }
+                        else
+                        {
+
+                        <h4 class="sec_title" style="text-align:center;margin-top: 146px;">Content Will Update Soon..</h4>                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+                @*<div class="inner-banner">
+                <div class="container">
+                    <div class="inner_banner_set">
+                        <h2 class="inner_bbaner_title"> @CMS.BLL.Common.DecodeURL(ViewBag.heading)</h2>
+                        <div class="banner_small_img">
+                            <img src="content/images/about-b-small.jpg" alt="">
+                        </div>
+                    </div>
+                </div>
+            </div>*@

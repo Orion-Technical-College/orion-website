@@ -1,0 +1,104 @@
+﻿@{
+    Layout = "~/Areas/User/Views/Shared/_MainLayout.cshtml";
+
+
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+    ViewBag.Title = "Acknowledgment - " + objAppInfo.SiteName;
+
+    var FormName = ViewBag.cname;
+}
+
+<!-- Start inner banner Section -->
+    <section class="">
+      <div class="innban-sec position-relative " >
+        <img class="w-100" src="Content/User/img/banner-image-2.jpg" alt="banner-image-2">
+        <div class="caption position-absolute top-50 start-0 text-start">
+            <div class="container">
+                <div class="" >
+                    <h2 class="td_section_title td_fs_48 mb-0 text-white">
+                        @if (FormName == "Exception")
+                        {
+                            @:Failed
+                        }
+                        else
+                        {
+                            @:Acknowledgement
+                        }
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    </section>
+    <!-- end inner banner Section -->
+
+  <!-- Start About us page Courses -->
+
+  <section class="td_gray_bg_3 ss sec-gap py-5 ">
+    <div class="container">
+      <div class="ab__topsec mt-0">
+        <div class="row  ">
+          <div class="col-md-12">
+              <div class="text-center " style="margin-bottom: 80px;">
+                  
+                  @if (FormName == "Exception")
+                  {
+                    <img src="Content/User/img/failed-icon.png" alt="failed-icon" style="height:190px;" />
+                  }
+                  else
+                  {
+                    <img src="Content/User/img/tnks-img.png" alt="tnks-img" style="height:300px;" />
+                  }
+
+                  <div class="inner__heading">
+                      <h2 class="head__title text-center  justify-content-center" style="margin-top: -40px;">
+                          @if (FormName == "ApplyNow")
+                          {
+                              @:Thank you for completing your pre-application!<br /> We appreciate your interest and will review your submission shortly.
+                          }
+
+                          else if (FormName == "RequestTranscript")
+                          {
+                              @:Thank you for submitting your request.<br /> Our team has received your request and is processing it.
+                          }
+                          else if (FormName == "EmployeeOpportunities")
+                          {
+                              @:Thank you for submitting your request.<br /> Our team has received your request and is processing it.
+                          }
+                          else if (FormName == "ContactUs")
+                          {
+                              @:Thank You for Reaching Out! <br />We appreciate you contacting us! <br />
+                              @:<span style="font-size: 60%;font-weight: 500;">Our team has received your message and will get back to you as soon as possible.</span>
+                          }
+                          else if (FormName == "Exception")
+                          {
+
+                              @:<div>Failed Submitting the form</div>
+                          }
+                          else if (FormName == "Error")
+                          {
+                              @:<div>Failed Submitting the form</div>
+                          }
+                          else
+                          {
+                              @:Thanks for submitting the details
+                          }
+
+
+                      </h2><br />
+                  </div>
+                  <a class="td_btn td_style_1 td_radius_10 td_medium sec__btn mt-3" href="@Url.Action("Index", "Home")"><span class="td_btn_in td_white_color  sec__btn2"><span>Back to Home</span>  </span> </a>
+              </div>
+          </div>
+        </div>
+      </div>
+      </div>
+  </section>
+
+
+  <!-- End About us page Courses -->
+

@@ -1,0 +1,167 @@
+﻿@{
+    ViewBag.Title = "View Menu Item - " + Session["SiteName"];
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    CMS.Entities.AdminMenuItems objAdminMenuItems = ViewBag.objAdminMenuItems;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#wOthers, #wAdminMenu').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+</script>
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+<!-- breadcumb -->
+<div class="content-header">
+    <h1>View Menu Item</h1>
+    <ol class="breadcrumb">
+        <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-dashboard"></i>Home</a></li>
+        <li><a href="@Url.Action("Index", "AdminMenuItems", new { mid = ViewBag.mid})"><i class="fa fa-sort-amount-asc"></i> Admin Menu Items</a></li>
+        <li class="active">View Menu Item</li>
+    </ol>
+</div>
+<!--end breadcumb -->
+
+<div class="content">
+    <!-- Main content -->
+    <div id="divmessage">
+        @if (TempData["message"] != null)
+        {@Html.Raw(TempData["message"].ToString())}
+
+        @if (ViewBag.message != null)
+        {@Html.Raw(ViewBag.message.ToString())}
+    </div>
+    <div class="box validation">
+        <div class="box-body">
+            <div class="row">
+                <div class="col-xs-12 col-lg-4 col-sm-6" style="display:none">
+                    <label>Chapter:</label>
+                    @if (lstChapters != null && lstChapters.Count != 0)
+                    {
+                        foreach (var item in lstChapters)
+                        {
+                            if (item.ChapterId == objAdminMenuItems.ChapterId)
+                            {
+                                <span>@item.ChapterName</span>
+                            }
+                        }
+                    }
+                </div>
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>Menu Item Name : </label>
+                    @objAdminMenuItems.DisplayName
+                </div>
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>Parent Menu Item : </label>
+                    @*@objAdminMenuItems.ParentName*@
+
+                    @(objAdminMenuItems.ParentName == null || objAdminMenuItems.ParentName == "" ? "N/A" : objAdminMenuItems.ParentName)
+                </div>
+                @*<div class="col-xs-12 col-lg-4 col-sm-6">
+            <label style="display: block;">&nbsp;</label>
+            <label>Display Order : </label>
+            @objAdminMenuItems.Position
+        </div>
+        <div class="col-xs-12 col-lg-2 col-sm-6">
+            <label style="display: block;">&nbsp;</label>
+            <label class="checkbox-in">
+                <input type="checkbox" name="IsTopBar" id="IsTopBar" @(objAdminMenuItems.IsTopBar ? "checked=checked" : "") class="flat-red" disabled="disabled" value="true" />
+                Is Top Bar
+            </label>
+        </div>*@
+
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label> PageUrl: </label>
+                    @objAdminMenuItems.PageUrl
+                </div>
+
+
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>OtherUrl : </label>
+                    @objAdminMenuItems.OtherUrl
+                </div>
+
+
+
+
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsMenuBar" id="IsMenuBar" @(objAdminMenuItems.IsMenuBar ? "checked=checked" : "") class="flat-red" disabled="disabled" value="true" />
+                        Is Menu Bar
+                    </label>
+                </div>
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" @(objAdminMenuItems.IsQuickLinks ? "checked=checked" : "") class="flat-red" disabled="disabled" value="true" />
+                        Is Add Action?
+                    </label>
+                </div>
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsEdit" id="IsEdit" @(objAdminMenuItems.IsEdit ? "checked=checked" : "") class="flat-red" value="true" />
+                        Is Edit Action?
+                    </label>
+                </div>
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsView" id="IsView" @(objAdminMenuItems.IsView ? "checked=checked" : "") class="flat-red" value="true" />
+                        Is View Action?
+                    </label>
+                </div>
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsDelete" id="IsDelete" @(objAdminMenuItems.IsDelete ? "checked=checked" : "") class="flat-red" value="true" />
+                        Is Delete Action?
+                    </label>
+                </div>
+                <div class="col-xs-12 col-lg-2 col-sm-6">
+                    <label style="display: block;">&nbsp;</label>
+                    <label class="checkbox-in">
+                        <input type="checkbox" name="IsExport" id="IsExport" @(objAdminMenuItems.IsExport ? "checked=checked" : "") class="flat-red" value="true" />
+                        Is Export Action?
+                    </label>
+                </div>
+                @*<div class="col-xs-12 col-lg-2 col-sm-6">
+            <label style="display: block;">&nbsp;</label>
+            <label class="checkbox-in">
+                <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" @(objAdminMenuItems.IsQuickLinks ? "checked=checked" : "") class="flat-red" disabled="disabled" value="true" />
+                Is Quick Links
+            </label>
+        </div>
+        <div class="col-xs-12 col-lg-2 col-sm-6">
+            <label style="display: block;">&nbsp;</label>
+            <label class="checkbox-in">
+                <input type="checkbox" name="IsFooterBar" id="IsFooterBar" @(objAdminMenuItems.IsFooterBar ? "checked=checked" : "") class="flat-red" disabled="disabled" value="true" />
+                Is Footer Bar
+            </label>
+        </div>*@
+
+
+            </div>
+
+
+        </div>
+
+        <div class="box">
+            <!-- /.box-header -->
+            <div class="box-body text-right">
+                @*<input type="submit" onclick="return ValidateAdminMenuItems()" class="btn btn-primary" id="add" value="Submit" name="add">*@
+                <a class="btn btn-info" href="@Url.Action("Index", "AdminMenuItems", new { ChapterId = @objAdminMenuItems.ChapterId, mid = ViewBag.mid })">Cancel</a>
+            </div>
+            <!-- /.box-body -->
+        </div>
+        <!-- /.box-body -->
+    </div>
+    <!-- /.content -->
+</div>
+

@@ -1,0 +1,22 @@
+﻿@{
+    Layout = null;
+
+    var ActiveMenuItems = (int)ViewBag.ActiveMenuItems;
+    var InactiveMenuItems = (int)ViewBag.InactiveMenuItems;
+    var RecentAdded = (int)ViewBag.RecentAdded;
+   
+    var lstMenuItems = (List<CMS.Entities.MenuItems>)ViewBag.lstMenuItems;
+    var TotalMenuItems = (int)ViewBag.TotalMenuItems;
+
+    var Items = (int)ViewBag.Items;
+
+}
+
+    <div class="gray-box-c l-r-p20">
+             <div class="row-fluid">
+               <div class="span6">
+                 <div class="whiteborder-r"><h5 class="f-w6 black-text mN line-h36">MenuItems</h5></div></div>
+                <div class="span6"><h5 class="f-w6 black-text mN line-h36">Total<a href="@Url.Action("Index", "MenuItems")" class="pull-right font20">@(TotalMenuItems)</a></h5></div>
+            </div> 
+            </div>
+

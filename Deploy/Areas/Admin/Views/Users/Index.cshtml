@@ -1,0 +1,955 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Roles> lstRoles = ViewBag.lstRoles;
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+
+    var RoleName = ViewBag.RoleName;
+
+
+
+    int status = 0;
+
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+
+}
+<style>
+    .SumoSelect > .CaptionCont, .SumoSelect.open > .CaptionCont, .SumoSelect:focus > .CaptionCont, .SumoSelect:hover > .CaptionCont {
+        box-shadow: none !important;
+        border: 0px !important;
+    }
+
+    .SumoSelect {
+        width: 100% !important;
+        top: -10px;
+        cursor: pointer
+    }
+        /*        .SumoSelect > .CaptionCont > span.placeholder{
+            color:#fff !important;
+        }*/
+        .SumoSelect .select-all {
+            height: 42px !important;
+            background: #efe !important;
+        }
+
+    .placeholder {
+        background-color: #fff !important;
+        font-size: 12px !important;
+        font-style: normal !important
+    }
+
+    .SumoSelect > .CaptionCont {
+        padding-left: 15px !important;
+        cursor: pointer
+    }
+
+        .SumoSelect > .CaptionCont > span.placeholder {
+            color: #75757571 !important;
+            opacity: 1 !important;
+            font-style: normal;
+        }
+</style>
+<link href="Content/Admin/css/sumoselect.min.css" rel="stylesheet" />
+<script src="Scripts/Admin/jquery.sumoselect.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#wUsers').addClass('active');
+        $('#AddUser').dialog
+           ({
+               autoOpen: false,
+               width: 450,
+               modal: true
+           });
+        $('#EditUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('#divuserroles').dialog
+         ({
+             autoOpen: false,
+             width: 450,
+             modal: true
+         });
+        $('#ViewUser').dialog
+          ({
+              autoOpen: false,
+              width: 450,
+              modal: true
+          });
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button"></button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button"></button>');
+    });
+
+    function Add() {
+      /*  alert("test");*/
+        clearUser();
+        $("#Add-User").modal('show');
+        $('#Albltitle').html('Add Admin');
+    }
+
+    function clearUser() {
+
+        $('#UserName').val('');
+        $('#Email').val('');
+        $('#Password').val('');
+        $('#PhoneNo').val('');
+
+        $('#UserName').removeClass("validate");
+        $('#Email').removeClass("validate");
+        $("#AddUser").dialog("close");
+        $("#EditUser").dialog("close");
+    }
+    function clearEditUser() {
+        $("#EditUser").dialog("close");
+    }
+    $(document).ready(function () {
+        $('#selectrole').val('@ViewBag.RoleName');
+        if ('@ViewBag.RoleName' == 'Admin') {
+            $('#Administrators').addClass('red-t');
+        }
+        else { $('#Users').addClass('red-t'); }
+        PagerClickBind();
+        //print_country("Country");
+
+    });
+
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            UserBind($(this).text(), 'on');
+        });
+    }
+    function sortresult(sortcolumn) {
+
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        UserBind(1, 'on');
+    }
+
+
+    function UserBind(page, sort) {
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var Search = $('#txtsearch').val();
+        var pageno = Common.Pageno(page);
+        var IsApproved = $.trim($('#IsApproved').val());
+        var RoleId = $.trim($('#RoleId').val());
+
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserList", "Users")', // the URL of the controller action method
+            data: { Items: $('#pgitems').val(), IsApproved: IsApproved, RoleId: RoleId, Search: Search, PageNo: pageno, SortOrder: sortorder, SortColumn: sortcolumn, RoleName: '@RoleName' }, // optional data
+            success: function (result) {
+                $('#divUserList').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        $('#IsApproved').val('');
+        $('#RoleId').val('');
+        UserBind(1, 'on');
+    }
+
+    function GetUserRoles(userid) {
+        var UserId = userid;
+        $('#UserId1').val(UserId);
+        $.ajax({
+            type: "GET",
+            cache: false,
+            url: '@Url.Action("UserAccess", "Users")', // the URL of the controller action method
+            data: { UserId: UserId }, // optional data
+            success: function (result) {
+                $('#divuserroles1').html(result);
+
+                $("#add-user1").modal('show');
+
+                $('#Rlbltitle').html('User Access');
+            }
+        });
+    }
+    function UserClear() {
+        $('#txtUserName').val('');
+        $('#txtemail').val('');
+        $('#Country').val('');
+        $('#State').val('');
+        $('#hdnsortcolumn').val('');
+        $('#hdnsortorder').val('ASC');
+
+
+        UserBind(1, 'on');
+    }
+    function CheckEmailAvailability(email) {
+
+        var returnval = null;
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckEmailAvailability", "Users")', // the URL of the controller action method
+            data: { Email: email }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+    function CheckProfileEmailAvailability(email, userid) {
+        var returnval = null;
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckProfileEmailAvailability", "Users")', // the URL of the controller action method
+            data: { UserId: userid, Email: email }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+    function CheckUserNameAvailability(UserName) {
+
+        var returnval = null;
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckUserNameAvailability", "Users")', // the URL of the controller action method
+            data: { UserName: UserName }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+
+    $(document).ready(function () {
+
+
+
+        $("#ContactForm").validate({
+            rules: {
+                Designation: "required",
+                UserName: "required",
+                Email: {
+                    required: true,
+                    email: true
+                },
+              /*  EmailId: "required validate_email",*/
+                PhoneNo: {
+                    required: true,
+                    phone: true
+                },
+
+            },
+            messages: {
+                Designation: "Please select Role",
+                UserName: "Please enter your firstname",
+                Email: {
+                    required: "Please enter email address",
+                    validate_email: "Please enter valid email address",
+                },
+                PhoneNo: {
+                    required: "Please enter phone number",
+                    phone: "Please enter valid phone number",
+                },
+
+            },
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                // Add the `help-block` class to the error element
+                error.addClass("help-block");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest("fieldset").length) {
+                    element.closest("fieldset").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-error").removeClass("has-success");
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-success").removeClass("has-error");
+            }
+
+        });
+        });
+
+
+    function ResetValidateClass() {
+        $('#UserName').removeClass("validate");
+        $('#Email').removeClass("validate");
+    }
+    function EValidateProfile() {
+        var return_val = true;
+        //Account Information
+        if ($.trim($('#EUserName').val()) == '') { $('#EUserName').addClass("validate"); return_val = false; } else { $('#EUserName').removeClass("validate"); }
+        if ($.trim($('#EEmail').val()) == '') { $('#EEmail').addClass("validate"); return_val = false; }
+        else {
+            $('#EEmail').removeClass("validate");
+            if (!Common.CheckEmail($.trim($('#EEmail').val()))) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Please enter valid email.'; $('#EEmail').addClass("validate"); return_val = false; }
+            else {
+                $('#EEmail').removeClass("validate");
+                if (!CheckProfileEmailAvailability($.trim($('#EEmail').val()), $('#UserId').val())) { $('#EEmail').val(''); document.getElementsByName('EEmail')[0].placeholder = 'Email address already exist.'; $('#EEmail').addClass("validate"); return_val = false; } else { $('#EEmail').removeClass("validate"); }
+            }
+        }
+        return return_val;
+    }
+    function EResetValidateClass() {
+        $('#EEmail').removeClass("validate");
+        $('#EUserName').removeClass("validate");
+    }
+
+
+
+
+    function UserEdit(UserId) {
+        $.ajax({
+            url: '@Url.Action("EditUser", "Users")',
+            type: 'POST',
+            data: { UserId: UserId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objUser = result.data;
+                    var lstChapterUsers = result.data1;
+                    $('#EUserName').val(objUser.UserName);
+                   /* $('#EDesignation').val(objUser.Designation);*/
+                    $('#EEmail').val(objUser.Email);
+                    $('#EMobilePhone').val(objUser.MobilePhone);
+                    $('#EDesignation').val(objUser.Designation);
+                    //$('#EChapterId').val(objUser.ChapterIds);
+                    var chapterIds = objUser.ChapterIds.split(',');
+
+                    // Set the selected values for the SumoSelect dropdown
+                    $('#EChapterId').val(chapterIds); // Set the selected values first
+
+                    // Reinitialize the SumoSelect after setting the value
+                    $('#EChapterId').SumoSelect();
+
+
+
+
+
+                    $('#UserId').val(objUser.UserId);
+                    $('#Edit-User').modal('show');
+                    $('#Elbltitle').html('Edit Admin');
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function UserView(UserId) {
+        $.ajax({
+            url: '@Url.Action("ViewUser", "Users")',
+            type: 'POST',
+            data: { UserId: UserId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objUser = result.data;
+                    $('#lblUserName').html(objUser.UserName);
+                    $('#lblEmail').html(objUser.Email);
+                    $('#lblMobilePhone').html((objUser.MobilePhone == "" ? "N/A" : objUser.MobilePhone));
+                    $('#lblDesignation').html((objUser.lblDesignation == "" ? "N/A" : (objUser.lblDesignation)));
+                    $('#lblDateOfBirth').html(objUser.SDateOfBirth);
+                    $('#lblAddress').html((objUser.Address == "" ? "N/A" : objUser.Address));
+
+                    var lstRoles = objUser.lstRoles;
+                    var sb = "";
+                    if (lstRoles != null) {
+                        for (var i = 0; i < lstRoles.length; i++) {
+                            sb = sb + "<input type=\"checkbox\" disabled=\"disabled\" checked=\"checked\" \"> " + lstRoles[i].RoleName + "";
+                        }
+                    }
+                    $('#divRoles1').html(sb);
+
+                    $('#View-User').modal('show');
+                    $('#Vlbltitle').html('View Admin');
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function GetMember() {
+        var ChapterId = $('#ChapterId').val();
+            $.ajax({
+            url: '@Url.Action("MembersData", "Users")',
+            type: 'POST',
+            data: { ChapterId: ChapterId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var lstMembers = result.data;
+                    var sb = "<label> Members </label><select id=\"MemberId\" class=\"form-control\" name=\"MemberId\" onchange=\"MembersEdit()\"><option value=\"\">Select Member *</option>";
+                    if (lstMembers != null) {
+                        for (var i = 0; i < lstMembers.length; i++) {
+                            sb = sb + "<option value=" + lstMembers[i].MemberId + "> " + lstMembers[i].FirstName + " " + lstMembers[i].LastName + "</option>";
+                        }
+                    }
+                    sb = sb + "</select>";
+                    $('#divMembers').html(sb);
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function MembersEdit() {
+        /*var MemberId = $('#MemberId').val();*/
+        var MemberEmail = $('#MemberEMail').val();
+        $.ajax({
+            url: '@Url.Action("MembersEdit", "Users")',
+            type: 'POST',
+            data: { Email : MemberEmail },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objMember = result.data;
+                    $('#UserName').val(objMember.FirstName + "" + objMember.LastName);
+                    $('#Email').val(objMember.Email);
+                    $('#MobilePhone').val(objMember.MobilePhone);
+                    $('#ChapterId').val(objMember.ChapterId);
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function ChangeRole() {
+        var Role = $('#Designation').val();
+        if (Role == 'ChapterAdmin') {
+            $('#ChaptersDrop').show();
+        }
+        else {
+            $('#ChaptersDrop').show();
+        }
+    }
+
+    function userphonenumber(event) {
+        if (event.keyCode == 8 || event.keyCode == 46) {
+        }
+        else {
+            var ph = $('#PhoneNo').val();
+            if (ph.length == 3) { $('#PhoneNo').val(ph + '-'); }
+            if (ph.length == 7) { $('#PhoneNo').val(ph + '-'); }
+        }
+    }
+
+    function Edituserphonenumber(event) {
+        if (event.keyCode == 8 || event.keyCode == 46) {
+        }
+        else {
+            var ph = $('#EMobilePhone').val();
+            if (ph.length == 3) { $('#EMobilePhone').val(ph + '-'); }
+            if (ph.length == 7) { $('#EMobilePhone').val(ph + '-'); }
+        }
+    }
+    function ChapterBind() {
+        $('#ChapterIds').val($('#ChapterId').val());
+    }
+    function EditChapterBind() {
+        $('#EChapterIds').val($('#EChapterId').val());
+    }
+</script>
+
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="UserId" />
+<input id="hdnsortorder" type="hidden" value="ASC" />
+<input id="hdnuserid" type="hidden" value="0" />
+<!-- breadcumb -->
+<div class="card">
+    <div class="card-header py-3 mb-3">
+        <div class="row  gx-2">
+            <div class="col-lg-3 col-md-6 col-8">
+                <div class="input-box">
+                    <label class="form-label">Search <span class="text-danger">*</span></label>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="txtsearch" id="txtsearch" placeholder="Search by  email / phone no">
+                        @*<span class="input-group-text pointer" style="cursor:pointer" onclick="UserBind();" id="basic-addon1"><i class="bi bi-search"></i></span>*@
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="btn-align">
+                    <button type="button" class="btn btn-primary px-3" onclick="UserBind();">Search</button>
+                    <button type="button" class="btn btn-danger px-3" onclick="ClearSearch();">Clear</button>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-4 text-end ms-auto">
+                <div class="btn-align">
+                    <button type="button" class="btn btn-primary" onclick="Add();">Add New Admin</button>
+
+
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+    <!--end breadcrumb-->
+    <!-- Button trigger modal -->
+    <!-- Modal -->
+    <div class="modal fade" id="add-user1" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            @using (Html.BeginForm("UpdateUserAccess", "Users", FormMethod.Post, new { enctype = "multipart/form-data", @class = "m0", @id = "UsersForm", @name = "UsersForm" }))
+            {
+                <input id="UserId1" name="UserId" type="hidden" />
+                <input id="IsAdds" name="IsAdds" type="hidden" />
+                <input id="IsEdits" name="IsEdits" type="hidden" />
+                <input id="IsViews" name="IsViews" type="hidden" />
+                <input id="IsDeletes" name="IsDeletes" type="hidden" />
+                <input id="IsExports" name="IsExports" type="hidden" />
+                @Html.Hidden("RoleIds")
+
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><span id="lbltitle"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div id="divuserroles1" class="modal-body">
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close-button" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </div>}
+        </div>
+    </div>
+
+    <div class="modal fade" id="Add-User" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            @using (Html.BeginForm("CreateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data", @class = "m0", @id = "FormWebBanners", @name = "FormWebBanners" }))
+            {
+                <input type="hidden" value="SiteAdmin" id="RoleName" name="RoleName" />
+                <input type="hidden" value="" id="ChapterIds" name="ChapterIds" />
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><span id="Albltitle"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+
+
+                            @if (objAppInfo.chapterStatus == "Yes")
+                            {
+                                <div class="col-lg-12 mb-3">
+                                    <div class="input-box">
+                                        <label class="form-label">Chapters</label>
+
+                                        <select class="search_all" multiple="multiple" id="ChapterId" name="ChapterId" placeholder="Select Chapters" onclick="ChapterBind();">
+                                            @*<option value="">-- Select --</option>*@
+                                            @if (lstChapters != null && lstChapters.Count != 0)
+                                            {
+                                                foreach (var item in lstChapters)
+                                                {
+                                                    <option value="@item.ChapterId">@item.ChapterName</option>
+                                                }
+                                            }
+                                        </select>
+
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-lg-12 mb-3" style="display:none">
+                                <div class="input-box">
+                                    <label class="form-label">Enter Member Email<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="MemberEMail" name="MemberEMail" placeholder="Member EMail">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">User Name<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="UserName" name="UserName" placeholder="User Name *">
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Email Id<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="Email" name="Email" placeholder=" EMail">
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Mobile</label>
+                                    <input type="text" class="form-control" maxlength="12" onkeypress="return Common.isNumberKey(event)" id="MobilePhone" name="MobilePhone" placeholder="Mobile">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Designation<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="Designation" name="Designation" placeholder="Designation">
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close-button" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add SubAdmin Role</button>
+
+                      
+
+
+
+                    </div>
+                </div>}
+        </div>
+    </div>
+
+    <div class="modal fade" id="Edit-User" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            @using (Html.BeginForm("UpdateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data", @class = "m0", @id = "VideoGalleryForm", @name = "VideoGalleryForm" }))
+            {
+                @Html.Hidden("UserId")
+                <input type="hidden" value="SiteAdmin" id="ERoleName" name="RoleName" />
+                <input type="hidden" value="" id="EChapterIds" name="ChapterIds" />
+
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><span id="Elbltitle"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+
+
+
+                            @if (objAppInfo.chapterStatus == "Yes")
+                            {
+                                <div class="col-lg-12 mb-3">
+                                    <div class="input-box">
+                                        <label class="form-label">Chapters</label>
+
+                                        <select class="" multiple="multiple" id="EChapterId" name="ChapterId" onclick="EditChapterBind();">
+                                            @if (lstChapters != null && lstChapters.Count != 0)
+                                            {
+                                                foreach (var item in lstChapters)
+                                                {
+                                                    <option value="@item.ChapterId">@item.ChapterName</option>
+                                                }
+                                            }
+                                        </select>
+
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">User Name<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" onkeypress="EResetValidateClass();" onclick="EResetValidateClass();" id="EUserName" name="UserName" placeholder="First Name *">
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Email Id<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" onkeypress="EResetValidateClass();" onclick="EResetValidateClass();" id="EEmail" name="Email" placeholder="Email Id *">
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Mobile<span class="text-danger"></span></label>
+                                    <input type="text" class="form-control" id="EMobilePhone" maxlength="12" onKeyPress="Edituserphonenumber(event); return Common.isNumberKey(event);" name="MobilePhone" placeholder="Mobile">
+                                </div>
+                            </div>
+                            <div class="col-lg-12 mb-3">
+                                <div class="input-box">
+                                    <label class="form-label">Designation<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="EDesignation" name="Designation" placeholder="Designation">
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close-button" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </div>}
+        </div>
+    </div>
+
+    <div class="modal fade" id="view-User" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            @using (Html.BeginForm("UpdateUser", "Users", FormMethod.Post, new { enctype = "multipart/form-data", @class = "m0", @id = "VideoGalleryForm", @name = "VideoGalleryForm" }))
+            {
+                @Html.Hidden("UserId")
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><span id="Vlbltitle"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="#" method="post">
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>User Name :</label>
+                                <span class="font13">: <span id="lblUserName"></span></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Id </label>
+                                <span class="font13">: <span id="lblEmail"></span></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Designation</label>
+                                <span class="font13">: <span id="lblDesignation"></span></span>
+                            </div>
+                            <div class="form-group">
+                                <label>Mobile </label>
+                                <span class="font13">: <span id="lblMobilePhone"></span></span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div id="divRoles1">
+                            </div>
+                        </div>
+                        <div class="modal-footer clearfix">
+                            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                        </div>
+                    </form>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary modal-close-button" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add SubAdmin Role</button>
+                    </div>
+                </div>}
+        </div>
+    </div>
+
+
+    <div id="divUserList" class="clearfix">
+        @{Html.RenderAction("UserList", "Users", new { RoleName = RoleName });}
+    </div>
+</div>
+<script>
+ 
+    $(document).ready(function () {
+        $("#BannerUrl").change(function () {
+            validateBannerUrl();
+        });
+
+        function validateBannerUrl() {
+            $("#FormWebBanners").validate().resetForm();
+            $("#FormWebBanners").validate().element("#BannerUrl");
+        }
+
+        $.validator.addMethod("validImageExtension", function (value, element) {
+            if (element.files && element.files.length > 0) {
+                var allowedExtensions = ["jpg", "png", "gif", "jpeg"];
+                var fileName = element.files[0].name;
+                var extension = fileName.split('.').pop().toLowerCase();
+                return $.inArray(extension, allowedExtensions) !== -1;
+            }
+            return true;
+        }, "Only allowed extensions are: jpg, png, gif, jpeg");
+
+
+        var validateForm = $("#FormWebBanners").validate({
+            rules: {
+                Designation: "required",
+
+                UserName: "required",
+
+                Email: {
+                    required: true,
+                    validate_email: true,
+
+                },
+            },
+            messages: {
+                Designation: "Please Enter Designation",
+
+                UserName: "Please Enter User Name",
+
+                Email: {
+                    required: "Please enter email address",
+                    validate_email: "Please enter valid email address",
+
+                },
+            },
+            submitHandler: function (form) {
+                var response = grecaptcha.getResponse();
+                if ('Yes' == 'Yes') {
+                    if (response.length === 0) {
+                        alert('Please confirm that you are not a robot.');
+                    }
+                    else {
+                        form.submit();
+                    }
+                }
+                else {
+                    form.submit();
+                }
+            },
+
+            errorElement: "div",
+            errorPlacement: function (error, element) {
+                // Add the `invalid-feedback` class to the error element
+                error.addClass("invalid-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest(".input-box").length) {
+                    element.closest(".input-box").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                // Highlight the input, textarea, or select element with the `is-invalid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-invalid").removeClass("is-valid");
+                }
+
+
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                // Unhighlight the input, textarea, or select element by adding the `is-valid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-valid").removeClass("is-invalid");
+                }
+
+            },
+
+
+        });
+
+        $('.modal').on('hidden.bs.modal', function () {
+            // Reset form fields
+            $('#FormWebBanners')[0].reset();
+
+            // Reset form validations
+            validateForm.resetForm();
+
+            // Clear validation classes
+            $('.modal').find('.error').removeClass('is-valid is-invalid');
+            $('.modal').find('.form-control').removeClass('is-valid is-invalid');
+        });
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+    // Function to clear form validation errors and reset the form
+    function clearFormErrorsAndReset() {
+        // Clear any validation error messages
+        $('em.error').remove(); // Assuming error messages have a class of 'error-message'
+
+        // Reset the form
+        $('form')[0].reset();
+    }
+
+    // Event handler for closing the modal dialog
+    $('.modal-close-button, .close').on('click', function () {
+        // Clear form errors and reset upon closing the modal
+        clearFormErrorsAndReset();
+    });
+
+    // Event handler for when the modal is closed by clicking outside of it
+    $('.modal').on('click', function (event) {
+        // Check if the click event occurred outside the modal dialog
+        if ($(event.target).hasClass('modal')) {
+            // Clear form errors and reset upon closing the modal
+            clearFormErrorsAndReset();
+        }
+    });
+
+    $(document).on('keydown', function (event) {
+        // Check if the escape key was pressed and the modal is open
+        if (event.key === "Escape" && $('.modal').is(':visible')) {
+            // Clear form errors and reset upon closing the modal
+            clearFormErrorsAndReset();
+        }
+    });
+
+
+</script>
+<script>
+
+    //$(document).ready(function () {
+    $('.search_all').SumoSelect({ selectAll: true, search: true, searchText: 'Enter here.' });
+
+        //});
+</script>
+
+<link rel="stylesheet" href="path/to/sumoselect.css">
+<script src="path/to/jquery.sumoselect.min.js"></script>

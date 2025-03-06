@@ -1,0 +1,188 @@
+-------------------START-------------9/28/2022 3:49:53 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------9/28/2022 3:49:53 PM
+-------------------START-------------9/28/2022 3:49:54 PM
+Page :/NATSWorld/add-servicesdonation
+Contributions Amount Splitting
+-------------------END-------------9/28/2022 3:49:54 PM
+-------------------START-------------9/28/2022 3:49:57 PM
+Page :/NATSWorld/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------9/28/2022 3:49:57 PM
+-------------------START-------------9/28/2022 3:50:01 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Contributions Insertion Process
+-------------------END-------------9/28/2022 3:50:01 PM
+-------------------START-------------9/28/2022 3:50:15 PM
+Page :/NATSWorld/add-servicesdonation
+Contributions Inserted Successfully
+-------------------END-------------9/28/2022 3:50:15 PM
+-------------------START-------------9/28/2022 3:50:23 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------9/28/2022 3:50:23 PM
+-------------------START-------------9/28/2022 3:50:33 PM
+Page :/NATSWorld/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------9/28/2022 3:50:33 PM
+-------------------START-------------9/28/2022 3:50:38 PM
+Page :/NATSWorld/add-servicesdonation
+Updated Service Donations(Mahesh Kulkarni-1)&TransactionId - A10AB27B4B16
+-------------------END-------------9/28/2022 3:50:38 PM
+-------------------START-------------9/28/2022 3:50:41 PM
+Page :/NATSWorld/add-servicesdonation
+Reccuring Process for General Donation Cause
+-------------------END-------------9/28/2022 3:50:41 PM
+-------------------START-------------9/28/2022 3:50:50 PM
+Page :/NATSWorld/add-servicesdonation
+Sending Notification Email for Reccuring
+-------------------END-------------9/28/2022 3:50:50 PM
+-------------------START-------------9/28/2022 3:51:58 PM
+Page :/NATSWorld/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------9/28/2022 3:51:58 PM
+-------------------START-------------9/28/2022 3:51:58 PM
+Page :/NATSWorld/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------9/28/2022 3:51:58 PM
+-------------------START-------------9/28/2022 3:51:58 PM
+Page :/NATSWorld/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------9/28/2022 3:51:58 PM
+-------------------START-------------9/28/2022 3:58:52 PM
+Page :/NATSWorld/global/member-registration
+After reCAPTCHA Entered to the Process
+-------------------END-------------9/28/2022 3:58:52 PM
+-------------------START-------------9/28/2022 3:58:58 PM
+Page :/NATSWorld/global/member-registration
+Member Inserted Successfully
+-------------------END-------------9/28/2022 3:58:58 PM
+-------------------START-------------9/28/2022 3:59:00 PM
+Page :/NATSWorld/global/member-registration
+Entered Into Dnation Process
+-------------------END-------------9/28/2022 3:59:00 PM
+-------------------START-------------9/28/2022 3:59:07 PM
+Page :/NATSWorld/global/member-registration
+Service Donations Inserted Successfully
+-------------------END-------------9/28/2022 3:59:07 PM
+-------------------START-------------9/28/2022 3:59:14 PM
+Page :/NATSWorld/global/member-registration
+Entered Into Payment Process
+-------------------END-------------9/28/2022 3:59:14 PM
+-------------------START-------------9/28/2022 3:59:31 PM
+Page :/NATSWorld/global/member-registration
+RESPMSG Approved - Members Orders Inserted
+-------------------END-------------9/28/2022 3:59:31 PM
+-------------------START-------------9/28/2022 3:59:36 PM
+Page :/NATSWorld/global/member-registration
+Updated Service Donations
+-------------------END-------------9/28/2022 3:59:36 PM
+-------------------START-------------9/28/2022 3:59:55 PM
+Page :/NATSWorld/global/member-registration
+User Notification Email Sent
+-------------------END-------------9/28/2022 3:59:55 PM
+-------------------START-------------9/28/2022 4:00:05 PM
+Page :/NATSWorld/global/member-registration
+Admin Notification Email Sent
+-------------------END-------------9/28/2022 4:00:05 PM
+-------------------START-------------9/28/2022 4:00:10 PM
+Page :/NATSWorld/global/member-registration-acknowledgement
+Entered into Acknowledgement Page
+-------------------END-------------9/28/2022 4:00:10 PM
+-------------------START-------------9/28/2022 4:25:59 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------9/28/2022 4:25:59 PM
+-------------------START-------------9/28/2022 4:25:59 PM
+Page :/NATSWorld/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------9/28/2022 4:25:59 PM
+-------------------START-------------9/28/2022 4:25:59 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------9/28/2022 4:25:59 PM
+-------------------START-------------9/28/2022 4:26:01 PM
+Page :/NATSWorld/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------9/28/2022 4:26:01 PM
+-------------------START-------------9/28/2022 4:26:01 PM
+Page :/NATSWorld/add-servicesdonation
+Updated Service Donations(test test-4)&TransactionId - A10AB27B4E8F
+-------------------END-------------9/28/2022 4:26:01 PM
+-------------------START-------------9/28/2022 4:26:01 PM
+Page :/NATSWorld/add-servicesdonation
+Individual Service Donations
+-------------------END-------------9/28/2022 4:26:01 PM
+-------------------START-------------9/28/2022 4:26:01 PM
+Page :/NATSWorld/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------9/28/2022 4:26:01 PM
+-------------------START-------------9/28/2022 4:26:03 PM
+Page :/NATSWorld/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------9/28/2022 4:26:03 PM
+-------------------START-------------9/28/2022 4:26:03 PM
+Page :/NATSWorld/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------9/28/2022 4:26:03 PM
+-------------------START-------------9/28/2022 4:26:03 PM
+Page :/NATSWorld/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------9/28/2022 4:26:03 PM
+-------------------START-------------9/28/2022 4:26:03 PM
+Page :/NATSWorld/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------9/28/2022 4:26:03 PM
+-------------------START-------------9/28/2022 4:26:03 PM
+Page :/NATSWorld/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------9/28/2022 4:26:03 PM
+-------------------START-------------9/28/2022 5:18:33 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Service Donation Process
+-------------------END-------------9/28/2022 5:18:33 PM
+-------------------START-------------9/28/2022 5:18:33 PM
+Page :/NATSWorld/add-servicesdonation
+Inserted the Donation Successfully
+-------------------END-------------9/28/2022 5:18:33 PM
+-------------------START-------------9/28/2022 5:18:33 PM
+Page :/NATSWorld/add-servicesdonation
+Entered Into Payment Process
+-------------------END-------------9/28/2022 5:18:33 PM
+-------------------START-------------9/28/2022 5:18:36 PM
+Page :/NATSWorld/add-servicesdonation
+Payment Responsive Get Approved
+-------------------END-------------9/28/2022 5:18:36 PM
+-------------------START-------------9/28/2022 5:18:36 PM
+Page :/NATSWorld/add-servicesdonation
+Updated Service Donations(Seema TEst-5)&TransactionId - A90A0EDD4A61
+-------------------END-------------9/28/2022 5:18:36 PM
+-------------------START-------------9/28/2022 5:18:36 PM
+Page :/NATSWorld/add-servicesdonation
+Individual Service Donations
+-------------------END-------------9/28/2022 5:18:36 PM
+-------------------START-------------9/28/2022 5:18:36 PM
+Page :/NATSWorld/add-servicesdonation
+Get Service Donations info By Id
+-------------------END-------------9/28/2022 5:18:36 PM
+-------------------START-------------9/28/2022 5:18:37 PM
+Page :/NATSWorld/add-servicesdonation
+User Service Donations Notification Email Sent Succefully
+-------------------END-------------9/28/2022 5:18:37 PM
+-------------------START-------------9/28/2022 5:18:37 PM
+Page :/NATSWorld/add-servicesdonation
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------9/28/2022 5:18:37 PM
+-------------------START-------------9/28/2022 5:18:39 PM
+Page :/NATSWorld/service-acknowledgement
+Entered into service Acknowledgement
+-------------------END-------------9/28/2022 5:18:39 PM
+-------------------START-------------9/28/2022 5:18:39 PM
+Page :/NATSWorld/service-acknowledgement
+Service Donations getting By Id Succefully
+-------------------END-------------9/28/2022 5:18:39 PM
+-------------------START-------------9/28/2022 5:18:39 PM
+Page :/NATSWorld/service-acknowledgement
+Service Contributions getting By Id Succefully
+-------------------END-------------9/28/2022 5:18:39 PM

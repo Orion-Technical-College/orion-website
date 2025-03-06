@@ -1,0 +1,20 @@
+-------------------START-------------7/3/2023 6:54:42 PM
+Page :/NewTool/global/member-registration
+After reCAPTCHA Entered to the Process
+-------------------END-------------7/3/2023 6:54:42 PM
+-------------------START-------------7/3/2023 6:55:15 PM
+Page :/NewTool/global/member-registration
+Member Inserted Successfully
+-------------------END-------------7/3/2023 6:55:15 PM
+-------------------START-------------7/3/2023 6:55:41 PM
+Page :/NewTool/global/member-registration-acknowledgement
+Entered into Acknowledgement Page
+-------------------END-------------7/3/2023 6:55:41 PM
+-------------------START-------------7/3/2023 7:01:01 PM
+Page :/NewTool/global/member-registration
+After reCAPTCHA Entered to the Process
+-------------------END-------------7/3/2023 7:01:01 PM
+-------------------START-------------7/3/2023 7:01:15 PM
+Page :/NewTool/global/member-registration
+Member Inserted Successfully
+-------------------END-------------7/3/2023 7:01:15 PM

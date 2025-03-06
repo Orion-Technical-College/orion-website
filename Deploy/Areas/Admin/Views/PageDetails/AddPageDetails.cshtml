@@ -1,0 +1,563 @@
+﻿@{
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    ViewBag.Pageheading = "Add Page Details";
+    int status = 0;
+
+    CMS.BLL.AppInfo _appinfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objappinfo = _appinfo.GetAppInfoDetails(ref status);
+
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+    List<CMS.Entities.MenuItems> lstMenuItems2 = ViewBag.lstMenuItems2;
+    List<CMS.Entities.MenuItems> lstMenuItems3 = ViewBag.lstMenuItems3;
+    List<CMS.Entities.MenuItems> lstMenuItems4 = ViewBag.lstMenuItems4;
+
+    List<CMS.Entities.MenuItems> lstExistingMenuItems = ViewBag.lstExistingMenuItems;
+    Int64 ChapterId = ViewBag.ChapterId;
+    var cssloc = objappinfo.BaseUrl + "Content/Admin/front-end-style.css";
+}
+
+<script type="text/javascript">
+
+        $(document).ready(function () {
+            //$('#wPageDetails').addClass('active');
+            $('#wWebPages, #wPageDetails').addClass('active');
+            $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+            $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+
+        });
+
+
+        function CheckPageHeadingAvailability(Heading) {
+
+        var returnval = null;
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("CheckPageHeadingAvailability", "PageDetails")', // the URL of the controller action method
+            data: { Heading: Heading }, // optional data
+            datatype: "JSON",
+            async: false,
+            success: function (result) {
+                if (result.ok) {
+                    returnval = result.data;
+                }
+            }
+        });
+        return returnval;
+    }
+
+
+    $(document).ready(function () {
+        $('#wPageDetails').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+    function urlupdate() {
+        var heading = $('#Heading').val();
+        if (heading != null && heading != '') {
+            heading = heading.toLowerCase();
+            heading = heading.replace(/\ /gi, '-');
+            heading = heading.replace(/\ & /gi, '-');
+            heading = heading.replace(/\&/gi, '-');
+            heading = heading.replace(/\'/gi, '-');
+            heading = heading.replace(/\#/gi, '-');
+            $('#PageUrl').val(heading);
+            $('#DisplayName').val(heading);
+
+        }
+        else {
+            $('#PageUrl').val('');
+            $('#DisplayName').val('');
+        }
+    }
+    function PageUrlChange() {
+        var heading = $('#PageUrl').val();
+        if (heading != null && heading != '') {
+            heading = heading.toLowerCase();
+            heading = heading.replace(/\ /gi, '-');
+            heading = heading.replace(/\ & /gi, '-');
+            heading = heading.replace(/\&/gi, '-');
+            heading = heading.replace(/\'/gi, '-');
+            heading = heading.replace(/\#/gi, '-');
+            $('#PageUrl').val(heading);
+        }
+        else {
+            $('#PageUrl').val('');
+        }
+    }
+</script>
+
+
+
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+
+
+@using (Html.BeginForm("AddPageDetails", "PageDetails", FormMethod.Post, new { enctype = "multipart/form-data", @id = "FormMenuItems", @name = "FormMenuItems" }))
+{
+
+
+    <input id="mid" name="mid" value="@ViewBag.mid" type="hidden" />
+    <input id="baseurl" name="baseurl" value="@objappinfo.BaseUrl" type="hidden" />
+    <input id="uploadpath" name="uploadpath" value="@objappinfo.UploadPath" type="hidden" />
+    <div class="card">
+        <div class="card-body">
+
+            <div class="row  g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Heading <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="Heading" id="Heading" placeholder="Heading" onkeyup="urlupdate();">
+                        <span id="spanHeading" class="text-danger"></span>
+
+                    </div>
+                </div>
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <label>Page Url</label>
+                    <div class="row">
+                        <div class="col-xs-10 col-lg-9 col-sm-10" style="padding-right:4px;">
+                            <input type="text" class="form-control" id="PageUrl" name="PageUrl" placeholder="Page Url" onkeyup="PageUrlChange();" />
+                        </div>
+                        <div class="col-xs-2 col-lg-3 col-sm-2 t-p8" style="padding-left:1px;">
+                            .html
+                        </div>
+                    </div>
+
+                </div>
+
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">External Url</label>
+                        <input type="text" class="form-control" name="OtherUrl" placeholder="External Url">
+                    </div>
+                </div>
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">
+                            Target
+
+                            <button type="button" data-bs-toggle="tooltip" title="Specifies where to open the linked document/page!" class="" style="border: 0;background: transparent;padding: 0px;"><i class="bi bi-info-circle"></i></button>
+
+
+                        </label>
+                        <select class="form-control" name="Target">
+                            <option value="">Select Target</option>
+                            <option value="_blank">opens in a new window or tab</option>
+                            <option value="_parent">opens in the with in the tab</option>
+                        </select>
+                    </div>
+
+
+
+                </div>
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">
+                            Upload Document
+                            <button type="button" data-bs-toggle="tooltip" title="Document should accept only 'PDF' file Format." class="" style="border: 0;background: transparent;padding: 0px;"><i class="bi bi-info-circle"></i></button>
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" placeholder="file">
+                        <label style="color: #f00;" id="lblfile"></label>
+
+                    </div>
+
+
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Add Page For?<span class="text-danger">*</span></label>
+                        <select class="single-select" name="AddPage" id="AddPage" onchange="AddPageBind();">
+                            <option value="">--Select--</option>
+                            <option value="Only Page">Only Page</option>
+                            <option value="Existing Menu">Existing Menu</option>
+                            <option value="New Menu Item">New Menu Item</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6" id="ExistingMenuhide">
+                    <div class="input-box">
+                        <label class="form-label">Existing Menu<span class="text-danger">*</span></label>
+                        <select class="single-select" name="ExistingMenuItemId" id="ExistingMenuItemId">
+
+
+                            <option value="">Select Menu</option>
+                            @if (lstExistingMenuItems != null && lstExistingMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstExistingMenuItems)
+                                {
+                                    <option value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                }
+                            }
+
+
+                        </select>
+                    </div>
+                </div>
+
+
+            </div>
+
+        </div>
+    </div>
+    <div class="card" id="MenuItemhide">
+        <div class="card-body">
+            <div class="box-header">
+                <h3 class="box-title dis-in">Create Menu</h3>
+            </div>
+            <div class="row  g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Chapter<span class="text-danger">*</span></label>
+                        <select class="single-select" name="ChapterId" id="ChapterId" onchange="MenuItemBind();">
+
+
+                            <option value="">Select Chapter</option>
+                            @if (lstChapters != null && lstChapters.Count != 0)
+                            {
+                                foreach (var item in lstChapters)
+                                {
+                                    <option @(item.ChapterId == ChapterId ? "selected=selected" : "") value="@item.ChapterId">@item.ChapterName</option>
+                                }
+                            }
+
+
+                        </select>
+                    </div>
+
+                  
+                </div>
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Menu Item Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="DisplayName" id="DisplayName" placeholder="Menu Item Name">
+                    </div>
+                </div>
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Parent Menu Item </label>
+                        <select class="single-select" name="PageParentId" id="PageParentId">
+                            <option value="">---- Root Level ----</option>
+                            @if (lstMenuItems != null && lstMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstMenuItems)
+                                {
+                                    <option value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                    if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                                    {
+                                        foreach (var item2 in lstMenuItems2)
+                                        {
+                                            if (item2.PageParentId == item.MenuItemId)
+                                            {
+                                                <option value="@(item2.MenuItemId)">| @item2.DisplayName</option>
+
+                                                if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                                {
+                                                    foreach (var item3 in lstMenuItems3)
+                                                    {
+                                                        if (item3.PageParentId == item2.MenuItemId)
+                                                        {
+                                                            <option value="@item3.MenuItemId">| | @item3.DisplayName</option>
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+
+                        </select>
+                    </div>
+                </div>
+
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Display Order</label>
+                        <input type="text" class="form-control" maxlength="3" onkeypress="return Common.isNumberKey(event)" id="Position" name="Position" placeholder="Display Order">
+
+                    </div>
+                </div>
+
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="card" id="MenuItem1hide">
+        <div class="card-body">
+
+            <div class="box validation">
+
+                <div class="box-body">
+                    <div class="row  g-3">
+
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsMenuBar" id="IsMenuBar" class="flat-red" value="true" />
+                                Is MenuBar
+                            </label>
+                        </div>
+
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" class="flat-red" value="true" />
+                                Is QuickLinks
+                            </label>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsFooterBar" id="IsFooterBar" class="flat-red" value="true" />
+                                Is Footer Bar
+                            </label>
+                        </div>
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+
+            <div class="box validation">
+                <div class="box-header">
+                    <h3 class="box-title dis-in"> Description</h3>
+                </div>
+                <div class="box-body">
+                    <div class="row  g-3">
+                        <div class="col-lg-12">
+                            <div class="input-box">
+                                @*<label>Description </label>*@
+                                <textarea rows="10" placeholder="Description *" name="Description" id="" cols="80" style="visibility: hidden; display: none;"></textarea><br />
+                                <span class="field-validation-error" id="spanDescription"></span>
+                                <script type="text/javascript">
+                    var editor = CKEDITOR.replace('Description', { contentsCss: '../css/editor.css' });
+                    CKFinder.setupCKEditor(editor, '@(objappinfo.BaseUrl)ckfinder/');
+                                </script>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="box validation">
+                <div class="box-header">
+                    <h3 class="box-title dis-in"> SEO Details</h3>
+                </div>
+                <div class="box-body">
+                    <div class="row  g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Page Title</label>
+                                <textarea type="text" class="form-control" name="PageTitle" placeholder="PageTitle"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Meta Keywords</label>
+                                <textarea type="text" class="form-control" name="MetaKeywords" placeholder="MetaKeywords"></textarea>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Meta Description</label>
+                                <textarea type="text" class="form-control" name="MetaDescription" placeholder="Meta Description"></textarea>
+                            </div>
+                        </div>
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Topline</label>
+                                <textarea type="text" class="form-control" name="Topline" placeholder="Topline"></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+    <div class="row">
+        <div class="col-lg-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success px-3 me-2">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+            <a class="btn btn-primary px-3" href="@Url.Action("Index", "PageDetails", new { mid = ViewBag.mid  })">Cancel</a>
+        </div>
+    </div>
+
+
+
+}
+
+
+
+<script>
+
+  $(document).ready(function () {
+    // Custom validation method for file extensions
+      $("#MenuItemhide").hide();
+      $("#ExistingMenuhide").hide();
+      $("#MenuItem1hide").hide();
+      $.validator.addMethod("validImageExtension", function (value, element) {
+          if (element.files && element.files.length > 0) {
+              var allowedExtensions = ["jpg", "png", "gif", "jpeg", "pdf", "doc", "docx", "xls", "xlsx"];
+              var fileName = element.files[0].name;
+              var extension = fileName.split('.').pop().toLowerCase();
+              return $.inArray(extension, allowedExtensions) !== -1;
+          }
+          return true; // If no file is selected, validation passes
+      }, "Only allowed extensions are: JPG, PNG, GIF, JPEG, PDF, DOC, DOCX, XLS, XLSX");
+
+
+    $("#FormMenuItems").validate({
+        rules: {
+            Heading: "required",
+            AddPage: "required",
+            ChapterId: "required",
+            DisplayName: "required",
+            file: {
+                validImageExtension: true
+            },
+        },
+        messages: {
+            Heading: "Please Enter Heading",
+            AddPage: "Please Select One",
+            ChapterId: "Please Select One Chapter",
+            DisplayName: "Please Enter Item Name",
+            file: {
+                validImageExtension: "Invalid file type. Only JPG, PNG, GIF, JPEG, PDF, DOC, DOCX, XLS, XLSX files are allowed."
+            },
+        },
+        submitHandler: function (form) {
+            var Heading = $("#Heading").val();
+            var PageDetailId = 0;
+
+            $.ajax({
+                type: "POST",
+                  url: "@Url.Action("CheckPageHeadingAvailability", "PageDetails")",
+                data: { Heading: Heading, PageDetailId: PageDetailId },
+                success: function (result) {
+                    if (result.ok) {
+                        if (result.data === true) {
+                            form.submit(); // Proceed with form submission
+                        } else {
+                            $("#spanHeading").text("Heading is Already Available Required");
+                        }
+                    }
+                }
+            });
+        },
+        errorElement: "div",
+        errorPlacement: function (error, element) {
+            error.addClass("invalid-feedback");
+
+            if (element.prop("type") === "checkbox") {
+                error.insertAfter(element.parent("label"));
+            } else {
+                error.insertAfter(element);
+            }
+
+            if (element.closest(".input-box").length) {
+                element.closest(".input-box").after(error);
+            }
+        },
+        highlight: function (element, errorClass, validClass) {
+            var $element = $(element);
+            if ($element.is('input, textarea, select')) {
+                $element.addClass("is-invalid").removeClass("is-valid");
+            }
+        },
+        unhighlight: function (element, errorClass, validClass) {
+            var $element = $(element);
+            if ($element.is('input, textarea, select')) {
+                $element.addClass("is-valid").removeClass("is-invalid");
+            }
+        },
+    });
+});
+    function AddPageBind() {
+        var AddPage = $("#AddPage").val();
+        if (AddPage == 'Only Page') {
+            $("#MenuItemhide").hide();
+            $("#MenuItem1hide").hide();
+            $("#ExistingMenuhide").hide();
+        }
+        else if (AddPage == 'Existing Menu') {
+            $("#MenuItemhide").hide();
+            $("#MenuItem1hide").hide();
+            $("#ExistingMenuhide").show();
+        }
+        else if (AddPage == 'New Menu Item') {
+            $("#MenuItemhide").show();
+            $("#MenuItem1hide").show();
+            $("#ExistingMenuhide").hide();
+        }
+    }
+</script>
+
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+</script>

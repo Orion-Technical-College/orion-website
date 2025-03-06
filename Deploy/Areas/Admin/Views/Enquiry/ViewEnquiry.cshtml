@@ -1,0 +1,98 @@
+﻿@{
+    ViewBag.Title = "Enquiries";
+    ViewBag.Pageheading = "View Enquiry";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    CMS.Entities.Enquiries objEnquiriy = ViewBag.objEnquiriy;
+}
+<script>
+
+    $(document).ready(function () {
+        $('#wEnquiries, #wOthers').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+
+
+
+</script>
+<!-- breadcumb -->
+
+<!--<div class="content-header">-->
+    @*<h1>@(Session["userrole"].ToString() != "Vendor" ? "View Vendor" : "My Profile") (@objVendors.VendorTaxId) </h1>*@
+    <!--<ol class="breadcrumb pull-right gap-3">
+       
+            <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-dashboard"></i>Home</a></li>
+            <li><a href="@Url.Action("Index", "Enquiry", new { mid = ViewBag.Mid})">Enquiries</a></li>
+       
+    </ol>
+</div>-->
+<!--end breadcumb -->
+<div class="content">
+    <!-- Main content -->
+    
+    <div class="clearfix sepH_b"></div>
+    <div class="nav-tabs-custom">
+       
+        <div class="tab-content">
+            <div class="tab-pane active">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="box validation">
+                            <div class="box-header">
+
+                                <h4 class="box-title dis-in">Enquiry Details </h4>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Name : </label>
+                                        @objEnquiriy.Name
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Email : </label>
+                                        @objEnquiriy.Email
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Phone No : </label>
+                                        @objEnquiriy.PhoneNo
+                                    </div>
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Subject : </label>
+                                        @objEnquiriy.Subject
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Description : </label>
+                                        @objEnquiriy.Description
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @*<div class="box validation">
+
+                    <div class="box-body">
+                        
+                    </div>
+                </div>*@
+
+
+                <div class="box">
+                    <!-- /.box-header -->
+                    <div class="box-body text-end">
+                        <a class="btn btn-info" style="margin-left:500px;" href="@Url.Action("Index", "Enquiry", new { mid = ViewBag.Mid})">Cancel</a>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+
+
+            </div>
+            </div>
+    </div>
+</div>
+

@@ -1,0 +1,148 @@
+﻿@{
+    ViewBag.Title = "EditRedirections";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    CMS.Entities.Redirections objRedirections = ViewBag.objRedirections;
+}
+
+<script>
+    $(document).ready(function () {
+        $('#wRedirections').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+
+    });
+
+    function Validate() {
+        if ($.trim($('#FromUrl').val()) == '') { document.getElementsByName('FromUrl')[0].placeholder = 'Required'; $('#FromUrl').focus().addClass("validate"); return false; } else { $('#FromUrl').focus().removeClass("validate"); }
+        if ($.trim($('#ToUrl').val()) == '') { document.getElementsByName('ToUrl')[0].placeholder = 'Required'; $('#ToUrl').focus().addClass("validate"); return false; } else { $('#FromUrl').focus().removeClass("validate"); }
+
+        return true;
+    }
+</script>
+
+
+<input type="hidden" id="hdnimgvalidate" value="0" />
+
+
+<div class="content">
+
+
+
+        @using (Html.BeginForm("AddRedirections", "Redirections", FormMethod.Post, new { style = "margin-bottom:0", @id = "FormRedirections", @name = "FormRedirections" }))
+        {
+
+            <div class="card">
+                <div class="card-body">
+                    <input type="hidden" name="RedirectionId" id="RedirectionId" value="@objRedirections.RedirectionId" />
+                    <div class="row  g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Source Url :  <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="FromUrl" id="FromUrl" value="@objRedirections.FromUrl">
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Target Url :  <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="ToUrl" id="ToUrl" value="@objRedirections.ToUrl">
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Link Target : </label>
+                                <select class="single-select" id="Target" name="Target">
+                                    <option value="">--Select--</option>
+                                    <option @(objRedirections.Target == "_blank" ? "selected =selected" : "") value="_blank">Out of the tab</option>
+                                    <option @(objRedirections.Target == "_parent" ? "selected =selected" : "") value="_parent">With in the tab</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-2 col-3 text-end ms-auto">
+                                <button type="submit" class="btn btn-success px-3 " value="submit">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+                                <a class="btn btn-primary px-3" href="@Url.Action("Index", "Redirections")">Cancel</a>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    
+<script>
+    $(document).ready(function () {
+        $("#BannerUrl").change(function () {
+            validateBannerUrl();
+        });
+
+        $("#FormRedirections").validate({
+            rules: {
+                FromUrl: "required",
+                ToUrl: "required",
+                Target: "required",
+
+            },
+            messages: {
+                FromUrl: "Please Provide FromUrl",
+                ToUrl: "Please Provide ToUrl",
+                Target: "Please Select",
+                BannerTitle: "Please Enter The Banner Title",
+                BannerUrl: {
+                    required: "Please select an image file",
+                    validImageExtension: "Invalid file type. Only jpg, png, gif, jpeg files are allowed."
+                }
+            },
+            submitHandler: function (form) {
+                var response = grecaptcha.getResponse();
+                if ('Yes' == 'Yes') {
+                    if (response.length === 0) {
+                        alert('Please confirm that you are not a robot.');
+                    }
+                    else {
+                        form.submit();
+                    }
+                }
+                else {
+                    form.submit();
+                }
+            },
+
+            errorElement: "div",
+            errorPlacement: function (error, element) {
+                // Add the `invalid-feedback` class to the error element
+                error.addClass("invalid-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest(".input-box").length) {
+                    element.closest(".input-box").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                // Highlight the input, textarea, or select element with the `is-invalid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-invalid").removeClass("is-valid");
+                }
+
+
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                // Unhighlight the input, textarea, or select element by adding the `is-valid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-valid").removeClass("is-invalid");
+                }
+
+            },
+
+
+        });
+    });
+</script>

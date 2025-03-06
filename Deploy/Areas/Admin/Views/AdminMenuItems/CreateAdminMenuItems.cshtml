@@ -1,0 +1,313 @@
+﻿@{
+    ViewBag.Pageheading = "Add Admin Menu";
+    
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    List<CMS.Entities.AdminMenuItems> lstAdminMenuItems = ViewBag.lstAdminMenuItems;
+    List<CMS.Entities.AdminMenuItems> lstAdminMenuItems2 = ViewBag.lstAdminMenuItems2;
+    List<CMS.Entities.AdminMenuItems> lstAdminMenuItems3 = ViewBag.lstAdminMenuItems3;
+    List<CMS.Entities.AdminMenuItems> lstAdminMenuItems4 = ViewBag.lstAdminMenuItems4;
+    Int64 ChapterId = ViewBag.ChapterId;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        MenuItemBind();
+        //  $('#wAdminMenuItems').addClass('active');
+        $('#wOthers, #wAdminMenu').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+
+    function ValidateAdminMenuItems() {
+        if ($('#ChapterId').val() == '') { $('#ChapterId').focus().addClass("validate"); return false; } else { $('#ChapterId').removeClass("validate"); }
+        if ($('#InstituteId').val() == '') { $('#InstituteId').focus().addClass("validate"); return false; } else { $('#InstituteId').removeClass("validate"); }
+        if ($('#DisplayName').val() == '') { $('#DisplayName').focus().addClass("validate"); return false; } else { $('#DisplayName').removeClass("validate"); }
+
+        return true;
+    }
+
+    function MenuItemBind() {
+        var ChapterId = $('#ChapterId').val();
+        $.ajax({
+            url: '@Url.Action("AdminMenuItemsByInstitute", "AdminMenuItems")',
+            type: 'POST',
+            data: { ChapterId: ChapterId }, // optional data
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var sb = "<option value=\"0\">---- Root Level ----</option>";
+                    AdminMenuItems = result.data;
+                    AdminMenuItems2 = result.data2;
+                    AdminMenuItems3 = result.data3;
+                    AdminMenuItems4 = result.data4;
+                    if (AdminMenuItems != null) {
+                        for (var i = 0; i < AdminMenuItems.length; i++) {
+                            sb = sb + "<option  value=\"" + AdminMenuItems[i].MenuItemId + "\">" + AdminMenuItems[i].DisplayName + "</option>";
+                            if (AdminMenuItems2 != null) {
+                                for (var j = 0; j < AdminMenuItems2.length; j++) {
+                                    if (AdminMenuItems[i].MenuItemId == AdminMenuItems2[j].PageParentId) {
+                                        sb = sb + "<option  value=\"" + AdminMenuItems2[j].MenuItemId + "\">| " + AdminMenuItems2[j].DisplayName + "</option>";
+                                        if (AdminMenuItems3 != null) {
+                                            for (var k = 0; k < AdminMenuItems3.length; k++) {
+                                                if (AdminMenuItems2[j].MenuItemId == AdminMenuItems3[k].PageParentId) {
+                                                    sb = sb + "<option  value=\"" + AdminMenuItems3[k].MenuItemId + "\">| | " + AdminMenuItems3[k].DisplayName + "</option>";
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    $('#PageParentId').html(sb);
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $('#wAdminMenuItems').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+</script>
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+@using (Html.BeginForm("CreateAdminMenuItems", "AdminMenuItems", FormMethod.Post, new { enctype = "multipart/form-data", @id = "FormMenuItems", @name = "FormMenuItems" }))
+{
+    <input id="ChapterId" name="ChapterId" type="hidden" value="1" />
+    <input id="mid" name="mid" value="@ViewBag.mid" type="hidden" />
+
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="row  g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Menu Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="DisplayName" id="DisplayName" placeholder="Menu Item Name" onkeypress="return Common.isChar(event)">
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Parent Menu Name </label>
+
+                        <select id="PageParentId" name="PageParentId" class="form-control">
+                            <option value="0">---- Root Level ----</option>
+                            @if (lstAdminMenuItems != null && lstAdminMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstAdminMenuItems)
+                                {
+                                    <option value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                    if (lstAdminMenuItems2 != null && lstAdminMenuItems2.Count != 0)
+                                    {
+                                        foreach (var item2 in lstAdminMenuItems2)
+                                        {
+                                            if (item2.PageParentId == item.MenuItemId)
+                                            {
+                                                <option value="@(item2.MenuItemId)">| @item2.DisplayName</option>
+
+                                                if (lstAdminMenuItems3 != null && lstAdminMenuItems3.Count != 0)
+                                                {
+                                                    foreach (var item3 in lstAdminMenuItems3)
+                                                    {
+                                                        if (item3.PageParentId == item2.MenuItemId)
+                                                        {
+                                                            <option value="@item3.MenuItemId">| | @item3.DisplayName</option>
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Display Order</label>
+                        <input type="text" class="form-control" maxlength="3" onkeypress="return Common.isNumberKey(event)" id="Position" name="Position" placeholder="Display Order">
+
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Page Url</label>
+                        <input type="text" class="form-control" name="PageUrl" id="PageUrl" placeholder="Page Url">
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Other Url</label>
+                        <input type="text" class="form-control" name="OtherUrl" id="OtherUrl" placeholder="Other Url">
+                    </div>
+                </div>
+
+
+
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="box validation">
+
+                <div class="box-body">
+                    <div class="row  g-3">
+
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsMenuBar" id="IsMenuBar" class="flat-red" value="true" />
+                                Is MenuBar
+                            </label>
+                        </div>
+
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" class="flat-red" value="true" />
+                                Is Add Action?
+                            </label>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsEdit" id="IsEdit" class="flat-red" value="true" />
+                                Is Edit Action?
+                            </label>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsView" id="IsView" class="flat-red" value="true" />
+                                Is View Action?
+                            </label>
+                        </div>
+
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsDelete" id="IsDelete" class="flat-red" value="true" />
+                                Is Delete Action?
+                            </label>
+                        </div>
+
+                        <div class="col-lg-2 col-md-6">
+
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsExport" id="IsExport" class="flat-red" value="true" />
+                                Is Export Action?
+                            </label>
+                        </div>
+
+
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success px-3 me-2">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+            <a class="btn btn-danger px-3" href="@Url.Action("Index", "AdminMenuItems", new { mid = ViewBag.mid})">Cancel</a>
+        </div>
+    </div>
+
+
+}
+
+<script>
+
+    $(document).ready(function () {
+        $("#FormMenuItems").validate({
+            rules: {
+                DisplayName: "required",
+
+            },
+            messages: {
+                DisplayName: "please enter your menu display name",
+
+            },
+
+            submitHandler: function (form) {
+                var response = grecaptcha.getResponse();
+                if ('Yes' == 'Yes') {
+                    if (response.length === 0) {
+                        alert('Please confirm that you are not a robot.');
+                    }
+                    else {
+                        form.submit();
+                    }
+                }
+                else {
+                    form.submit();
+                }
+            },
+
+            errorElement: "div",
+            errorPlacement: function (error, element) {
+                // Add the `invalid-feedback` class to the error element
+                error.addClass("invalid-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest(".input-box").length) {
+                    element.closest(".input-box").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                // Highlight the input, textarea, or select element with the `is-invalid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-invalid").removeClass("is-valid");
+                }
+
+
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                // Unhighlight the input, textarea, or select element by adding the `is-valid` class
+                var $element = $(element);
+                if ($element.is('input, textarea, select')) {
+                    $element.addClass("is-valid").removeClass("is-invalid");
+                }
+
+            },
+
+
+        });
+    });
+
+
+</script>

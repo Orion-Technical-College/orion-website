@@ -1,0 +1,49 @@
+﻿
+@{
+    ViewBag.Pageheading = "403 - Unauthorized";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+}
+<!---  Breadcrumb Section Start ------>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 50px;
+        background-color: #f9f9f9;
+    }
+
+    h1 {
+        font-size: 50px;
+        color: #ff0000;
+    }
+
+    p {
+        font-size: 20px;
+        color: #333;
+    }
+
+    a {
+        color: #007BFF;
+        text-decoration: none;
+        font-size: 18px;
+    }
+
+        a:hover {
+            text-decoration: underline;
+        }
+</style>
+<div class="card">
+    <div class="clearfix py-3 mb-3">
+        <h1>403 - Unauthorized</h1>
+        <p>You do not have permission to access this page.</p>
+        <p><button onclick="goBack()" class="btn btn-danger px-3" style="font-size:16px!important;">Back to previous page</button></p>
+
+        <script>
+function goBack() {
+    window.history.back();
+}
+        </script>
+        <p>If you think this is a mistake, please <a href="mailto:">contact support</a>.</p>
+    </div>
+</div>
+

@@ -1,0 +1,170 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+    ViewBag.Pageheading = "Mail Templates";
+
+
+    var userRole = "";
+
+    bool IsEdit = Convert.ToBoolean(Session["IsEdit"]);
+    bool IsView = Convert.ToBoolean(Session["IsView"]);
+    bool IsDelete = Convert.ToBoolean(Session["IsDelete"]);
+    bool IsExport = Convert.ToBoolean(Session["IsExport"]);
+    bool IsAdd = Convert.ToBoolean(Session["IsAdd"]);
+    Int64 Mid = ViewBag.mid;
+
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#wOthers,#wMailTemplates').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        PagerClickBind();
+    });
+
+
+    function sortresult(sortcolumn) {
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        MailTemplateBind(1);
+    }
+
+    function MailTemplateView(MailTemplateId) {
+        $.ajax({
+            url: '@Url.Action("EditMailTemplate", "MailTemplates")',
+            type: 'POST',
+            data: { MailTemplateId: MailTemplateId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objInnerPageCategory = result.data;
+                    $('#lblCategoryName').html(objInnerPageCategory.CategoryName);
+
+                    $("#InnerPageCategoryView").dialog("open");
+
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+
+    }
+    function MailTemplateBind(Pageno) {
+
+        var pageno = Common.Pageno(Pageno);
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var items = $('#txtitems').val();
+        var Search = $('#txtsearch').val();
+
+        $.ajax({
+            url: '@Url.Action("MailTemplatesList", "MailTemplates")',
+            type: 'GET',
+            cache: false,
+            data: { Search: Search, PageNo: pageno, SortColumn: sortcolumn, SortOrder: sortorder, Items: items, IsEdit: '@IsEdit', IsView: '@IsView', IsDelete: '@IsDelete', IsExport: '@IsExport', IsAdd: '@IsAdd', Mid: '@Mid'},
+            success: function (result) {
+                $('#divDetails').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+
+    function Delete(MailTemplateId) {
+        var val2 = confirm("Do you want to delete this record?");
+        if (val2) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("DeleteMailTemplate", "MailTemplates")',  // the URL of the controller action method
+                data: { MailTemplateId: MailTemplateId }, // optional data
+                success: function (result) {
+                    showLobiboxNotification(result.messageType, result.message);
+                    MailTemplateBind($('#hdnPageNo').val());
+                },
+                error: function (req, status, error) {
+                    showLobiboxNotification(result.messageType, result.message);
+                }
+            });
+        }
+    }
+
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            MailTemplateBind($(this).text());
+        });
+    }
+
+    function SearchClear() {
+        $('#txtsearch').val('');
+        MailTemplateBind(1);
+    }
+    function ClearSearch() {
+        $('#txtsearch').val('');
+        $('#InnerPageCategoryId').val('');
+        $('#hdnPageNo').val(1);
+        MailTemplateBind(1);
+    }
+</script>
+<style>
+    .aws-h-a {
+        text-decoration: none;
+        position: relative;
+    }
+
+        .aws-h-a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            border-bottom: 2px solid #0756ca;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .aws-h-a:hover::after {
+            transform: scaleX(1);
+        }
+</style>
+
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="UpdatedTime" />
+<input id="hdnsortorder" type="hidden" value="DESC" />
+
+    <!-- Main content -->
+<div class="card">
+    <div class="card-header py-3 mb-3">
+        <div class="row  gx-2">
+            <div class="col-lg-3 col-md-6 col-8">
+                <div class="input-box">
+                    <label class="form-label">Search by  Heading <span class="text-danger">*</span></label>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" name="txtsearch" id="txtsearch" placeholder="Heading">
+                       
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="btn-align">
+                    <button type="button" class="btn btn-primary px-3" onclick="MailTemplateBind(1);">Search</button>
+                    <button type="button" class="btn btn-danger px-3" onclick="ClearSearch();">Clear</button>
+                </div>
+            </div>
+            @if (IsAdd == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+            {
+                <div class="col-lg-2 col-4 text-end ms-auto">
+                    <div class="btn-align">
+                        <a class="btn btn-primary" href="@Url.Action("AddMailTemplate", "MailTemplates", new { mid = Mid })"> Add Template</a>
+                        
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+        <div id="divDetails" class="clearfix">
+            @{Html.RenderAction("MailTemplatesList", "MailTemplates", new { IsEdit = IsEdit, IsView = IsView, IsDelete = IsDelete, IsExport = IsExport, IsAdd = IsAdd, Mid = Mid });}
+        </div>
+</div>

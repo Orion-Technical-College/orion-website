@@ -1,0 +1,568 @@
+﻿@{
+    int status = 0;
+    ViewBag.Pageheading = "Edit Page Details";
+    CMS.BLL.AppInfo _appinfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objappinfo = _appinfo.GetAppInfoDetails(ref status);
+
+    ViewBag.Title = "Edit Page Details - " + objappinfo.SiteName;
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    CMS.Entities.PageDetails objPageDetails = ViewBag.objPageDetails;
+    CMS.Entities.MenuItems objMenuItems = ViewBag.objMenuItems;
+    CMS.Entities.MenuPages objMenuPages = ViewBag.objMenuPages;
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+    List<CMS.Entities.MenuItems> lstMenuItems2 = ViewBag.lstMenuItems2;
+    List<CMS.Entities.MenuItems> lstMenuItems3 = ViewBag.lstMenuItems3;
+    List<CMS.Entities.MenuItems> lstMenuItems4 = ViewBag.lstMenuItems4;
+    List<CMS.Entities.MenuItems> lstExistingMenuItems = ViewBag.lstExistingMenuItems;
+
+    var cssloc = objappinfo.BaseUrl + "Content/Admin/front-end-style.css";
+}
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#wWebPages, #wPageDetails').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+
+    });
+
+
+    function Validate() {
+        var return_val = true;
+        if ($('#Heading').val() == '') { $('#Heading').addClass("validate"); document.getElementsByName('Heading')[0].placeholder = 'Heading Required'; return_val = false; } else { $('#Heading').removeClass("validate"); }
+        if ($('#PageUrl').val() == '') { $('#PageUrl').addClass("validate"); document.getElementsByName('PageUrl')[0].placeholder = 'PageUrl Required'; return_val = false; } else { $('#PageUrl').removeClass("validate"); }
+        if ($('#file').val() != "") {
+            if (!Common.isPDFDocument($('#file').val())) { $('#lblfile').html('Sorry document is invalid. Only allowed extensions are:<b>pdf</b>.'); $('#file'); returnval = false; } else { $('#lblfile').html(''); }
+        }
+        return return_val;
+    }
+
+    $(document).ready(function () {
+        $('#wPageDetails').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+    function urlupdate() {
+        var heading = $('#Heading').val();
+        if (heading != null && heading != '') {
+            heading = heading.toLowerCase();
+            heading = heading.replace(/\ /gi, '-');
+            heading = heading.replace(/\ & /gi, '-');
+            heading = heading.replace(/\&/gi, '-');
+            heading = heading.replace(/\'/gi, '-');
+            heading = heading.replace(/\#/gi, '-');
+            $('#PageUrl').val(heading);
+            $('#DisplayName').val('');
+        }
+        else {
+            $('#PageUrl').val('');
+            $('#DisplayName').val('');
+        }
+    }
+    function PageUrlChange() {
+        var heading = $('#PageUrl').val();
+        if (heading != null && heading != '') {
+            heading = heading.toLowerCase();
+            heading = heading.replace(/\ /gi, '-');
+            heading = heading.replace(/\ & /gi, '-');
+            heading = heading.replace(/\&/gi, '-');
+            heading = heading.replace(/\'/gi, '-');
+            heading = heading.replace(/\#/gi, '-');
+            $('#PageUrl').val(heading);
+        }
+        else {
+            $('#PageUrl').val('');
+        }
+    }
+</script>
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+
+<!-- breadcumb -->
+@using (Html.BeginForm("AddPageDetails", "PageDetails", FormMethod.Post, new { enctype = "multipart/form-data", id = "PageDetailsForm" }))
+{
+    <div class="card">
+        <div class="card-body">
+            <input class="form-control" type="hidden" id="PageDetailId" name="PageDetailId" value="@objPageDetails.PageDetailId" />
+            @Html.Hidden("MenuItemId", (Int64)@objMenuItems.MenuItemId)
+
+
+
+            <div class="row  g-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Heading <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="Heading" id="Heading" placeholder="Heading" onkeyup="urlupdate();" value="@objPageDetails.Heading">
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label>Page Url </label>
+                    <div class="row">
+                        <div class="col-xs-10 col-lg-9 col-sm-10" style="padding-right:5px;">
+                            <input type="text" class="form-control" id="PageUrl" name="PageUrl" value="@objPageDetails.PageUrl" onkeyup="PageUrlChange();" />
+                        </div>
+                        <div class="col-xs-2 col-lg-3 col-sm-2 t-p8" style="padding-left:0;">
+                            .html
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">External Url</label>
+                        <input type="text" class="form-control" name="OtherUrl" placeholder="External Url" value="@objPageDetails.OtherUrl" onkeypress="return Common.isNumberKey(event);" @*maxlength="10"*@>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">
+                            Target
+                            <button type="button" data-bs-toggle="tooltip" title="Specifies where to open the linked document/page!" class="" style="border: 0;background: transparent;padding: 0px;"><i class="bi bi-info-circle"></i></button>
+
+                        </label>
+                        <select class="form-control" name="Target">
+                            <option value="">Select Target</option>
+
+                            <option @(objPageDetails.Target == "_blank" ? "selected=selected" : "") value="_blank">opens in a new window or tab</option>
+                            <option @(objPageDetails.Target == "_parent" ? "selected=selected" : "") value="_parent">opens in the with in the tab</option>
+
+
+                        </select>
+
+
+                        @*<div class="alert bg-light my-2 p-2" style="font-size:12px">
+                                <span style="color:#ff0000; text-decoration:underline; font-weight:500">Note :</span> <b style="color: #f00; font-size: 15px"></b>Specifies where to open the linked document/page<br>
+                            </div>*@
+
+
+
+
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label>
+                            Upload Document
+                            <button type="button" data-bs-toggle="tooltip" title="Document should accept only 'PDF' file Format." class="" style="border: 0;background: transparent;padding: 0px;"><i class="bi bi-info-circle"></i></button> @if (objPageDetails.DocumentUrl != null && objPageDetails.DocumentUrl != "")
+                            {<a href="@objappinfo.BaseUrl/Content/PageDocuments/@objPageDetails.DocumentUrl" target="_blank" class="red-t dis-inb" style="text-decoration:underline; padding-left:8px;">(View Document)</a>}
+
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" placeholder="file">
+                        <label style="color: #f00;" id="lblfile"></label>
+
+                    </div>
+
+                    @*<div class="alert bg-light my-2 p-2" style="font-size:12px">
+                            <span style="color:#ff0000; text-decoration:underline; font-weight:500">Note :</span> <b style="color: #f00; font-size: 15px"></b>Document should accept only 'PDF' file Format.<br>
+                        </div>*@
+
+
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Add Page For?<span class="text-danger">*</span></label>
+                        <select class="single-select" name="AddPage" id="AddPage" onchange="AddPageBind();">
+                            <option value="">--Select--</option>
+                            <option @(objPageDetails.AddPage == "Only Page" ? "selected=selected" : "") value="Only Page">Only Page</option>
+                            <option @(objPageDetails.AddPage == "Existing Menu" ? "selected=selected" : "") value="Existing Menu">Existing Menu</option>
+                            <option @(objPageDetails.AddPage == "New Menu Item" ? "selected=selected" : "") value="New Menu Item">New Menu Item</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6" id="ExistingMenuhide">
+                    <div class="input-box">
+                        <label class="form-label">Existing Menu<span class="text-danger">*</span></label>
+                        <select class="single-select" name="ExistingMenuItemId" id="ExistingMenuItemId">
+
+
+                            <option value="">Select Menu</option>
+                            @if (lstExistingMenuItems != null && lstExistingMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstExistingMenuItems)
+                                {
+                                    <option @(objMenuPages.MenuItemId == item.MenuItemId ? "selected=selected" : "") value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                }
+                            }
+
+
+                        </select>
+                    </div>
+                </div>
+
+
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card" id="MenuItemhide">
+        <div class="card-body">
+            <div class="box-header">
+                <h3 class="box-title dis-in">Create Menu</h3>
+            </div>
+            <div class="row  g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Chapter<span class="text-danger">*</span></label>
+                        <select class="single-select" name="ChapterId" id="ChapterId" onchange="MenuItemBind();">
+
+
+                            <option value="">Select Chapter</option>
+                            @if (lstChapters != null && lstChapters.Count != 0)
+                            {
+                                foreach (var item in lstChapters)
+                                {
+                                    <option @(item.ChapterId == objMenuItems.ChapterId ? "selected=selected" : "") value="@item.ChapterId">@item.ChapterName</option>
+                                }
+                            }
+
+
+                        </select>
+                    </div>
+
+
+                </div>
+
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Menu Item Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="DisplayName" id="DisplayName" placeholder="Menu Item Name" value="@objMenuItems.DisplayName">
+                    </div>
+                </div>
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Parent Menu Item</label>
+                        <select class="single-select" name="PageParentId" id="PageParentId">
+                            <option value="0">---- Root Level ----</option>
+                            @if (lstMenuItems != null && lstMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstMenuItems)
+                                {
+                                    <option @(item.MenuItemId == objMenuItems.PageParentId ? "selected=selected" : "") value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                    if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                                    {
+                                        foreach (var item2 in lstMenuItems2)
+                                        {
+                                            if (item2.PageParentId == item.MenuItemId)
+                                            {
+                                                if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                                {
+                                                    foreach (var item3 in lstMenuItems3)
+                                                    {
+                                                        if (item3.PageParentId == item2.MenuItemId)
+                                                        {
+                                                            <option @(item3.MenuItemId == objMenuItems.PageParentId ? "selected=selected" : "") value="@item3.MenuItemId">| | @item3.DisplayName</option>
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Display Order</label>
+                        <input type="text" class="form-control" maxlength="3" onkeypress="return Common.isNumberKey(event)" id="Position" name="Position" placeholder="Display Order" value="@objMenuItems.Position">
+
+                    </div>
+                </div>
+
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="card" id="MenuItem1hide">
+        <div class="card-body">
+
+            <div class="box validation">
+
+                <div class="box-body">
+                    <div class="row  g-3">
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsMenuBar" id="IsMenuBar" @(objMenuItems.IsMenuBar ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is MenuBar
+                            </label>
+                        </div>
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" @(objMenuItems.IsQuickLinks ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is QuickLinks
+                            </label>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsFooterBar" id="IsFooterBar" @(objMenuItems.IsFooterBar ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is Footer Bar
+                            </label>
+                        </div>
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+
+            <div class="box validation">
+                <div class="box-header">
+                    <h3 class="box-title dis-in"> Description</h3>
+                </div>
+                <div class="box-body">
+                    <div class="row  g-3">
+                        <div class="col-lg-12">
+                            <div class="input-box">
+                                <textarea rows="10" placeholder="Description *" name="Description" id="" cols="80" style="visibility: hidden; display: none;">@objPageDetails.Description</textarea><br />
+                                <span class="field-validation-error" id="spanDescription"></span>
+                                <script type="text/javascript">
+                                var editor = CKEDITOR.replace('Description', { contentsCss: '../css/editor.css' });
+                                CKFinder.setupCKEditor(editor, '@(objappinfo.BaseUrl)ckfinder/');
+                                </script>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="card">
+        <div class="card-body">
+            <div class="box validation">
+                <div class="box-header">
+                    <h3 class="box-title dis-in"> Seo Details</h3>
+                </div>
+                <div class="box-body">
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">PageTitle </label>
+
+                                <textarea type="text" class="form-control" name="PageTitle" placeholder="PageTitle">@objPageDetails.PageTitle</textarea>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Meta Keywords </label>
+                                <textarea type="text" class="form-control" name="MetaKeywords" placeholder="Meta Keywords">@objPageDetails.MetaKeywords</textarea>
+
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Meta Description</label>
+                                <textarea type="text" class="form-control" name="MetaDescription" placeholder="Meta Description">@objPageDetails.MetaDescription</textarea>
+
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-box">
+                                <label class="form-label">Topline</label>
+
+                                <textarea type="text" class="form-control" name="Topline" placeholder="TopLine">@objPageDetails.TopLine</textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <div class="row">
+        <div class="col-lg-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success px-3 me-2">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+            <a class="btn btn-primary px-3" href="@Url.Action("Index", "PageDetails", new { mid = ViewBag.mid  })">Cancel</a>
+        </div>
+    </div>
+
+
+
+
+
+
+
+}
+<script>
+    $(document).ready(function () {
+     @if (objPageDetails.AddPage == "Only Page")
+    {
+        <text>
+            $("#MenuItemhide").hide();
+            $("#ExistingMenuhide").hide();
+            $("#MenuItem1hide").hide();
+        </text>
+    }
+    else if (objPageDetails.AddPage == "Existing Menu")
+    {
+        <text>
+            $("#MenuItemhide").hide();
+            $("#ExistingMenuhide").show();
+            $("#MenuItem1hide").hide();
+        </text>
+    }
+    else if (objPageDetails.AddPage == "New Menu Item")
+    {
+        <text>
+            $("#MenuItemhide").show();
+            $("#ExistingMenuhide").hide();
+    $("#MenuItem1hide").show();
+        </text>
+    }
+    AddPageBind();
+
+        $("#FormMenuItems").validate({
+             rules: {
+                 Heading: "required",
+                AddPage: "required",
+                DisplayName: "required",
+
+            },
+            messages: {
+                 Heading: "Please Enter Heading is required",
+
+            },
+             submitHandler: function (form) {
+
+                 var Heading = $("#Heading").val();
+                 var PageDetailId = @objPageDetails.PageDetailId;
+
+                $.ajax({
+                     type: "POST",
+                    url: "@Url.Action("CheckPageHeadingAvailability", "PageDetails")",
+                    data: { Heading: Heading, PageDetailId: PageDetailId },
+                    success: function (result) {
+                         if (result.ok) {
+                             if (result.data == true) {
+                                 form.submit(); // Proceed with form submission
+                             } else {
+                                $("#spanHeading").text("Heading is Already Available Required");
+                             }
+                         }
+                     }
+                 });
+             },
+
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                 // Add the `help-block` class to the error element
+                 error.addClass("help-block");
+
+                 if (element.prop("type") === "checkbox") {
+                     error.insertAfter(element.parent("label"));
+                 } else {
+                     error.insertAfter(element);
+                 }
+
+                 // Move the error element after the fieldset element
+                 if (element.closest("fieldset").length) {
+                     element.closest("fieldset").after(error);
+                 }
+             },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-error").removeClass("has-success");
+             },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-success").removeClass("has-error");
+             },
+
+        });
+
+
+    });
+
+    function AddPageBind() {
+        var AddPage = $("#AddPage").val();
+        if (AddPage == 'Only Page') {
+            $("#MenuItemhide").hide();
+            $("#MenuItem1hide").hide();
+            $("#ExistingMenuhide").hide();
+        }
+        else if (AddPage == 'Existing Menu') {
+            $("#MenuItemhide").hide();
+            $("#MenuItem1hide").hide();
+            $("#ExistingMenuhide").show();
+        }
+        else if (AddPage == 'New Menu Item') {
+            $("#MenuItemhide").show();
+            $("#MenuItem1hide").show();
+            $("#ExistingMenuhide").hide();
+        }
+    }
+</script>
+
+
+<script>
+    $(document).ready(function () {
+
+        //Date Picker
+
+        $(function () {
+            $("#ExpiryDate,#PostDate").datepicker({
+
+                changeMonth: true,
+                changeYear: true,
+                showButtonPanel: true,
+                dateFormat: 'dd/mm/yy'
+            });
+        });
+
+
+
+    });
+</script>
+
+
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+</script>

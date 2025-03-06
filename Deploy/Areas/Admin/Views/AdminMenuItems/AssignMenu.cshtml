@@ -1,0 +1,167 @@
+﻿@{
+    ViewBag.Title = "AssignMenu";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Roles> lstRoles = ViewBag.lstRoles;
+}
+
+<style type="text/css">
+    .SumoSelect > .CaptionCont {
+        min-height: 40px;
+    }
+
+    .SumoSelect {
+        line-height: 30px;
+    }
+
+        .SumoSelect.open .search-txt {
+            min-height: 40px;
+            font-size: 16px;
+        }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#wOthers, #wAssignMenu').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+    function AssignMenuBind() {
+        var RoleId = $('#RoleId').val();
+        $('#Loadingdiv').show();
+        $('#divAssignMenuList').hide();
+        $.ajax({
+            url: '@Url.Action("GetAssignMenuList", "AdminMenuItems")',
+            type: 'GET',
+            cache: false,
+            data: { RoleId: RoleId, mid: '@ViewBag.mid' },
+            success: function (result) {
+                $('#divAssignMenuList').html(result);
+                $('#Loadingdiv').hide();
+                $('#divAssignMenuList').show();
+                $('.multiple-select').select2({
+                    theme: 'bootstrap4',
+                    width: $(this).data('width') ? $(this).data('width') : $(this).hasClass('w-100') ? '100%' : 'style',
+                    placeholder: $(this).data('placeholder'),
+                    allowClear: Boolean($(this).data('allow-clear')),
+                });
+
+            }
+        });
+    }
+
+
+    function PostRoleMenus() {
+        var EmployeeCompanyIds = $('#EmployeeCompanyIds').val();
+        var EmployeeCompanys = EmployeeCompanyIds.split(',');
+
+        var Menus = $('#Menus').val();
+        var Menus = Menus.split(',');
+        var message = '';
+        var i = 0;
+        if (EmployeeCompanys != null && EmployeeCompanys != '') {
+            for (var l = 0; l < EmployeeCompanys.length; l++) {
+                if (Menus != null && Menus != '') {
+                    for (var k = 0; k < Menus.length; k++) {
+                        $('#AssignedMenus').val('');
+                        $('#AssignedMenus').val($('#' + Menus[k] + '-AssignedMenus').val());
+
+                        var MenuIds = $('#AssignedMenus').val();
+
+                        var RoleId = $('#RoleId').val();
+                        if (MenuIds != '') {
+                            $.ajax({
+                                url: '@Url.Action("InsertRoleMenu", "AdminMenuItems")',
+                                type: 'POST',
+                                cache: false,
+                                data: { MenuIds: MenuIds, RoleId: RoleId, UserId: EmployeeCompanys[l] },
+                                success: function (result) {
+                                    message = result.data;
+                                }
+                            });
+                            i = 1;
+                        }
+
+                    }
+                }
+
+                  var values = $('#items').val();
+                        if (values != '') {
+                             $.ajax({
+                                url: '@Url.Action("InsertRoleMenu", "AdminMenuItems")',
+                                type: 'POST',
+                                cache: false,
+                                 data: { MenuIds: values, RoleId: RoleId, UserId: EmployeeCompanys[l] },
+                                success: function (result) {
+                                    message = result.data;
+                                }
+                            });
+                        }
+            }
+            if (i == 1) {
+                alert('Your Data Saved Successfully!');
+                AssignMenuBind();
+            }
+            else {
+                alert('Select any one Menu / Report');
+            }
+
+        }
+    }
+
+
+    function getCheckboxValues() {
+        // Select all checkboxes with the name "fruit"
+        var checkboxes = document.querySelectorAll('input[name="MenusItems"]:checked');
+
+        // Map the checked checkboxes to their values
+        var values = Array.from(checkboxes).map(function (checkbox) {
+            return checkbox.value;
+        });
+
+        // Join the values into a comma-separated string
+        var commaSeparatedValues = values.join(',');
+        $('#items').val(commaSeparatedValues);
+
+    }
+
+</script>
+<input type="hidden" value="" id="AssignedMenus" />
+
+
+
+
+<div class="content">
+    <div class="card">
+        <!-- /.box-header -->
+        <div class="card-body">
+            <div class="clearfix box-body">
+                <div class="clearfix row">
+                    <div class="col-xs-12 col-lg-12 col-sm-12">
+                        <div class="clearfix" style="width: 300px; text-align: center; margin-left: auto; margin-right: auto;">
+                            <label style="font-size: 25px;">Choose Role</label>
+
+                            <select class="single-select" id="RoleId" name="RoleId" onchange="AssignMenuBind();" style="font-size: 17px !important; height: 60px; text-align: center; background-color: #ccc; ">
+                                <option value="">--  Select Role  --</option>
+                                @if (lstRoles != null && lstRoles.Count != 0)
+                                {
+                                    foreach (var item in lstRoles)
+                                    {
+                                        <option value="@item.RoleId">@item.RoleName</option>
+                                    }
+                                }
+                            </select>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+    
+    <div id="divAssignMenuList" class="clearfix">
+    </div>
+

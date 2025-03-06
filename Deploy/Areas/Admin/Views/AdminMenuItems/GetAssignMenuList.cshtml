@@ -1,0 +1,119 @@
+﻿@{
+    Layout = null;
+
+
+    List<CMS.Entities.AdminMenuItems> lstSubMenuMaster = ViewBag.lstMenuMaster;
+    List<CMS.Entities.AdminMenuItems> lstMainMenuMaster = ViewBag.lstMainMenuMaster;
+    List<CMS.Entities.Role_Menu> lstrole_Menus = ViewBag.lstrole_Menus;
+    List<CMS.Entities.Users> lstEmployeeCompanyInformation = ViewBag.lstEmployeeCompanyInformation;
+}
+
+<input type="hidden" id="EmployeeCompanyIds" value="@string.Join(",", lstEmployeeCompanyInformation.Select(x => x.UserId))" />
+<input type="hidden" id="Menus" value="@string.Join(",", lstMainMenuMaster.Select(x => x.MenuItemId))" />
+
+<input type="hidden" id="items" name="items" value="" />
+<div class="card">
+    <div class="card-body">
+
+        <div class="row  g-3">
+            <div class="  border p20 white-bg">
+                <section class=" ">
+                    <div class=" ">
+                        @if (lstMainMenuMaster != null && lstMainMenuMaster.Count != 0)
+                        {
+                            <h4 class="Roboto-Medium font18 red-t b-m0">Assign Menu</h4>
+                            <div class="  row">
+                                @foreach (var item in lstMainMenuMaster)
+                                {
+                                    var rolemenu = lstSubMenuMaster.FindAll(x => x.PageParentId == item.MenuItemId);
+                                    if (rolemenu != null && rolemenu.Count != 0)
+                                    {
+                                        <div class="  col-xs-12 col-lg-3 col-sm-6">
+                                            @if (lstrole_Menus.Exists(x => x.MenuId == item.MenuItemId))
+                                            {
+                                                <label class="checkbox-in" style="font-size: 16px;">
+                                                    <input type="checkbox" id="MenusItems-@item.MenuItemId" onclick="getCheckboxValues();" checked="checked" name="MenusItems" class="flat-red" value="@item.MenuItemId">
+                                                    @item.DisplayName
+                                                </label>
+                                            }
+                                            else
+                                            {
+                                                <label class="checkbox-in" style="font-size: 16px;">
+                                                    <input type="checkbox" id="MenusItems-@item.MenuItemId" onclick="getCheckboxValues();" name="MenusItems" class="flat-red" value="@item.MenuItemId">
+                                                    @item.DisplayName
+                                                </label>
+                                            }
+                                            <div class="  row">
+                                                <div class="  col-xs-12 col-lg-12 col-sm-12">
+                                                    <div class="l-r-p5 position-r">
+                                                        <div class=" " style="padding-bottom:20px;">
+
+                                                            @if (rolemenu != null && rolemenu.Count != 0)
+                                                            {
+                                                                <select class="multiple-select" multiple="multiple" id="@item.MenuItemId-AssignedMenus" name="@item.MenuItemId-AssignedMenus">
+                                                                    @foreach (var item1 in rolemenu)
+                                                                    {
+                                                                        if (lstrole_Menus.Exists(x => x.MenuId == item1.MenuItemId))
+                                                                        {
+                                                                            <option selected="selected" value="@item1.MenuItemId">@item1.DisplayName</option>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <option value="@item1.MenuItemId">@item1.DisplayName</option>
+                                                                        }
+
+                                                                    }
+                                                                </select>
+                                                            }
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="  col-xs-12 col-lg-3 col-sm-6">
+                                            @if (lstrole_Menus.Exists(x => x.MenuId == item.MenuItemId))
+                                            {
+                                                <label class="checkbox-in" style="font-size: 16px;">
+                                                    <input type="checkbox" id="MenusItems-@item.MenuItemId" onclick="getCheckboxValues();" checked="checked" name="MenusItems" class="flat-red" value="@item.MenuItemId">
+                                                    @item.DisplayName
+                                                </label>
+                                            }
+                                            else
+                                            {
+                                                <label class="checkbox-in" style="font-size: 16px;">
+                                                    <input type="checkbox" id="MenusItems-@item.MenuItemId" onclick="getCheckboxValues();" name="MenusItems" class="flat-red" value="@item.MenuItemId">
+                                                    @item.DisplayName
+                                                </label>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+
+                        }
+
+                    </div>
+
+
+                </section>
+            </div>
+        </div>
+    </div>
+    @*<div class="box">
+        <div class="box-body text-right">
+            <input type="submit" value=" Submit " onclick="PostRoleMenus();" name="send" class="button2 btn btn-primary">
+            <a class="btn btn-info" href="@Url.Action("Index","AssignMenu", new { mid = ViewBag.mid })">Cancel</a>
+        </div>
+    </div>*@
+
+</div>
+<div class="row">
+    <div class="col-lg-12 d-flex justify-content-end">
+        <button type="submit" class="btn btn-success px-3 me-2">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+        <a class="btn btn-danger px-3" href="@Url.Action("AssignMenu","AdminMenuItems")">Cancel</a>
+    </div>
+</div>

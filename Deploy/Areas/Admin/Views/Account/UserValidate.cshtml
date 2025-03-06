@@ -1,0 +1,89 @@
+﻿@using System.Configuration
+@{    
+    int status = 0;
+
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+    ViewBag.Title = "User Validate - " + objAppInfo.SiteName;
+    Layout = null;
+}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" class="bg-black">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport' />
+    @{var baseurl = objAppInfo.BaseUrl;}
+    <base href="@(baseurl)" />
+    <title>@objAppInfo.SiteName - Control Panel</title>
+    <link rel="shortcut icon" href="Content/Admin/images/fevicon.ico" />
+    <!-- Bootstrap -->
+    <link href="Content/Admin/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="Content/Admin/common-styles.css" rel="stylesheet" type="text/css" />
+    <link href="Content/Admin/fullcalendar/fullcalendar.css" rel="stylesheet" type="text/css" />
+    <link href="Content/Admin/daterangepicker/daterangepicker-bs3.css" rel="stylesheet" type="text/css" />
+    <link href="Content/Admin/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css" rel="stylesheet" type="text/css" />
+    <link href="Content/Admin/admin-styles.css" rel="stylesheet" type="text/css" />
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+          <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+          <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+    <!-- add new calendar event modal -->
+    <script src="Scripts/Admin/jquery-1.8.3.js" type="text/javascript"></script>
+    <script src="Scripts/Admin/jquery-ui-1.9.2.custom.min.js" type="text/javascript"></script>
+    <!-- Bootstrap -->
+
+    <script src="Scripts/Admin/bootstrap.min.js" type="text/javascript"></script>
+    <script src="Scripts/Admin/Common.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function () { 
+            $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+            $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        }); 
+    </script>
+</head>
+<body class="bg-black">
+    @*<div class="form-box" id="login-box">
+        <div class="header">
+            <img src="Content/Admin/images/logo.png" alt="@objAppInfo.SiteName" title="@objAppInfo.SiteName" border="0" />
+        </div>
+        <div class="body bg-gray text-center">
+            @if (TempData["message"] != null)
+            {
+                <h3 class="font14 t-c b-p40">@Html.Raw(TempData["message"])</h3>
+            }
+        </div>
+        <div class="footer">
+            <a class="btn btn-primary btn-block" href="@Url.Action("LogOn", "Account")">Go to Login</a>
+        </div>
+    </div>*@
+
+
+
+    <div class="login-sec">
+        <div class="login-form">
+            <div class="text-center" style="margin-bottom:30px;">
+                <a href="#"><img src="Content/Admin/images/logo1.png" alt="@objAppInfo.SiteName" title="@objAppInfo.SiteName" border="0" width="180px" /></a>
+            </div>
+
+            <div class="login-head text-center">@objAppInfo.SiteName</div>
+
+            @if (TempData["message"] != null)
+            {
+                <h3 class="font14 t-c b-p40">@Html.Raw(TempData["message"])</h3>
+            }
+
+            <div style="width:50%;margin:auto;">
+                <button class="login-btn" style="margin-top:20px;" type="submit" onclick="window.open('admin', '_blank');">Go to Login </button>
+            </div>
+            
+
+        </div>
+    </div>
+</body>
+</html> 

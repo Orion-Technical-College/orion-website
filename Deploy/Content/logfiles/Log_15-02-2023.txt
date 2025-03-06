@@ -1,0 +1,44 @@
+-------------------START-------------2/15/2023 7:46:14 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Entered Into Telugu Ammai Registration Process
+-------------------END-------------2/15/2023 7:46:14 AM
+-------------------START-------------2/15/2023 8:05:35 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Entered Into Telugu Ammai Registration Process
+-------------------END-------------2/15/2023 8:05:35 AM
+-------------------START-------------2/15/2023 8:05:55 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Inserted the Telugu Ammai Registration Successfully
+-------------------END-------------2/15/2023 8:05:55 AM
+-------------------START-------------2/15/2023 8:05:55 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Entered Into Payment Process
+-------------------END-------------2/15/2023 8:05:55 AM
+-------------------START-------------2/15/2023 8:05:58 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Payment Responsive Get Approved
+-------------------END-------------2/15/2023 8:05:58 AM
+-------------------START-------------2/15/2023 8:05:58 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Updated Telugu Ammai Registrations
+-------------------END-------------2/15/2023 8:05:58 AM
+-------------------START-------------2/15/2023 8:05:58 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Telugu Ammai Registrations Mailling section entry
+-------------------END-------------2/15/2023 8:05:58 AM
+-------------------START-------------2/15/2023 8:06:01 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+User Telugu Ammai Registration Notification Email Sent Succefully
+-------------------END-------------2/15/2023 8:06:01 AM
+-------------------START-------------2/15/2023 8:06:02 AM
+Page :/NATSWorld/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------2/15/2023 8:06:02 AM
+-------------------START-------------2/15/2023 8:06:02 AM
+Page :/NATSWorld/teluguammai-acknowledgement
+Successfully Payment done
+-------------------END-------------2/15/2023 8:06:02 AM
+-------------------START-------------2/15/2023 8:06:02 AM
+Page :/NATSWorld/teluguammai-acknowledgement
+Telugu Ammai Registration getting By Id Succefully
+-------------------END-------------2/15/2023 8:06:02 AM

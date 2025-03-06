@@ -1,0 +1,333 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    var MenuItemId = ViewBag.MenuItemId;
+
+    List<CMS.Entities.MenuPages> lstPageDetails = ViewBag.lstMenuPages;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+    List<CMS.Entities.MenuItems> lstMenuItems2 = ViewBag.lstMenuItems2;
+    List<CMS.Entities.MenuItems> lstMenuItems3 = ViewBag.lstMenuItems3;
+    List<CMS.Entities.MenuItems> lstMenuItems4 = ViewBag.lstMenuItems4;
+
+    HttpCookie authCookie = HttpContext.Current.Request.Cookies["UserCookie"];
+
+    FormsAuthenticationTicket authTicket;
+    string userRole = null;
+    if (this.User.Identity.IsAuthenticated && this.User.Identity.Name != null && Context.Session != null)
+    {
+        authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+
+        userRole = authTicket.UserData;
+    } 
+}
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('#MWebsite').addClass('active');
+        $('#MWebsite').addClass('active');
+        $('#MWebsite').addClass('active');
+        //$('#AddMenuPages').dialog
+        //   ({
+        //       autoOpen: false,
+        //       width: 450,
+        //       modal: true
+        //   });
+        $('#SponsorCategoryId').val(MenuItemId);
+
+        PagerClickBind();
+    });
+
+    function sortresult(sortcolumn) {
+        $('#hdnsortorder').val(($('#hdnsortorder').val() == 'ASC' ? 'DESC' : 'ASC'));
+        $('#hdnsortcolumn').val(sortcolumn);
+        Onload(1);
+    }
+
+    function Onload(Pageno) {
+        var pageno = Common.Pageno(Pageno);
+        var sortcolumn = $('#hdnsortcolumn').val();
+        var sortorder = $('#hdnsortorder').val();
+        var items = $('#txtitems').val();
+        var Search = $('#keyword').val();
+        var MenuItemId = $('#MenuItemId').val();
+
+        $.ajax({
+            url: '@Url.Action("MenuPagesList", "MenuPages")',
+            type: 'GET',
+            cache: false,
+            data: { Search: Search, PageNo: pageno, SortColumn: sortcolumn, SortOrder: sortorder, Items: items, MenuItemId: MenuItemId },
+            success: function (result) {
+                $('#divPageDetails').html(result);
+                PagerClickBind();
+            }
+        });
+    }
+    function PagerClickBind() {
+        $(".pagination a").bind("click", function () {
+            Onload($(this).text());
+        });
+    }
+    function ClearSearch() {
+        $('#keyword').val('');
+        $('#MenuItemId').val('');
+        $('#hdnPageNo').val(1);
+        Onload(1);
+    }
+
+    function Add() {
+        clearMenuPages();
+        $('#hdnPageDetails').show();
+        $("#AddMenuPages").modal("show");
+        $('#lbltitle').html('Add Page Details');
+    }
+
+    function EditMenuPages(MenuPagesId) {
+        $.ajax({
+            url: '@Url.Action("EditMenuPages", "MenuPages")',
+            type: 'POST',
+            data: { MenuPagesId: MenuPagesId },
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var objMenuPages = result.data;
+                    $('#AMenuPageId').val(objMenuPages.MenuPageId);
+                    $('#AMenuItemId').val(objMenuPages.MenuItemId);
+                    $('#APageDetailId').val(objMenuPages.PageDetailId);
+                    $('#lbltitle').html('Edit Page Details');
+                    $('#hdnPageDetails').hide();
+
+                    $("#AddMenuPages").modal("show");
+                }
+                else {
+                    alert(result.data);
+                }
+            }
+        });
+    }
+
+    function clearMenuPages() {
+        $('#PageDetailsId').val('');
+        $('#Designation').val('');
+        $('#spanPageDetailsId').html('');
+        $('#spanDesignation').html('');
+        $('#Designation').focus().focus().removeClass("red-border");
+    }
+
+    //function Validate() {
+    //    if ($('#hdnMode').val() == 'add') {
+    //        if ($('#PageDetailsId').val() == '') { $('#spanPageDetailsId').html('Required.'); $('#PageDetailsId').focus(); return false; } else { $('#spanPageDetailsId').html(''); $('#PageDetailsId').focus(); }
+    //    }
+    //    return true;
+    //}
+
+    function AddEditValidate(mode, MenuPagesId) {
+        $('#hdnMode').val(mode);
+        if (mode == 'add') {
+            Add();
+        }
+        else {
+            EditMenuPages(MenuPagesId);
+        }
+    }
+</script>
+
+<input id="hdnMode" type="hidden" value="add" />
+<input id="hdnPageNo" type="hidden" value="1" />
+<input id="hdnsortcolumn" type="hidden" value="PageDetailId" />
+<input id="hdnsortorder" type="hidden" value="ASC" />
+
+<!-- breadcumb -->
+<div class="content-header">
+    <h1>Menu Pages</h1>
+    <ol class="breadcrumb">
+        @if (userRole.Contains("SuperAdmin"))
+        {
+            <li><a href="@Url.Action("Index", "Home")"><i class="fa fa-dashboard"></i>Home</a></li>
+        }
+        <li class="active">Menu Pages</li>
+    </ol>
+</div>
+<!--end breadcumb -->
+<div class="content">
+    <!-- Main content -->
+    <div id="divmessage">
+        @if (TempData["message"] != null)
+        { @Html.Raw(TempData["message"].ToString())}
+
+        @if (ViewBag.message != null)
+        { @Html.Raw(ViewBag.message.ToString())}
+    </div>
+    <div class="box">
+        <!-- /.box-header -->
+        <div class="clearfix box-body">
+            <div class="clearfix row">
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>Search</label>
+                    <input placeholder="Heading" name="txtsearch" id="txtsearch" class="form-control" type="text">
+                </div>
+
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <label>Search</label>
+                    <select id="MenuItemId" class="form-control" name="MenuItemId">
+                        <option value="">Select</option>
+                        @if (lstMenuItems != null && lstMenuItems.Count != 0)
+                        {
+                            foreach (var item in lstMenuItems)
+                            { 
+                            <option value="@(item.MenuItemId)">@item.DisplayName</option> 
+                                if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                                {
+                                    foreach (var item2 in lstMenuItems2)
+                                    {
+                                        if (item2.PageParentId == item.MenuItemId)
+                                        {
+                            <option value="@(item2.MenuItemId)">| @item2.DisplayName</option> 
+                                            if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                            {
+                                                foreach (var item3 in lstMenuItems3)
+                                                {
+                                                    if (item3.PageParentId == item2.MenuItemId)
+                                                    {
+                            <option value="@item3.MenuItemId">| | @item3.DisplayName</option> 
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="col-xs-12 col-lg-4 col-sm-6">
+                    <div>
+                        <label>&nbsp;</label>
+                    </div>
+                    <button class="btn btn-primary" type="submit" onclick="Onload(1);">Search</button>
+                    <button class="btn btn-info" type="submit" onclick="ClearSearch();">Clear</button>
+                    <a data-toggle="modal" onclick="AddEditValidate('add', 0);" class="btn btn-danger pull-right">Add Page to Menu type</a>
+
+                </div>
+            </div>
+        </div>
+        <div id="divPageDetails" class="box-body table-responsive">
+            @{Html.RenderAction("MenuPagesList", "MenuPages");}
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="modal fade" id="AddMenuPages" tabindex="-1" role="dialog" aria-hidden="true">
+    @using (Html.BeginForm("AddMenuPages", "MenuPages", FormMethod.Post))
+    { 
+        <input type="hidden" id="AMenuPageId" name="MenuPageId" value="0" />
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title"><span id="hdnPageDetails"></span></h4>
+                </div>
+                <div class="modal-body validation">
+                    <div class="form-group">
+                        <label>Page</label>
+                        <select id="APageDetailId" class="form-control" name="PageDetailId">
+                            <option value="">Select</option>
+                            @if (lstPageDetails != null)
+                            {
+                                foreach (var item in lstPageDetails)
+                                { 
+                                <option value="@item.PageDetailId">@item.Heading</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Menu Items</label>
+                        <select id="AMenuItemId" class="form-control" name="MenuItemId">
+                            <option value="">Select</option>
+                            @if (lstMenuItems != null && lstMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstMenuItems)
+                                { 
+                                <option value="@(item.MenuItemId)">@item.DisplayName</option> 
+                                    if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                                    {
+                                        foreach (var item2 in lstMenuItems2)
+                                        {
+                                            if (item2.PageParentId == item.MenuItemId)
+                                            {
+                                <option value="@(item2.MenuItemId)">| @item2.DisplayName</option> 
+                                                if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                                {
+                                                    foreach (var item3 in lstMenuItems3)
+                                                    {
+                                                        if (item3.PageParentId == item2.MenuItemId)
+                                                        {
+                                <option value="@item3.MenuItemId">| | @item3.DisplayName</option> 
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer clearfix">
+                    <input type="submit"  value="Submit" class="btn btn-danger">
+                    <a class="btn btn-primary pull-left" onclick=" $('#AddMenuPages').dialog('close')" data-dismiss="modal">Cancel</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+<script>
+    $(document).ready(function () {
+        $("#FormMenuItems").validate({
+            rules: {
+                PageDetailId: "required",
+               
+            },
+            messages: {
+             
+                PageDetailId: "required",
+            },
+
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                // Add the `help-block` class to the error element
+                error.addClass("help-block");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest("fieldset").length) {
+                    element.closest("fieldset").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-error").removeClass("has-success");
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-success").removeClass("has-error");
+            },
+
+        });
+
+
+    });
+
+
+</script>

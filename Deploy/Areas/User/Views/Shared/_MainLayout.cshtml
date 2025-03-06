@@ -1,0 +1,642 @@
+@{
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+    var baseurl = objAppInfo.BaseUrl;
+
+
+    string refurl = Request.Url.AbsoluteUri;
+    refurl = refurl.Replace(baseurl, "");
+
+    var objuser = new CMS.Entities.Users();
+
+
+    CMS.Entities.PageDetails objInnerPages = new CMS.Entities.PageDetails();
+
+
+    var adminurl = objAppInfo.BaseUrl;
+
+    List<CMS.Entities.PageDetails> lstInnerPages = ViewBag.lstInnerPages;
+
+    string str = "";
+    if (ViewBag.str != null && ViewBag.str != "")
+    {
+        str = ViewBag.str;
+    }
+
+    var InnerPageTitle = ViewBag.Title;
+    var InnerPageMetaDescription = ViewBag.MetaDescription;
+    var InnerPageMetaKeywords = ViewBag.MetaKeywords;
+    var InnerPageheading = ViewBag.heading;
+
+    int pcurrentYear = DateTime.Now.Year;
+
+    var pagename = ViewBag.heading;
+
+    var currentUrl = Context.Request.Path;
+
+    var currentUrll = Context.Request.Url;
+}
+
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+
+    @{
+        string title = "";
+        string description = "";
+        string keywords = "";
+
+        switch (currentUrl)
+        {
+            case "/apply":
+                title = "Pre-Application - Orion";
+                description = "";
+                keywords = "";
+                break;
+
+            case "/employment":
+                title = "Employment Opportunities - Orion";
+                description = "We have direct listings to all of our currently available positions on our Indeed page, however, Orion is always looking to work with talented and ambitious";
+                keywords = "";
+                break;
+
+            case "/transcript-diploma-request":
+                title = "Transcript, Diploma, Degree Request Form - Orion";
+                description = "Note: Transcript requests CANNOT be processed for former students with a balance owed to the College";
+                keywords = "";
+                break;
+
+            case "/contact-us":
+                title = "Contact Us - Orion";
+                description = "Learn more about the city that Orion Tech calls &quot;Home&quot;";
+                keywords = "";
+                break;
+
+            default:
+                //Title
+                if (InnerPageTitle != null && !string.IsNullOrEmpty(InnerPageTitle))
+                {
+                    title = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(InnerPageTitle.ToLower());
+                }
+                else if (objAppInfo != null)
+                {
+                    title = objAppInfo.PageTitle;
+                }
+                else
+                {
+                    title = "Orion Technical College | Advanced Technical & Medical Training Since 1969";
+
+                }
+                //MetaDescription
+                if (InnerPageMetaDescription != null && !string.IsNullOrEmpty(InnerPageMetaDescription))
+                {
+                    description = InnerPageMetaDescription;
+                }
+                else if (objAppInfo != null)
+                {
+                    description = objAppInfo.MetaDescription;
+                }
+                //MetaKeywords
+                if (InnerPageMetaKeywords != null && !string.IsNullOrEmpty(InnerPageMetaKeywords))
+                {
+                    keywords = InnerPageMetaKeywords;
+                }
+                else if (objAppInfo != null)
+                {
+                    keywords = objAppInfo.MetaKeywords;
+                }
+
+
+                break;
+        }
+
+    }
+
+
+    <!-- Meta Tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Orion Technical College">
+    <base href="@(baseurl)" />
+    <!-- Favicon Icon -->
+    <link rel="icon" href="Content/User/img/favicon.png">
+    <!-- Site Title -->
+    @*@if (description != "")
+    {
+        <meta property="og:description" content="@description" />
+    }
+    @if (keywords != "")
+    {
+        <meta property="og:keywords" content="@keywords" />
+    }*@
+  
+
+    <!-- Search Engine Optimization -->
+
+    <title>@title</title>
+    <meta name="description" content="@description" />
+
+    <link rel="canonical" href="@currentUrll" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
+
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="@title" />
+    <meta property="og:description" content="@description" />
+    <meta property="og:url" content="@currentUrll" />
+    <meta property="og:site_name" content="@objAppInfo.SiteName" />
+    <meta property="og:updated_time" content="2024-09-06T18:30:24+00:00" />
+    <meta property="article:published_time" content="2024-07-01T19:07:07+00:00" />
+    <meta property="article:modified_time" content="2024-09-06T18:30:24+00:00" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@title" />
+    <meta name="twitter:description" content="@description" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="oegredesign" />
+    <meta name="twitter:label2" content="Time to read" />
+    <meta name="twitter:data2" content="73 minutes" />
+
+    <!-- SEO plugin -->
+
+    <link rel="stylesheet" href="Content/User/css/bootstrap.min.css">
+    <link rel="stylesheet" href="Content/User/css/fontawesome.min.css">
+    <link rel="stylesheet" href="Content/User/css/slick.min.css">
+    <link rel="stylesheet" href="Content/User/css/odometer.css">
+    <link rel="stylesheet" href="Content/User/css/animate.css">
+    <link rel="stylesheet" href="Content/User/css/jquery-ui.min.css">
+    <link rel="stylesheet" href="Content/User/css/slider-text.css">
+    <link rel="stylesheet" href="Content/User/css/style.css">
+
+
+    <script src="https://cdn.jsdelivr.net/npm/popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous">
+    <script src="Content/User/js/jquery-3.7.1.min.js"></script>
+    <script src="Scripts/User/Common.js"></script>
+</head>
+<body>
+    @*<article class="clearfix position-r">
+        <article class="clearfix msg-caption">
+            <div id="divmessage">
+                <div>
+                    @if (TempData["message"] != null)
+                    {@Html.Raw(TempData["message"].ToString())}
+                    @if (ViewBag.message != null)
+                    {@Html.Raw(ViewBag.message.ToString())}
+                </div>
+            </div>
+
+        </article>
+
+    </article>*@
+
+    <!-- Start Preloader -->
+    <div class="td_preloader">
+        <div class="td_preloader_in">
+            <span></span>
+            <span></span>
+        </div>
+    </div>
+    <!-- End Preloader -->
+    <!-- Start Header Section -->
+    <header class="td_site_header td_style_1 td_type_3 td_sticky_header td_medium td_heading_color">
+        <div class="td_main_header">
+            <div class="">
+                <div class="td_main_header_in">
+                    <div class="td_main_header_left">
+                        <a class="td_site_branding" href="">
+                            <img src="Content/User/img/logo-final.png" alt="Logo">
+                        </a>
+                    </div>
+                    <div class="td_main_header_center">
+                        <nav class="td_nav">
+                            <div class="td_nav_list_wrap">
+                                <div class="td_nav_list_wrap_in">
+                                    <ul class="td_nav_list ">
+                                        <li class="menu-item-has-children mega-menu">
+                                            <a href="about">About Us</a>
+                                            <ul class="ul__limenu">
+                                                <li class="">
+                                                    <div class="row">
+                                                        <div class="col-md-4">
+                                                            <h2 class="td_section_title td_fs_48 mb-0 mobile_menu_hide">About Us <i class="bi bi-arrow-right"></i></h2>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                <div><a href="about">About Orion Technical College</a></div>
+                                                                <div><a href="accreditation-approvals-otc">Accreditation and Memberships</a></div>
+                                                                <div><a href="Content/User/files/cio-information.pdf" target="_blank">CIO Information</a></div>
+                                                                <div><a href="consumer-information-otc">Consumer Information</a></div>
+                                                                <div><a href="Content/User/files/dean-of-academic-affairs-appointment.pdf" target="_blank">Dean of Academic Affairs Appointment</a></div>
+                                                                <div><a href="apply">Apply</a></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                <div><a href="employment">Employment Opportunities</a></div>
+                                                                <div><a href="financial-aid">Financial Aid</a></div>
+                                                                <div><a href="2020-catalog-orion-technical">Orion Tech Catalog</a></div>
+                                                                <div><a href="transcript-diploma-request">Request a Transcript</a></div>
+                                                                <div><a href="cares-act">CARES Act</a></div>
+                                                                <div><a href="spiritstore">Spirit Stores</a></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li class="menu-item-has-children mega-menu">
+                                            <a href="artificialintelligence">Academics</a>
+                                            <ul class="ul__limenu">
+                                                <li class="">
+                                                    <div class="row">
+                                                        <div class="col-md-4">
+                                                            <h2 class="td_section_title td_fs_48 mb-0 mobile_menu_hide">Academics <i class="bi bi-arrow-right"></i></h2>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                <div class="heading"><span class="first__cls">Graduate Programs</span></div>
+                                                                <div><a href="artificialintelligence">Artificial Intelligence</a></div>
+                                                                <div><a href="businessanalytics">Business Analytics</a></div>
+                                                                <div><a href="computerscience">Computer Science</a></div>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                <div class="heading"><span class="first__cls">Undergraduate Programs</span></div>
+                                                                @*<div><a href="student-services">Student Services</a></div>*@
+                                                                <div><a href="electronics-engineering-technology">Electronics Engineering Technology</a></div>
+                                                                <div><a href="integrated-business-processes">Integrated Business Processes</a></div>
+                                                                <div><a href="mechatronics">Mechatronics</a></div>
+                                                                <div><a href="medical-assisting">Medical Assisting</a></div>
+                                                                <div><a href="medical-billing-coding">Medical Billing & Coding</a></div>
+
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+
+                                        </li>
+
+                                        <li class="menu-item-has-children mega-menu">
+                                            <a href="student-services">Student Services</a>
+                                            <ul class="ul__limenu">
+                                                <li class="">
+                                                    <div class="row">
+                                                        <div class="col-md-4">
+                                                            <h2 class="td_section_title td_fs_48 mb-0 mobile_menu_hide">Student Services <i class="bi bi-arrow-right"></i></h2>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                <div><a href="2020-catalog-orion-technical">Academic Catalog</a></div>
+                                                                <div><a href="net-price-calculator-2">Net Price Calculator</a></div>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div class="div2">
+                                                                @*<div><a href="2020-catalog-orion-technical">academic catalog</a></div>
+                                                                    <div><a href="net-price-calculator.html">Net Price Calculator</a></div>*@
+
+                                                            </div>
+                                                        </div>
+                                                        @*<div class="col-md-4">
+                                                                <div class="div2">
+                                                                    <div><a href="employment">Employment Opportunities</a></div>
+                                                                    <div><a href="financial-aid">Financial Aid</a></div>
+                                                                    <div><a href="2020-catalog-orion-technical">Orion Tech Catalog</a></div>
+                                                                    <div><a href="transcript-diploma-request">Request a Transcript</a></div>
+                                                                    <div><a href="cares-act">CARES Act</a></div>
+                                                                    <div><a href="spiritstore">Spirit Stores</a></div>
+                                                                </div>
+                                                            </div>*@
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+
+                                        <li class="menu-item-has-children main__menu">
+                                            <a href="#">Current Students</a>
+                                            <ul class="ul__limenu">
+                                                <li><a href="https://outlook.office.com" target="_blank">Orion Email</a></li>
+                                                <li><a href="https://orion.instructure.com/login/saml">Canvas</a></li>
+                                            </ul>
+                                        </li>
+                                        <li class="main__menu"><a href="#">Spirit Store</a></li>
+                                        <li><a href="contact-us">Contact Us</a></li>
+                                    </ul>
+                                    <div class="position-relative custom_language_wrap custom_responsive_btn">
+                                        <a href="apply" class="custom_btn custom_style_1 custom_radius_10 custom_medium custom_btn_menu p">
+                                            <span class="custom_btn_in custom_white_color custom_accent_bg custom_btn_menu1">
+                                                <span>Apply Now</span>
+                                            </span>
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="td_main_header_right">
+                        <div class="position-relative td_language_wrap">
+                            <a href="apply" class="td_btn td_style_1 td_radius_10 td_medium btn__menu p">
+                                <span class="td_btn_in td_white_color td_accent_bg btn__menu1">
+                                    <span>Apply Now</span>
+                                </span>
+                            </a>
+                        </div>
+                        <div class="position-relative">
+
+                            <div class="td_header_search_wrap">
+                                <form action="#" class="td_header_search">
+                                    <input type="text" class="td_header_search_input" placeholder="Search For Anything">
+                                    <button class="td_header_search_btn td_center">
+                                        <img src="Content/User/img/icons/search_2.svg" alt="search_2.svg">
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <button class="td_hamburger_btn">
+                            <div class="hamburg"><span class="ham-icon"></span><span class="ham-icon"></span><span class="ham-icon"></span></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Start Header Section -->
+    <!-- Start Header Section -->
+    <div class="td_side_header">
+        <button class="td_close"></button>
+        <div class="td_side_header_overlay"></div>
+        <div class="td_side_header_in">
+            <div class="td_side_header_shape"></div>
+            <a class="td_site_branding pn" href="index.html">
+                <img src="Content/User/img/logo-final.png" alt="logo-final.png">
+            </a>
+            <div class="td_side_header_box pb-3 pt-3">
+                <ul class=" td_nav_list ">
+                    <li>
+                        <a href="#">Current Students </a>
+                        <ul>
+                            <li><a href="https://outlook.office.com" target="_blank">  Orion Email</a></li>
+                            <li><a href="https://orion.instructure.com/login/saml" target="_blank">  Canva</a></li>
+                        </ul>
+
+                    </li>
+
+
+                </ul>
+            </div>
+            <div class="td_side_header_box pb-0 pt-3 pn">
+                <h3 class="td_side_header_title td_heading_color">Contact Us</h3>
+                <ul class="td_side_header_contact_info td_mp_0">
+                    <li>
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>@objAppInfo.CompanyAddress</span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-envelope"></i>
+                        <span><a href="mailto:@objAppInfo.CompanyEmail">@objAppInfo.CompanyEmail</a></span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-phone"></i>
+                        <span><a href="tel:@objAppInfo.CompanyPhone">@objAppInfo.CompanyPhone</a></span>
+                    </li>
+                </ul>
+            </div>
+            <div class="td_side_header_box pb-0">
+                <h3 class="td_side_header_title td_heading_color">Reach Us</h3>
+                <div class="td_social_btns td_style_1 td_heading_color">
+                    <iframe id="map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2985.403106919634!2d-90.53317421524628!3d41.560519511196155!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87e235d4d703b993%3A0x2606950176dbc32b!2s3940%20Elmore%20Avenue%2C%20Davenport%2C%20IA%2052807%2C%20USA!5e0!3m2!1sen!2sbd!4v1738567613923!5m2!1sen!2sbd" allowfullscreen="" style="width: 94%; height: 180px; margin: auto;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Header Section -->
+
+    @RenderBody()
+
+    <!-- Start Footer Section -->
+    <footer class="td_footer td_style_1">
+        <div class="container">
+            <div class="footer__sec sec-gap pb-0">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="td_footer_text_widget td_fs_16 footer__bottom  ">
+                            <img src="Content/User/img/otc-shield-only.png" alt="otc-shield-only.png">
+                        </div>
+                        <div class="footer__ul">
+                            <ul>
+                                <li>
+                                    <span>Orion Technical College</span>
+                                    @objAppInfo.CompanyAddress
+                                </li>
+                                <li>
+                                    <span>Email</span>
+                                    <a href="mailto:@objAppInfo.CompanyEmail"> @objAppInfo.CompanyEmail</a>
+                                </li>
+                                <li>
+                                    <span>Phone</span>
+                                    <a href="tel: @objAppInfo.CompanyPhone">  @objAppInfo.CompanyPhone</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="footer__box">
+                            <h3 class="td_fs_24 td_semibold td_mb_10">Quick Links</h3>
+                            <div class="footer__ul">
+                                <ul class="td_footer_widget_menu qck-links">
+                                    <li><a href="apply">Apply Now</a></li>
+                                    <li><a href="2020-catalog-orion-technical">Catalog</a></li>
+                                    <li><a href="accreditation-approvals-otc">Accreditation & Approvals</a></li>
+                                    <li><a href="cares-act">CARES Act</a></li>
+                                    <li><a href="consumer-information-otc">Consumer Information</a></li>
+                                    <li><a href="privacy-policy">Privacy Policy</a></li>
+                                    <li><a href="corporate-careers">Corporate Careers</a></li>
+                                </ul>
+                            </div>
+                            <ul class="social__media__links">
+                                @if (objAppInfo.FacebookUrl != null && objAppInfo.FacebookUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--facebook" href="@objAppInfo.FacebookUrl" target="_blank">
+                                            <span class="fab fa-facebook fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">Facebook</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @if (objAppInfo.GooglePlusUrl != null && objAppInfo.GooglePlusUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--tiktok" href="@objAppInfo.GooglePlusUrl" target="_blank">
+                                            <span class="fab fa-tiktok fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">TikTok</span>
+                                        </a>
+                                    </li>
+                                }
+
+
+                                @if (objAppInfo.TwitterUrl != null && objAppInfo.TwitterUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--twitter" href="@objAppInfo.TwitterUrl" target="_blank">
+                                            <span class="fab fa-x-twitter fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">X</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @if (objAppInfo.YoutubeUrl != null && objAppInfo.YoutubeUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--youtube_channel" href="@objAppInfo.YoutubeUrl" target="_blank">
+                                            <span class="fab fa-youtube fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">Youtube Channel</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @if (objAppInfo.InstagramUrl != null && objAppInfo.InstagramUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--instagram" href="@objAppInfo.InstagramUrl" target="_blank">
+                                            <span class="fab fa-instagram fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">Instagram</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @if (objAppInfo.InstagramUrl != null && objAppInfo.InstagramUrl != "")
+                                {
+                                    <li>
+                                        <a class="data-gtm-socialLinks social-media-link-icon--linkedin" href="#" target="_blank">
+                                            <span class="fab fa-linkedin fa-2x" aria-hidden="true"></span>
+
+                                            <span class="platform--name visually-hidden">LinkedIn</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="td_footer_bottom_in">
+                    <p class="td_copyright mb-0">Copyright &copy; @pcurrentYear Orion Technical College. All Right Reserved</p>
+                    <p class="td_copyright mb-0">Design &amp; Developed by <a class="aw-txt" href="https://arjunweb.com/" target="_blank">Arjunweb</a></p>
+                </div>
+            </div>
+        </div>
+        </div>
+        <div class="td_footer_bottom td_fs_18">
+            <div class="container">
+                <!-- Modal -->
+                <div class="modal">
+                    <!-- modal content -->
+                    <div class=" modal-dialog-centered">
+                        <div class="modal-content">
+                            <h3 class="ms-auto mb-0"><span class="close">&times;</span></h3>
+                            <div class="modal-body ">
+                                <section class="image-comparison" data-component="image-comparison-slider">
+                                    <div class="image-comparison__slider-wrapper">
+                                        <label for="image-comparison-range" class="image-comparison__label">Move image comparison slider</label>
+                                        <input type="range" min="0" max="100" value="50" class="image-comparison__range" id="image-compare-range" data-image-comparison-range="">
+
+                                        <div class="image-comparison__image-wrapper  image-comparison__image-wrapper--overlay" data-image-comparison-overlay="">
+                                            <figure class="image-comparison__figure image-comparison__figure--overlay">
+                                                <picture class="image-comparison__picture">
+                                                    <source media="(max-width: 40em)" srcset="Content/User/img/before-img.png">
+                                                    <source media="(min-width: 40.0625em) and (max-width: 48em)" srcset="Content/User/img/before-img.png">
+                                                    <img src="Content/User/img/before-img.png" alt="before-img.png" class="image-comparison__image">
+                                                </picture>
+
+                                                <figcaption class="image-comparison__caption image-comparison__caption--before">
+                                                    <span class="image-comparison__caption-body">Before</span>
+                                                </figcaption>
+                                            </figure>
+                                        </div>
+
+                                        <div class="image-comparison__slider" data-image-comparison-slider="">
+                                            <span class="image-comparison__thumb" data-image-comparison-thumb="">
+                                                <svg class="image-comparison__thumb-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="10" viewBox="0 0 18 10" fill="currentColor">
+                                                    <path class="image-comparison__thumb-icon--left" d="M12.121 4.703V.488c0-.302.384-.454.609-.24l4.42 4.214a.33.33 0 0 1 0 .481l-4.42 4.214c-.225.215-.609.063-.609-.24V4.703z"></path>
+                                                    <path class="image-comparison__thumb-icon--right" d="M5.879 4.703V.488c0-.302-.384-.454-.609-.24L.85 4.462a.33.33 0 0 0 0 .481l4.42 4.214c.225.215.609.063.609-.24V4.703z"></path>
+                                                </svg>
+                                            </span>
+                                        </div>
+
+                                        <div class="image-comparison__image-wrapper">
+                                            <figure class="image-comparison__figure">
+                                                <picture class="image-comparison__picture">
+                                                    <source media="(max-width: 40em)" srcset="Content/User/img/after-img.png">
+                                                    <source media="(min-width: 40.0625em) and (max-width: 48em)" srcset="Content/User/img/after-img.png">
+                                                    <img src="Content/User/img/after-img.png" alt="after-img.png">
+                                                </picture>
+
+                                                <figcaption class="image-comparison__caption image-comparison__caption--after">
+                                                    <span class="image-comparison__caption-body">After</span>
+                                                </figcaption>
+                                            </figure>
+                                        </div>
+                                    </div>
+
+                                </section>
+                                <div class="mt-1 d-flex gap-5  justify-content-between">
+                                    <div class="td_card_info">
+                                        <h2 class="td_card_title mb-0 td_fs_18 td_semibold">
+                                            1. Left Side: Hamilton Technical College (formerly)
+                                        </h2>
+
+                                    </div>
+                                    <div class="td_card_info">
+                                        <h2 class="td_card_title mb-0 td_fs_18 td_semibold">
+                                            2.  Right Side: Orion Technical College (currently)
+                                        </h2>
+
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </footer>
+    <!-- End Footer Section -->
+    <!-- Start Scroll Up Button -->
+    <div class="td_scrollup">
+        <i class="fa-solid fa-arrow-up"></i>
+    </div>
+    <!-- End Scroll Up Button -->
+    <!-- Script -->
+
+
+
+    <script src="Content/User/js/jquery.validate.js"></script>
+    <script src="Content/User/js/jquery.slick.min.js"></script>
+    <script src="Content/User/js/odometer.js"></script>
+    <script src="Content/User/js/gsap.min.js"></script>
+    <script src="Content/User/js/jquery-ui.min.js"></script>
+    <script src="Content/User/js/wow.min.js"></script>
+    <script src="Content/User/js/main.js"></script>
+    <script src="Content/User/js/slide-text.js"></script>
+
+</body>
+
+
+</html>

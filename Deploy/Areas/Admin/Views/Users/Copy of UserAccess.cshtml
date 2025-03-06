@@ -1,0 +1,78 @@
+﻿@{Layout = null;
+  var userroles = (List<CMS.Entities.Roles>)ViewBag.userRoleslst;
+  var roleslst = (List<CMS.Entities.Roles>)ViewBag.lstRoles;
+}
+<script>
+    function validateroles() {
+        var RoleIds = Common.GetCheckBoxValue('RoleNamecheckbox');
+        if (RoleIds == "") {
+            alert("Please select atleast one Item.");
+            return false;
+        }
+        $('#RoleIds').val(RoleIds);
+    }
+</script>
+
+@{int j = 3;
+     
+            <div class="row">
+                @foreach (var role in roleslst)
+                {
+                    int t1 = 0;
+                    if (userroles != null)
+                    {
+                        for (var x1 = 0; x1 < userroles.Count; x1++)
+                        {
+                            if (role.RoleId == userroles[x1].RoleId)
+                            {
+                                t1 = 1;
+
+                            }
+                        }
+                    }
+
+                    if (t1 == 1)
+                    {
+                       
+                            @*
+                             <div class="col-xs-12 col-lg-6 col-sm-6"> 
+                            <label>
+                                <input type="checkbox" checked="checked" name="RoleNamecheckbox" id="RoleNamecheckbox-@j" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "readonly" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "return false" : "")" class="flat-red" value="@{@role.RoleId}">
+                                Manage @role.RoleName
+                            </label> 
+                            </div>
+                            *@
+                        
+                    
+                      
+                        <div class="col-xs-12 col-lg-6 col-sm-6">
+                            <label>
+                                <input type="checkbox" checked="checked" name="RoleNamecheckbox" id="RoleNamecheckbox-@j" class="flat-red" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "readonly" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "return false" : "")" value="@{@role.RoleId}">
+                                Manage @role.RoleName
+                            </label>
+                        </div>
+                       
+                        
+                    }
+                    else
+                    {
+                     
+                       
+                        <div class="col-xs-12 col-lg-6 col-sm-6">
+                            <label>
+                                <input type="checkbox" name="RoleNamecheckbox" id="RoleNamecheckbox-@j" class="flat-red" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "readonly" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "return false" : "")" value="@{@role.RoleId}">
+                                Manage @role.RoleName
+                            </label>
+                        </div>
+                        
+                        
+                    }
+
+                    j++;
+                }
+            </div>
+        
+                }
+
+
+

@@ -1,0 +1,188 @@
+﻿@using System.Configuration;
+@{ Layout = null;}
+@{
+    string sortcolumn = (string)ViewBag.sortcolumn;
+    string sortorder = (string)ViewBag.sortorder;
+    Int64 Total = (Int64)ViewBag.total;
+    var PageNo = (Int64)ViewBag.pageno;
+    var Items = (Int64)ViewBag.items;
+
+    var RoleName = ""; 
+    List<CMS.Entities.Redirections> lstRedirections = ViewBag.lstRedirections;
+}
+
+@{ HttpContext ctx = HttpContext.Current;
+    HttpCookie authCookie = HttpContext.Current.Request.Cookies["UserCookie"];
+
+    FormsAuthenticationTicket authTicket;
+
+    if (this.User.Identity.IsAuthenticated && this.User.Identity.Name != null && Context.Session != null)
+    {
+        authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+        RoleName = authTicket.UserData;
+    }
+
+}
+
+<script type="text/javascript">
+
+    function RedirectionsStatus(RedirectionId) {
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("UpdateRedirectionsStatus", "Redirections")', // the URL of the controller action method
+            data: { RedirectionId: RedirectionId }, // optional data
+            datatype: "JSON",
+            success: function (result) {
+                
+                if (result.ok) {
+                    showLobiboxNotification(result.messageType, result.message);
+                    Onload($('#hdnPageNo').val());
+                }
+                else {
+                    $('#divmessage').html(result.data);
+                    $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                }
+            }
+        });
+    }
+
+    function RedirectionsDelete(RedirectionId) {
+        var val2 = confirm("Do you want to delete this record?");
+        if (val2) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("DeleteRedirections", "Redirections")',  // the URL of the controller action method
+                data: { RedirectionId: RedirectionId }, // optional data
+                success: function (result) {
+                    if (result.ok) {
+                        showLobiboxNotification(result.messageType, result.message);
+                        Onload($('#hdnPageNo').val());
+                    }
+                    else {
+                        $("#divmessage").val(result.data);
+                        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                    }
+                },
+            });
+        }
+    }
+</script>
+
+<div class="card-body">
+    <div class="table-responsive">
+        <table class= "table table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th width="5%" style="text-align: center;">S.No.</th>
+                    <th class="t-t-c" width="@(RoleName.Contains("SuperAdmin") ? "20%" : "20%")">
+                        <a onclick="javascript: sortresult('FromUrl');" class="white-t-u">
+                            Source Url  @if (sortcolumn == "FromUrl")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+                    </th>
+                    <th width="@(RoleName.Contains("SuperAdmin") ? "27%" : "27%")">Target Url</th>
+                    <th width="12%" style="text-align: center;">Target</th>
+
+
+                    @*<th width="15%" style="text-align: center;">Company</th>*@
+                    <th width="16%" style="text-align: center;">Posted Date</th>
+                    <th width="10%">
+                        <a onclick="javascript:sortresult('IsActive');" class="white-t-u">
+                            Status @if (sortcolumn == "IsActive")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+                    </th>
+
+                    <th width="13%" style="text-align: center;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (lstRedirections != null && lstRedirections.Count != 0)
+                {
+                    int i = 1;
+                    foreach (var item in lstRedirections)
+                    {
+
+                <tr valign="top">
+                    @*@if (RoleName.Contains("SuperAdmin"))
+        {
+            <td style="text-align: center;">
+                <input type="checkbox" class="CShipperCheck" id="ShipperCheck-@i" name="ShipperCheck" value="@item.ShipperId" style="opacity:1; position:inherit;" />
+            </td>
+        }*@
+                    <td style="text-align: center;">@item.RId</td>
+                    <td>@(item.FromUrl == "" ? "N/A" : item.FromUrl)</td>
+
+                    <td>@(item.ToUrl == "" ? "N/A" : item.ToUrl)</td>
+                    <td style="text-align: center;">@(item.Target == "" ? "N/A" : (item.Target == "_parent"? "With in the tab" : "Out of the tab"))</td>
+
+                    <td style="text-align: center;">@(item.InsertedDate != DateTime.MinValue ? item.InsertedDate.ToString("dd-MM-yyyy hh:mm tt") : "N/A")</td>
+                    <td style="text-align:center;">
+                        <div class="menu-hover">
+                            @{ var isChecked = item.IsActive ? "checked" : ""; }
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" onclick="RedirectionsStatus(@item.RedirectionId)" @isChecked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: center" class="t-t-c">
+                        <div class="table-actions  gap-3 fs-6">
+                            @if (ViewBag.IsView == true || RoleName.Contains("SuperAdmin") || RoleName.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-primary cursor-pointer" href="@Url.Action("ViewRedirections", "Redirections", new { RedirectionId = item.RedirectionId })" title="View" aria-label="Views"><i class="fa fa-eye"></i></a>
+                            }
+                            @if (ViewBag.IsEdit == true || RoleName.Contains("SuperAdmin") || RoleName.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-warning cursor-pointer" href="@Url.Action("EditRedirections", "Redirections", new { RedirectionId = item.RedirectionId })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+                            }
+                            @if (ViewBag.IsDelete == true || RoleName.Contains("SuperAdmin") || RoleName.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-danger cursor-pointer" onclick="javascript:RedirectionsDelete(@item.RedirectionId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                        i++;
+                    }
+                }
+                else
+                {
+                    <tr class="odd"><td valign="top" colspan="10" class="font-14 text-center">No Records found</td></tr>
+                }
+            </tbody>
+        </table>
+
+    </div>
+    <div class="row pt-3">
+        <div class="col-sm-4 col-md-5">
+            <div class="dataTables_info" id="example_info" role="status" aria-live="polite">
+                Showing @((PageNo * Items) - (Items - 1)) - @((PageNo * Items) > Total ? Total : (PageNo * Items)) of @Total entries
+            </div>
+        </div>
+        <div class="col-sm-3 col-md-7 " @(Total > 0 ? "" : "disable")>
+            <div class="d-flex flex-wrap gap-4 justify-content-end">
+                <div class="dataTables_length" id="example_length">
+                    <div class="d-flex align-items-center gap-2 pt-1">
+                        <span>Show Items</span>
+                        <select id="txtitems" name="txtitems" aria-controls="example" onchange="ThemeBannerBind();" class="form-select form-select-sm w-auto">
+                            <option @(Items == 25 ? "selected=selected" : "") value="25">25</option>
+                            <option @(Items == 50 ? "selected=selected" : "") value="50">50</option>
+                            <option @(Items == 75 ? "selected=selected" : "") value="75">75</option>
+                            <option @(Items == 100 ? "selected=selected" : "") value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="dataTables_paginate paging_simple_numbers" id="example_paginate">
+                    @Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref Total, (Int64)ViewBag.pageno, "pagination pb-0"))
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+

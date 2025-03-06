@@ -1,0 +1,16 @@
+-------------------START-------------9/1/2022 12:16:22 PM
+Page :/NATSWorld/event-registration.html
+Entered Into Event Registrations
+-------------------END-------------9/1/2022 12:16:22 PM
+-------------------START-------------9/1/2022 12:16:26 PM
+Page :/NATSWorld/event-registration.html
+Inserted Event UserInfo Succefully
+-------------------END-------------9/1/2022 12:16:26 PM
+-------------------START-------------9/1/2022 12:16:35 PM
+Page :/NATSWorld/event-registration.html
+Enterd Into Paymet Process
+-------------------END-------------9/1/2022 12:16:35 PM
+-------------------START-------------9/1/2022 12:17:51 PM
+Page :/NATSWorld/event-registration.html
+RESPMSG Not Approved - Updated Event User Payment info
+-------------------END-------------9/1/2022 12:17:51 PM

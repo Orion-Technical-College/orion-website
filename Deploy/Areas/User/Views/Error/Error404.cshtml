@@ -1,0 +1,57 @@
+﻿@{
+    Layout = "~/Areas/User/Views/Shared/_MainLayout.cshtml";
+
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+    ViewBag.Title = "Error - " + objAppInfo.SiteName;
+    //string cname = ViewBag.cname;
+}
+
+
+<!-- Start inner banner Section -->
+<section class="">
+    <div class="innban-sec position-relative ">
+        <img class="w-100" src="Content/User/img/banner-image-2.jpg" alt="Acknowledgement">
+        <div class="caption position-absolute top-50 start-0 text-start">
+            <div class="container">
+                <div class="">
+                    <h2 class="td_section_title td_fs_48 mb-0 text-white">
+                        404 - PAGE NOT FOUND
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- end inner banner Section -->
+<!-- Start About us page Courses -->
+
+<section class="td_gray_bg_3 ss sec-gap py-5 ">
+    <div class="container">
+        <div class="ab__topsec mt-0">
+            <div class="row  ">
+                <div class="col-md-12">
+                    <div class="text-center " style="margin-bottom: 80px;">
+
+                            <img src="Content/User/img/failed-icon.png" style="height:190px;" />
+                      
+
+                        <div class="inner__heading">
+                            <h2 class="head__title text-center  justify-content-center" style="margin-top: -40px;">
+                                The page you are looking for might have removed had its name changed or is temporarily unavailable.
+                            </h2><br />
+                        </div>
+                        <a class="td_btn td_style_1 td_radius_10 td_medium sec__btn mt-3" href="@Url.Action("Index", "Home")"><span class="td_btn_in td_white_color  sec__btn2"><span>Back to Home</span>  </span> </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- End About us page Courses -->
+

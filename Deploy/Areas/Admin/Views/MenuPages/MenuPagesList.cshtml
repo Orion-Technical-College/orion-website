@@ -1,0 +1,128 @@
+﻿@using System.Configuration;
+@{ Layout = null;}
+@{
+    string sortcolumn = (string)ViewBag.sortcolumn;
+    string sortorder = (string)ViewBag.sortorder;
+    Int64 Total = (Int64)ViewBag.total;
+    var PageNo = (Int64)ViewBag.pageno;
+    var Items = (Int64)ViewBag.items;
+
+    var imgloc = ConfigurationManager.AppSettings["baseurl"] + "Content/PageDetails/thumbphoto/";
+    var imglocNormal = ConfigurationManager.AppSettings["baseurl"] + "Content/PageDetails/normalphoto/";
+
+    List<CMS.Entities.PageDetails> lstPageDetails = ViewBag.lstPageDetails;
+
+    HttpCookie authCookie = HttpContext.Current.Request.Cookies["UserCookie"];
+
+    FormsAuthenticationTicket authTicket;
+    string userRole = null;
+    if (this.User.Identity.IsAuthenticated && this.User.Identity.Name != null && Context.Session != null)
+    {
+        authTicket = FormsAuthentication.Decrypt(authCookie.Value);
+
+        userRole = authTicket.UserData;
+    } 
+    
+}
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('.closable').append('<span class="closelink" title="Close"></span>');
+        $('#MWebsite').addClass('active');
+        $('.closelink').click(function () {
+            $(this).parent().fadeOut('600', function () { $(this).remove(); });
+        });
+    });
+
+    function PageDetailstatus(PageDetailId) {
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("PageDetailstatus", "PageDetails")', // the URL of the controller action method
+            data: { PageDetailId: PageDetailId }, // optional data
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    $('#divmessage').html(result.data);
+                    Onload($('#hdnPageNo').val());
+                }
+                else {
+                    $('#divmessage').html(result.data);
+                }
+            }
+        });
+    }
+
+    function DeletePageDetails(MenuPageId) {
+        var val2 = confirm("Do you want to delete this record?");
+        if (val2) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("DeleteMenuPages", "MenuPages")',  // the URL of the controller action method
+                data: { MenuPageId: MenuPageId }, // optional data
+                success: function (result) {
+                    if (result.ok) {
+                        $("#divmessage").html(result.data);
+                        Onload($('#hdnPageNo').val());
+                    }
+                    else {
+                        $("#divmessage").val(result.data);
+                    }
+                },
+            });
+        }
+    }
+
+</script>
+
+@if (Total == -1)
+{
+    <div class="norecords">Sorry failed processing your request.</div> 
+}
+else
+{
+    <table width="100%" class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                
+                        <th width="5%" style="text-align: center;">S.No.</th>
+                <th class="t-t-c"><a onclick="javascript:sortresult('Heading');" class="white-t-u">Heading @if (sortcolumn == "Heading")
+                                                                                                           {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" /> }</a></th>
+                <th width="8%">Menu item</th>
+                <th width="8%">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (lstPageDetails.Count != 0)
+            {
+                int j = 0;
+                foreach (var item in lstPageDetails)
+                { 
+                <tr valign="top">
+                    <td style="text-align: center;">@item.RId</td>
+                    <td class="t-t-c">
+                       <a href="@Url.Action("EditPageDetails", "PageDetails", new { PageDetailId =  item.PageDetailId,MenuItemId= item.MenuItemId })"> @item.Heading</a>
+                    </td>
+                    <td>@item.DisplayName</td>
+                    <td>
+                       
+                            <a onclick="AddEditValidate('edit', @item.MenuPageId);" title="Edit"><i class="fa fa-pencil-square-o"></i></a>
+                        
+                        
+                            <a class="Universitiesdelete" onclick="javascript:DeletePageDetails(@item.MenuPageId);" title="Delete"><i class="fa fa-trash-o"></i></a>
+                           
+                    </td>
+                </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td class="norecords" colspan="10">No Records Found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+@Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref Total, (Int64)ViewBag.PageNo, "pagination pagination-centered"))

@@ -1,0 +1,702 @@
+﻿@{
+    ViewBag.Title = "User RoleAccess";
+
+    var userroles = (List<CMS.Entities.Roles>)ViewBag.userRoleslst;
+    var roleslst = (List<CMS.Entities.Roles>)ViewBag.lstRoles;
+    var subroleslst = (List<CMS.Entities.Roles>)ViewBag.lstsubRoles;
+}
+<script>
+    function validateroles() {
+        var RoleIds = Common.GetCheckBoxValue('RoleNamecheckbox');
+        var IsAdds = Common.GetCheckBoxValue('IsAdd');
+        var IsEdits = Common.GetCheckBoxValue('IsEdit');
+        var IsViews = Common.GetCheckBoxValue('IsView');
+        var IsDeletes = Common.GetCheckBoxValue('IsDelete');
+        var IsExports = Common.GetCheckBoxValue('IsExport');
+        if (RoleIds == "") {
+            alert("Please select atleast one Item.");
+            return false;
+        }
+        $('#RoleIds').val(RoleIds);
+        $('#IsAdds').val(IsAdds);
+        $('#IsEdits').val(IsEdits);
+        $('#IsViews').val(IsViews);
+        $('#IsDeletes').val(IsDeletes);
+        $('#IsExports').val(IsExports);
+    }
+
+    function enableoptions(rolename, j) {
+        var checkbox = document.getElementById('RoleNamecheckbox-' + j);
+        if (checkbox.checked) {
+            $('#showbutton-' + j).show();
+            $('#Role-' + rolename).show();
+        }
+        else {
+            $('#showbutton-' + j).hide();
+            $('#Role-' + rolename).hide();
+        }
+    }
+
+    function selectall(j) {
+        var all = document.getElementById('IsSelectAll-' + j);
+        if (all.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+
+            var isadds = document.getElementById('IsAdd-' + j);
+            isadds.checked = true;
+
+            var isedits = document.getElementById('IsEdit-' + j);
+            isedits.checked = true;
+
+            var isviews = document.getElementById('IsView-' + j);
+            isviews.checked = true;
+
+            var isdeletes = document.getElementById('IsDelete-' + j);
+            isdeletes.checked = true;
+
+            var isexports = document.getElementById('IsExport-' + j);
+            isexports.checked = true;
+
+        }
+        else {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = false;
+
+            var isadds = document.getElementById('IsAdd-' + j);
+            isadds.checked = false;
+
+            var isedits = document.getElementById('IsEdit-' + j);
+            isedits.checked = false;
+
+            var isviews = document.getElementById('IsView-' + j);
+            isviews.checked = false;
+
+            var isdeletes = document.getElementById('IsDelete-' + j);
+            isdeletes.checked = false;
+
+            var isexports = document.getElementById('IsExport-' + j);
+            isexports.checked = false;
+        }
+    }
+
+    function bindrole(j) {
+        var isadds = document.getElementById('IsAdd-' + j);
+        var isedits = document.getElementById('IsEdit-' + j);
+        var isviews = document.getElementById('IsView-' + j);
+        var isdeletes = document.getElementById('IsDelete-' + j);
+        var isexports = document.getElementById('IsExport-' + j);
+        if (isadds.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+        }
+        else if (isedits.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+        }
+        else if (isviews.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+        }
+        else if (isdeletes.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+        }
+        else if (isexports.checked) {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = true;
+        }
+        else {
+            var isroles = document.getElementById('RoleNamecheckbox-' + j);
+            isroles.checked = false;
+        }
+
+    }
+
+    function RemoveRoleAccess(UserRoleId, RoleName, pid) {
+
+        var conf = confirm('Do you want to delete access to this ' + RoleName + '?');
+
+                            if (conf) {
+                    $.ajax({
+                                type: "POST",
+                        url: '@Url.Action("RemoveRoleAccess", "Users")', // the URL of the controller action method
+                        data: { UserRoleId: UserRoleId, ParentId: pid }, // optional data
+                        datatype: "JSON",
+                        success: function (result) {
+                            if (result.ok) {
+                                showLobiboxNotification(result.messageType, result.message);
+
+                                //$('#divmessage').html(result.data);
+                                $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                            RolesBind();
+                                        }
+                                        else {
+                                $('#divmessage').html(result.data);
+                                $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                                        }
+                                    }
+                                });
+                            }
+    }
+
+    function manageroles(parentids, roleid) {
+        // Comma-separated string
+        var commaSeparatedString = parentids;
+
+        var isrole = document.getElementById('RoleNamecheckbox-' + roleid);
+
+        // Split the string into an array using the split method
+        var arrayOfValues = commaSeparatedString.split(',');
+
+        // Variable to store the result
+        var result = '';
+
+        // Loop through the array and assign values to the result variable
+        for (var i = 0; i < arrayOfValues.length; i++) {
+            //result += arrayOfValues[i];
+            var issubroles = document.getElementById('RoleNamecheckbox-' + arrayOfValues[i]);
+            if (isrole.checked) {
+                issubroles.checked = true;
+            }
+            else {
+                issubroles.checked = false;
+            }
+
+        }
+    }
+    function toggleAllCheckboxes(roleId, isChecked) {
+        // List of checkbox names to toggle
+        const checkboxNames = ["IsAdd", "IsEdit", "IsView", "IsDelete", "IsExport", "IsSelectAll"];
+
+        // Iterate through the checkbox names and toggle their states
+        checkboxNames.forEach(function (name) {
+            const checkbox = document.getElementById(`${name}-${roleId}`);
+            if (checkbox) {
+                checkbox.checked = isChecked;
+            }
+        });
+    }
+    function SubtoggleAllCheckboxes(roleId, isChecked) {
+        // List of checkbox names to toggle
+        const checkboxNames = ["IsAdd", "IsEdit", "IsView", "IsDelete", "IsExport", "IsSelectAll"];
+
+        // Iterate through the checkbox names and toggle their states
+        checkboxNames.forEach(function (name) {
+            const checkbox = document.getElementById(`${name}-${roleId}`);
+            if (checkbox) {
+                checkbox.checked = isChecked;
+            }
+        });
+    }
+
+</script>
+<!-- breadcumb -->
+
+<table width="100%" class="table table-striped align-middle mb-0">
+    @{int j = 3;
+        int l = 3;
+        <thead class="table-light">
+                <tr>
+                    @*<th width="5%" align="center" style="padding:8px 6px; text-align:center;">S.No.</th>*@
+                    <th width="33%" style="text-align: left;padding:8px 6px">
+                        Role Name
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Is-Add
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Is-Edit
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Is-View
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Is-Delete
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Is-Export
+                    </th>
+                    <th width="10%" style="padding:8px 6px; text-align:center;">
+                        Select All
+                    </th>
+                    <th width="7%" style="padding:8px 6px; text-align:center;">#</th>
+                    <th width="7%" style="padding:8px 6px; text-align:center;">#</th>
+                </tr>
+        </thead>
+        <tbody>
+
+            @foreach (var role in roleslst)
+            {
+                int t1 = 0;
+                Int64 urid = 0;
+                bool isadd = false;
+                bool isedit = false;
+                bool isview = false;
+                bool isdelete = false;
+                bool isexport = false;
+                if (userroles != null)
+                {
+                    for (var x1 = 0; x1 < userroles.Count; x1++)
+                    {
+                        if (role.RoleId == userroles[x1].RoleId)
+                        {
+                            t1 = 1;
+                            urid = userroles[x1].UserRoleId;
+                            isadd = userroles[x1].IsAdd;
+                            isedit = userroles[x1].IsEdit;
+                            isview = userroles[x1].IsView;
+                            isdelete = userroles[x1].IsDelete;
+                            isexport = userroles[x1].IsExport;
+
+                        }
+                    }
+                }
+                if (t1 == 1)
+                {
+
+
+                    if (role.RoleName != "SiteAdmin" && role.RoleName != "ChapterAdmin")
+                    {
+                        <tr>
+                            <input type="hidden" id="UserRoleId-@role.RoleId" name="UserRoleId" value="@urid" />
+                            <td>
+                                <label>
+                                    <input type="checkbox" checked="checked" name="RoleNamecheckbox" id="RoleNamecheckbox-@role.RoleId" class="flat-red" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : ""); enableoptions('@role.RoleName',@role.RoleId); manageroles('@role.comma_separated_ids',@role.RoleId);" value="@{@role.RoleId}">
+                                    Manage @role.RoleName
+                                </label>
+                            </td>
+                            @if (role.SubRoleCount != 0)
+                            {
+                                <td style="text-align:center;" colspan="8">
+                                </td>
+                            }
+                            else
+                            {
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" @(isadd == true ? "checked=checked" : "") name="IsAdd" onclick="bindrole(@role.RoleId);" id="IsAdd-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" @(isedit == true ? "checked=checked" : "") name="IsEdit" onclick="bindrole(@role.RoleId);" id="IsEdit-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" @(isview == true ? "checked=checked" : "") name="IsView" onclick="bindrole(@role.RoleId);" id="IsView-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" @(isdelete == true ? "checked=checked" : "") name="IsDelete" onclick="bindrole(@role.RoleId);" id="IsDelete-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" @(isexport == true ? "checked=checked" : "") name="IsExport" onclick="bindrole(@role.RoleId);" id="IsExport-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@role.RoleId" onclick="selectall(@role.RoleId);" class="flat-red" value="Yes" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <a style="text-decoration: underline; color: #ff6a00; font-weight: bold; cursor: pointer" onclick="RemoveRoleAccess(@urid, '@role.RoleName',@role.RoleId);">Remove</a>
+                                </td>
+                                <td style="text-align:center;">
+                                    <a style="text-decoration: underline; color: #2aab0f; font-weight: bold; cursor: pointer" onclick="AssignRoleUsers(@role.RoleId, @role.RoleId,@role.RoleId);">Update</a>
+                                </td>
+
+                            }
+
+                        </tr>
+        }
+
+    }
+    else
+    {
+        if (role.RoleName != "SiteAdmin" && role.RoleName != "ChapterAdmin")
+        {
+                        <tr>
+                            <td>
+
+                                <label>
+                                    <input type="checkbox" name="RoleNamecheckbox" id="RoleNamecheckbox-@role.RoleId" class="flat-red"
+                                           onclick="toggleAllCheckboxes('@role.RoleId', this.checked);" value="@role.RoleId">
+                                    Manage @role.RoleName
+                                </label>
+                            </td>
+                            @if (role.SubRoleCount != 0)
+                            {
+                                <td style="text-align:center;" colspan="8">
+                                </td>
+                            }
+                            else
+                            {
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsAdd" onclick="bindrole(@role.RoleId);" id="IsAdd-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsEdit" onclick="bindrole(@role.RoleId);" id="IsEdit-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsView" id="IsView-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsDelete" onclick="bindrole(@role.RoleId);" id="IsDelete-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsExport" onclick="bindrole(@role.RoleId);" id="IsExport-@role.RoleId" class="flat-red" value="true" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                    <label class="checkbox-in">
+                                        <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@role.RoleId" onclick="selectall(@role.RoleId);" class="flat-red" value="Yes" />
+
+                                    </label>
+                                </td>
+                                <td style="text-align:center;">
+                                </td>
+                                <td style="text-align:center;">
+                                    <a style="text-decoration: underline; color: #2aab0f; font-weight: bold; cursor: pointer" onclick="AssignRoleUsers(@role.RoleId, @role.RoleId);">Update</a>
+                                </td>
+                            }
+
+                        </tr>
+                        }
+                    }
+
+                    foreach (var subrole in subroleslst)
+                    {
+
+                        int subt1 = 0;
+                        Int64 suburid = 0;
+                        bool subisadd = false;
+                        bool subisedit = false;
+                        bool subisview = false;
+                        bool subisdelete = false;
+                        bool subisexport = false;
+                        if (userroles != null)
+                        {
+                            for (var x1 = 0; x1 < userroles.Count; x1++)
+                            {
+                                if (subrole.RoleId == userroles[x1].RoleId)
+                                {
+                                    subt1 = 1;
+                                    suburid = userroles[x1].UserRoleId;
+                                    subisadd = userroles[x1].IsAdd;
+                                    subisedit = userroles[x1].IsEdit;
+                                    subisview = userroles[x1].IsView;
+                                    subisdelete = userroles[x1].IsDelete;
+                                    subisexport = userroles[x1].IsExport;
+
+                                }
+                            }
+                        }
+
+                        if (subrole.ParentId == role.RoleId)
+                        {
+                            if (subt1 == 1)
+                            {
+                                <tr>
+                                    <input type="hidden" id="UserRoleId-@subrole.RoleId" name="UserRoleId" value="@suburid" />
+                                    <td>
+                                        <label>
+                                            <span style="display: inline-block; padding-left: 60px;">
+                                                <img src="Content/images/indicater.gif" />
+                                                <input type="checkbox" checked="checked" name="RoleNamecheckbox" id="RoleNamecheckbox-@subrole.RoleId" class="flat-red" @((subrole.RoleName == "SiteAdmin" || subrole.RoleName == "ChapterAdmin") ? "" : "") onclick="@((subrole.RoleName == "SiteAdmin" || subrole.RoleName == "ChapterAdmin") ? "" : ""); enableoptions('@subrole.RoleName',@subrole.RoleId);" value="@{@subrole.RoleId}">
+                                                Manage @subrole.RoleName
+                                            </span>
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" @(subisadd == true ? "checked=checked" : "") name="IsAdd" onclick="bindrole(@subrole.RoleId);" id="IsAdd-@subrole.RoleId" class="flat-red" value="true" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" @(subisedit == true ? "checked=checked" : "") name="IsEdit" onclick="bindrole(@subrole.RoleId);" id="IsEdit-@subrole.RoleId" class="flat-red" value="true" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" @(subisview == true ? "checked=checked" : "") name="IsView" onclick="bindrole(@subrole.RoleId);" id="IsView-@subrole.RoleId" class="flat-red" value="true" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" @(subisdelete == true ? "checked=checked" : "") name="IsDelete" onclick="bindrole(@subrole.RoleId);" id="IsDelete-@subrole.RoleId" class="flat-red" value="true" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" @(subisexport == true ? "checked=checked" : "") name="IsExport" onclick="bindrole(@subrole.RoleId);" id="IsExport-@subrole.RoleId" class="flat-red" value="true" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@subrole.RoleId" onclick="selectall(@subrole.RoleId);" class="flat-red" value="Yes" />
+
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <a style="text-decoration: underline; color: #ff6a00; font-weight: bold; cursor: pointer" onclick="RemoveRoleAccess(@suburid, '@subrole.RoleName', @subrole.ParentId);">Remove</a>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <a style="text-decoration: underline; color: #2aab0f; font-weight: bold; cursor: pointer" onclick="AssignRoleUsers(@subrole.RoleId, @subrole.RoleId, @subrole.ParentId);">Update</a>
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td>
+                                        <label>
+                                            <span style="display: inline-block; padding-left: 60px;">
+                                                <img src="Content/images/indicater.gif" />
+                                                <input type="checkbox" name="RoleNamecheckbox" id="RoleNamecheckbox-@subrole.RoleId" class="flat-red"
+                                                       onclick="SubtoggleAllCheckboxes('@subrole.RoleId', this.checked);" value="@subrole.RoleId">
+                                                Manage @subrole.RoleName
+                                            </span>
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsAdd" id="IsAdd-@subrole.RoleId" class="flat-red" value="true" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsEdit" id="IsEdit-@subrole.RoleId" class="flat-red" value="true" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsView" id="IsView-@subrole.RoleId" class="flat-red" value="true" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsDelete" id="IsDelete-@subrole.RoleId" class="flat-red" value="true" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsExport" id="IsExport-@subrole.RoleId" class="flat-red" value="true" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <label class="checkbox-in">
+                                            <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@subrole.RoleId" class="flat-red" value="Yes" />
+                                        </label>
+                                    </td>
+                                    <td style="text-align:center;">
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <a style="text-decoration: underline; color: #2aab0f; font-weight: bold; cursor:pointer"
+                                           onclick="AssignRoleUsers(@subrole.RoleId, @subrole.RoleId, @subrole.ParentId);">Update</a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+
+                    }
+                    j++;
+                }
+
+            </tbody>
+        }
+    </table>
+
+
+
+        @*<div class="content">
+            <div class="box validation">
+               
+                <div class="box-header">
+                    <h3 class="box-title dis-in">Add Page Details </h3>
+                </div>
+                
+                <div class="box-body">
+                    @{int j = 3;
+
+                        <div class="row" style="display: flex; flex-wrap: wrap; ">
+                            @foreach (var role in roleslst)
+                            {
+                                int t1 = 0;
+                                if (userroles != null)
+                                {
+                                    for (var x1 = 0; x1 < userroles.Count; x1++)
+                                    {
+                                        if (role.RoleId == userroles[x1].RoleId)
+                                        {
+                                            t1 = 1;
+
+                                        }
+                                    }
+                                }
+
+                                if (t1 == 1)
+                                {
+
+                                   
+                                    <div class="col-xs-12 col-lg-6 col-sm-6">
+                                        <div class="single-how-works">
+                                            <label>
+                                                <input type="checkbox" checked="checked" name="RoleNamecheckbox" id="RoleNamecheckbox-@j" class="flat-red" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : ""); enableoptions('@role.RoleName',@j);" value="@{@role.RoleId}">
+                                                Manage @role.RoleName
+                                            </label>
+
+                                            <div class="clearfix row" id="Role-@role.RoleName" style="display:none;">
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsAdd" id="IsAdd-@j" class="flat-red" value="true" />
+                                                        Is Add
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsEdit" id="IsEdit-@j" class="flat-red" value="true" />
+                                                        Is Edit
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsView" id="IsView-@j" class="flat-red" value="true" />
+                                                        Is View
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsDelete" id="IsDelete-@j" class="flat-red" value="true" />
+                                                        Is Delete
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsExport" id="IsExport-@j" class="flat-red" value="true" />
+                                                        Is Export
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@j" onclick="selectall(@j);" class="flat-red" value="Yes" />
+                                                        Select All
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="buttonalign" id="showbutton-@j" style="display:none;">
+                                                <button class="welcome-hero-btn how-work-btn">
+                                                    Update
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                }
+                                else
+                                {
+
+
+                                    <div class="col-xs-12 col-lg-6 col-sm-6">
+                                        <div class="single-how-works">
+                                            <label>
+                                                <input type="checkbox" name="RoleNamecheckbox" id="RoleNamecheckbox-@j" class="flat-red" @((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : "") onclick="@((role.RoleName == "SiteAdmin" || role.RoleName == "ChapterAdmin") ? "" : ""); enableoptions('@role.RoleName',@j);" value="@{@role.RoleId}">
+                                                Manage @role.RoleName
+                                            </label>
+                                            <div class="clearfix row" id="Role-@role.RoleName" style="display:none;">
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsAdd" id="IsAdd-@j" class="flat-red" value="true" />
+                                                        Is Add
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsEdit" id="IsEdit-@j" class="flat-red" value="true" />
+                                                        Is Edit
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsView" id="IsView-@j" class="flat-red" value="true" />
+                                                        Is View
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsDelete" id="IsDelete-@j" class="flat-red" value="true" />
+                                                        Is Delete
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsExport" id="IsExport-@j" class="flat-red" value="true" />
+                                                        Is Export
+                                                    </label>
+                                                </div>
+                                                <div class="col-xs-12 col-lg-4 col-sm-6">
+                                                    <label class="checkbox-in">
+                                                        <input type="checkbox" name="IsSelectAll" id="IsSelectAll-@j" onclick="selectall(@j);" class="flat-red" value="true" />
+                                                        Select All
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="buttonalign" id="showbutton-@j" style="display:none;">
+                                                <button class="welcome-hero-btn how-work-btn">
+                                                    Update
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                }
+
+                                j++;
+                            }
+                        </div>
+
+                    }
+
+                </div>
+
+            </div>
+        </div>*@
+
+
+

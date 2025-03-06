@@ -1,0 +1,690 @@
+﻿@{
+    Layout = null;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+    List<CMS.Entities.MenuItems> lstMenuItems2 = ViewBag.lstMenuItems2;
+    List<CMS.Entities.MenuItems> lstMenuItems3 = ViewBag.lstMenuItems3;
+    List<CMS.Entities.MenuItems> lstMenuItems4 = ViewBag.lstMenuItems4;
+    var adminurl = Session["BaseUrl"];
+    Int64 ChapterId = ViewBag.ChapterId;
+    bool IsFooterBar = ViewBag.IsFooterBar;
+    bool IsMenuBar = ViewBag.IsMenuBar;
+    bool IsQuickLinks = ViewBag.IsQuickLinks;
+
+
+    var userRole = "";
+
+    bool IsEdit = Convert.ToBoolean(Session["IsEdit"]);
+    bool IsView = Convert.ToBoolean(Session["IsView"]);
+    bool IsDelete = Convert.ToBoolean(Session["IsDelete"]);
+    bool IsExport = Convert.ToBoolean(Session["IsExport"]);
+
+
+
+    Int64 Total = (Int64)ViewBag.total;
+
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+}
+
+<style>
+    .aws-h-a {
+        text-decoration: none;
+        position: relative;
+    }
+
+        .aws-h-a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            border-bottom: 2px solid #0756ca;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .aws-h-a:hover::after {
+            transform: scaleX(1);
+        }
+</style>
+
+<div class="card-body">
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+
+
+
+                    <th>Menu Item</th>
+                    <th style="text-align: center;">#</th>
+                    <th style="text-align: center;">#</th>
+                    @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <th style="text-align: center;">
+                    Order No</th>
+
+                        <th>Status</th>
+                    }
+                        <th>Action</th>
+                    </tr>
+            </thead>
+            <tbody>
+                @if (Total != 0)
+                {
+                    //int i = 1;
+                    if (lstMenuItems != null && lstMenuItems.Count != 0)
+                    {
+                        int i = 0;
+
+                        foreach (var item in lstMenuItems)
+                        {
+                <tr style="background: #d6e0f5;">
+                    <td><span style="display: inline-block; padding-left: 10px;">@item.DisplayName</span></td>
+                    <td style="text-align: center;">
+                        @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                        {
+                            if (item.PageDetailId != 0)
+                            {
+                                <a href="@Url.Action("EditPageDetails", "PageDetails", new { PageDetailId = item.PageDetailId, mid = ViewBag.Mid })" class="red-t aws-h-a" style="cursor:pointer">Edit Page Details</a><span> - <a onclick="EditMenuPages(@item.MenuPageId);" class="red-t" style="cursor:pointer">Change Page</a></span>
+                            }
+                            else
+                            {
+                                <a onclick="AddPageToItem('@item.MenuItemId', '@item.ChapterId');" class="red-t aws-h-a" style="cursor:pointer">Add Page to Item</a>
+                                @*<a href="/yourTargetPage?menuItemId=@item.MenuItemId&chapterId=@item.ChapterId" class="red-t" style="cursor:pointer;">Add Page to Item</a>*@
+
+
+                            }
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </td>
+                    <td style="text-align: center;">
+                        @if (item.PageDetailId != 0)
+                        {
+                            @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item.ChapterName]+"p/"+(item.PageUrl != null && item.PageUrl != "" ? item.PageUrl + ".html?mrid=" + item.MenuItemId : ""))" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+                            @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item.ChapterName]+"p/"+item.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+
+                            <a href="@(item.DocumentUrl != null && item.DocumentUrl != "" ? adminurl + "PageDocuments/" + item.DocumentUrl : (item.OtherUrl != null && item.OtherUrl != "" ? item.OtherUrl : "p/" + (item.PageUrl != null && item.PageUrl != "" ? item.PageUrl + ".html?mrid=" + item.MenuItemId : "")))" target="_blank" class="red-t aws-h-a" style="cursor:pointer;">Preview</a>
+
+
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </td>
+                    @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <td style="text-align: center;">
+                            <input type="text" maxlength="3" style="width: 50px; text-align: center; " id="Position@(i)" value="@item.Position" onkeypress="return Common.isNumberKey(event)" />
+                            <a onclick="UpdateOrderNo(@i,@item.MenuItemId);" title="Update"><i class="fa fa-fw fa-refresh"></i></a>
+
+                        </td>
+
+                        @*<td style="text-align:center;">
+                @{
+                    var isactive = "";
+                    var active = "";
+                    var disable = "";
+                    if (item.IsActive == true)
+                    {
+                        isactive = "Active";
+                        disable = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item.MenuItemId + ");\"";
+                    }
+                    else
+                    {
+                        isactive = "Disabled";
+                        active = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item.MenuItemId + ");\"";
+                    }
+                    <div class="admin-active">
+                        @isactive
+                        <ul>
+                            <li><a @Html.Raw(active)>Active</a></li>
+                            <li><a @Html.Raw(disable)>Disabled</a></li>
+                        </ul>
+                    </div>
+                }
+            </td>*@
+
+
+
+                        <td>
+                            <div class="menu-hover">
+                                @{ var isactive = item.IsActive ? "checked" : ""; }
+                                @{var titleValue = item.IsActive ? "Active" : "Disabled";}
+
+                                <div>
+                                    <label class="switch" title="@titleValue">
+                                        <input type="checkbox" onclick="MenuItemsStatus(@item.MenuItemId)" @isactive>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </td>
+                                    }
+                        <td class="">
+                            <div class="table-actions d-flex  gap-3 fs-6">
+                                @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                {
+
+                                    <a class="text-warning cursor-pointer" href="@Url.Action("EditMenuItems", "MenuItems",new { MenuItemId = item.MenuItemId,ChapterId = ChapterId, mid = ViewBag.Mid })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+
+                                }
+                                @*@if (IsView == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <a title="View" class="sepV_a" href="@Url.Action("ViewMenuItems", "MenuItems", new { MenuItemId = item.MenuItemId, mid = ViewBag.Mid })"><i class="fa fa-eye"></i></a>
+                    }*@
+                                @if (IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                {
+                                    if (item.SubMenuItemCount == 0)
+                                    {
+
+                                        <a class="text-danger cursor-pointer" onclick="MenuItemsDelete(@item.MenuItemId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                                    }
+                                    else
+                                    {
+                                        <a class="text-danger cursor-pointer"><i class="bi bi-trash-fill"></i></a>
+                                    }
+                                }
+
+
+
+                            </div>
+
+
+                        </td>
+
+
+                    </tr>
+                            if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                            {
+
+                                int j = 0;
+                                foreach (var item2 in lstMenuItems2)
+                                {
+                                    if (item2.PageParentId == item.MenuItemId)
+                                    {
+            <tr>
+                <td>
+                    <span style="display: inline-block; padding-left: 20px;">
+                        <img src="Content/images/indicater.gif" />
+                        @item2.DisplayName
+                    </span>
+                </td>
+                <td style="text-align: center;">
+                    @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        if (item2.PageDetailId != 0)
+                        {
+                            <a href="@Url.Action("EditPageDetails", "PageDetails", new { PageDetailId = item2.PageDetailId, mid = ViewBag.Mid })" class="red-t aws-h-a" style="cursor:pointer;">Edit Page Details</a><span> - <a onclick="EditMenuPages(@item2.MenuPageId);" class="red-t" style="cursor:pointer;">Change Page</a></span>
+                        }
+                        else
+                        {
+                            <a onclick="AddPageToItem('@item2.MenuItemId', '@item2.ChapterId');" class="red-t " style="cursor:pointer;">Add Page to Item</a>
+                        }
+                    }
+                </td>
+                <td style="text-align: center;">
+                    @if (item2.PageDetailId != 0)
+                    {
+
+
+                        @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item2.ChapterName]+item2.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+                        @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item.ChapterName]+"p/"+item.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+
+
+                        <a href="@(item2.DocumentUrl != null && item2.DocumentUrl != "" ? adminurl + "PageDocuments/" + item2.DocumentUrl : (item2.OtherUrl != null && item2.OtherUrl != "" ? item2.OtherUrl : "p/" + (item2.PageUrl != null && item2.PageUrl != "" ? item2.PageUrl + ".html?mrid=" + item2.MenuItemId : "")))" target="_blank" class="red-t aws-h-a" style="cursor:pointer;">Preview</a>
+
+                    }
+                    else
+                    {
+                        <span>N/A</span>
+                    }
+                </td>
+                @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                {
+                    <td style="text-align: center;">
+                        <input type="text" maxlength="3" style="width: 50px; text-align: center; text-align: center; " id="Position@(j)" value="@item2.Position" onkeypress="return Common.isNumberKey(event)" />
+                        <a onclick="UpdateOrderNo(@j,@item2.MenuItemId);" title="Update"><i class="fa fa-fw fa-refresh"></i></a>
+
+                    </td>
+
+                    @*<td style="text-align:center;">
+                @{
+                    var isactive2 = "";
+                    var active2 = "";
+                    var disable2 = "";
+                    if (item2.IsActive == true)
+                    {
+                        isactive2 = "Active";
+                        disable2 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item2.MenuItemId + ");\"";
+                    }
+                    else
+                    {
+                        isactive2 = "Disabled";
+                        active2 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item2.MenuItemId + ");\"";
+                    }
+                    <div class="admin-active">
+                        @isactive2
+                        @if (item2.ParentActive)
+                        {
+                            <ul>
+                                <li><a @Html.Raw(active2)>Active</a></li>
+                                <li><a @Html.Raw(disable2)>Disabled</a></li>
+                            </ul>
+                        }
+                    </div>
+                }
+            </td>*@
+                    <td>
+                        <div class="menu-hover">
+                            @{ var isactive2 = item2.IsActive ? "checked" : ""; }
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" onclick="MenuItemsStatus(@item2.MenuItemId)" @isactive2>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </td>
+                                }
+
+                    <td style="text-align:center;">
+                        <div class="table-actions d-flex align-items-center gap-3 fs-6">
+                            @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+
+                                <a class="text-warning cursor-pointer" href="@Url.Action("EditMenuItems", "MenuItems",new { MenuItemId = item2.MenuItemId,ChapterId = ChapterId, mid = ViewBag.Mid })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+                            }
+                            @*@if (IsView == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <a title="View" class="sepV_a" href="@Url.Action("ViewMenuItems", "MenuItems", new { MenuItemId = item2.MenuItemId, mid = ViewBag.Mid })"><i class="fa fa-eye"></i></a>
+                    }*@
+                            @if (IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                if (item2.SubMenuItemCount == 0)
+                                {
+                                    <a class="text-danger cursor-pointer" onclick="MenuItemsDelete(@item2.MenuItemId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+
+
+                                }
+                                else
+                                {
+                                    <a class="text-danger cursor-pointer"><i class="bi bi-trash-fill"></i></a>
+                                }
+                            }
+                        </div>
+                    </td>
+
+                </tr>
+
+
+                                        if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                        {
+
+
+
+                                            foreach (var item3 in lstMenuItems3)
+                                            {
+                                                if (item3.PageParentId == item2.MenuItemId)
+                                                {
+            <tr>
+                <td>
+                    <span style="display: inline-block; padding-left: 40px;">
+                        <img src="Content/images/indicater.gif" />
+                        @item3.DisplayName
+                    </span>
+                </td>
+                <td style="text-align:center;">
+                    @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        if (item3.PageDetailId != 0)
+                        {
+                            <a href="@Url.Action("EditPageDetails", "PageDetails", new { PageDetailId = item3.PageDetailId, mid = ViewBag.Mid })" class="red-t" style="cursor:pointer;">Edit Page Details</a><span> - <a onclick="EditMenuPages(@item3.MenuPageId);" class="red-t" style="cursor:pointer;">Change Page</a></span>
+                        }
+                        else
+                        {
+                            <a onclick="AddPageToItem('@item3.MenuItemId', '@item3.ChapterId');" class="red-t" style="cursor:pointer;">Add Page to Item</a>
+                        }
+                    }
+                </td>
+                <td style="text-align:center;">
+                    @if (item3.PageDetailId != 0)
+                    {
+                        @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item3.ChapterName]+item3.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+                        @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item.ChapterName]+"p/"+item.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+
+
+                        <a href="@(item.DocumentUrl != null && item.DocumentUrl != "" ? adminurl + "PageDocuments/" + item.DocumentUrl : (item.OtherUrl != null && item.OtherUrl != "" ? item.OtherUrl : "p/" + (item.PageUrl != null && item.PageUrl != "" ? item.PageUrl + ".html?mrid=" + item.MenuItemId : "")))" target="_blank" class="red-t" style="cursor:pointer;">Preview</a>
+
+                    }
+                    else
+                    {
+                        <span>N/A</span>
+                    }
+                </td>
+                @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                {
+                    <td style="text-align: center;">
+                        <input type="text" maxlength="3" style="width: 50px; text-align: center;" id="Position@(i)" value="@item3.Position" onkeypress="return Common.isNumberKey(event)" />
+                        <a onclick="UpdateOrderNo(@i,@item3.MenuItemId);" title="Update"><i class="fa fa-fw fa-refresh"></i></a>
+
+                    </td>
+
+
+                    @*<td style="text-align:center;">
+                @{
+                    var isactive3 = "";
+                    var active3 = "";
+                    var disable3 = "";
+                    if (item3.IsActive == true)
+                    {
+                        isactive3 = "Active";
+                        disable3 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item3.MenuItemId + ");\"";
+                    }
+                    else
+                    {
+                        isactive3 = "Disabled";
+                        active3 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item3.MenuItemId + ");\"";
+                    }
+                    <div class="admin-active">
+                        @isactive3
+                        @if (item3.ParentActive)
+                        {
+                            <ul>
+                                <li><a @Html.Raw(active3)>Active</a></li>
+                                <li><a @Html.Raw(disable3)>Disabled</a></li>
+                            </ul>
+                        }
+                    </div>
+                }
+            </td>*@
+
+                    <td>
+                        <div class="menu-hover">
+                            @{ var isactive3 = item3.IsActive ? "checked" : ""; }
+                            <div>
+                                <label class="switch">
+                                    <input type="checkbox" onclick="MenuItemsStatus(@item3.MenuItemId)" @isactive3>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </td>
+                                }
+
+                    <td style="text-align:center;">
+                        <div class="table-actions d-flex align-items-center gap-3 fs-6">
+                            @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-warning cursor-pointer" href="@Url.Action("EditMenuItems", "MenuItems",new { MenuItemId = item3.MenuItemId,ChapterId = ChapterId, mid = ViewBag.Mid })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+
+
+                            }
+                            @*@if (IsView == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                    {
+                        <a title="View" class="sepV_a" href="@Url.Action("ViewMenuItems", "MenuItems", new { MenuItemId = item3.MenuItemId, mid = ViewBag.Mid })"><i class="fa fa-eye"></i></a>
+                    }*@
+                            @if (IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                if (item3.SubMenuItemCount == 0)
+                                {
+                                    <a class="text-danger cursor-pointer" onclick="MenuItemsDelete(@item3.MenuItemId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                                }
+                                else
+                                {
+                                    <a class="text-danger cursor-pointer"><i class="bi bi-trash-fill"></i></a>
+                                }
+                            }
+                        </div>
+                    </td>
+                </tr>
+                                                    if (lstMenuItems4 != null && lstMenuItems4.Count != 0)
+                                                    {
+                                                        foreach (var item4 in lstMenuItems4)
+                                                        {
+                                                            if (item4.PageParentId == item3.MenuItemId)
+                                                            {
+                                                                <tr>
+                                                                    <td>
+                                                                        <span style="display: inline-block; padding-left: 60px;">
+                                                                            <img src="Content/images/indicater.gif" />
+                                                                            @item4.DisplayName
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style="text-align:center;">
+                                                                        @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                                                        {
+                                                                            if (item4.PageDetailId != 0)
+                                                                            {
+                                                                                <a href="@Url.Action("EditPageDetails", "PageDetails", new { PageDetailId = item4.PageDetailId, mid = ViewBag.Mid })" class="red-t" style="cursor:pointer;">Edit Page Details</a><span> - <a onclick="EditMenuPages(@item4.MenuPageId);" class="red-t" style="cursor:pointer;">Change Page</a></span>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <a onclick="AddPageToItem('@item4.MenuItemId', '@item4.ChapterId');" class="red-t" style="cursor:pointer;">Add Page to Item</a>
+                                                                            }
+                                                                        }
+                                                                    </td>
+                                                                    <td style="text-align:center;">
+                                                                        @if (item4.PageDetailId != 0)
+                                                                        {
+                                                                            @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item4.ChapterName]+item4.PageUrl+".html")" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+                                                                            @*<a href="@(System.Configuration.ConfigurationManager.AppSettings[item.ChapterName]+"p/"+item.PageUrl)" target="_blank" class="red-t" style="cursor:pointer;">View Page Details</a>*@
+
+                                                                            <a href="@(item.DocumentUrl != null && item.DocumentUrl != "" ? adminurl + "PageDocuments/" + item.DocumentUrl : (item.OtherUrl != null && item.OtherUrl != "" ? item.OtherUrl : "p/" + (item.PageUrl != null && item.PageUrl != "" ? item.PageUrl + ".html?mrid=" + item.MenuItemId : "")))" target="_blank" class="red-t" style="cursor:pointer;">Preview</a>
+
+                                                                        }
+
+
+                                                                        else
+                                                                        {
+                                                                            <span>N/A</span>
+                                                                        }
+                                                                    </td>
+                                                                    @*<td style="text-align:center;">
+                                                                            @{
+                                                                                var isactive4 = "";
+                                                                                var active4 = "";
+                                                                                var disable4 = "";
+                                                                                if (item4.IsActive == true)
+                                                                                {
+                                                                                    isactive4 = "Active";
+                                                                                    disable4 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item4.MenuItemId + ");\"";
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    isactive4 = "Disabled";
+                                                                                    active4 = "style=\"cursor: pointer;\" onclick=\"javascript:MenuItemsStatus(" + item4.MenuItemId + ");\"";
+                                                                                }
+                                                                                <div class="admin-active">
+                                                                                    @isactive4
+                                                                                    @if (item2.ParentActive)
+                                                                                    {
+                                                                                        <ul>
+                                                                                            <li><a @Html.Raw(active4)>Active</a></li>
+                                                                                            <li><a @Html.Raw(disable4)>Disabled</a></li>
+                                                                                        </ul>
+                                                                                    }
+                                                                                </div>
+                                                                            }
+                                                                        </td>*@
+
+                                                                    <td>
+                                                                        <div class="menu-hover">
+                                                                            @{ var isactive4 = item4.IsActive ? "checked" : ""; }
+                                                                            <div>
+                                                                                <label class="switch">
+                                                                                    <input type="checkbox" onclick="MenuItemsStatus(@item4.MenuItemId)" @isactive4>
+                                                                                    <span class="slider"></span>
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+
+                                                                    <td style="text-align:center;">
+                                                                        <div class="table-actions d-flex align-items-center gap-3 fs-6">
+                                                                            @if (IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                                                            {
+                                                                                <a class="text-warning cursor-pointer" href="@Url.Action("EditMenuItems", "MenuItems",new { MenuItemId = item4.MenuItemId,ChapterId = ChapterId, mid = ViewBag.Mid })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+                                                                            }
+                                                                            @*@if (IsView == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                                                                {
+                                                                                    <a title="View" class="sepV_a" href="@Url.Action("ViewMenuItems", "MenuItems", new { MenuItemId = item4.MenuItemId, mid = ViewBag.Mid })"><i class="fa fa-eye"></i></a>
+                                                                                }*@
+                                                                            @if (IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                                                            {
+                                                                                if (item4.SubMenuItemCount == 0)
+                                                                                {
+                                                                                    <a class="text-danger cursor-pointer" onclick="MenuItemsDelete(@item4.MenuItemId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    <a class="text-danger cursor-pointer"><i class="bi bi-trash-fill"></i></a>
+                                                                                }
+                                                                            }
+
+
+                                                                        </div>
+                                                                    </td>
+
+                                                                </tr>
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                    }
+
+
+
+                                    j++;
+                                }
+
+                            }
+
+
+                            i++;
+
+                        }
+
+                    }
+                }
+                else
+                {
+                    <tr class="odd"><td valign="top" colspan="10" class="font-14 text-center">No  Records found</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @*<div class="row pt-3">
+            <div class="col-sm-4 col-md-5">
+                <div class="dataTables_info" id="example_info" role="status" aria-live="polite">
+                    Showing @((PageNo * Items) - (Items - 1)) - @((PageNo * Items) > Total ? Total : (PageNo * Items)) of @Total entries
+                </div>
+            </div>
+            <div class="col-sm-3 col-md-7 " @(Total > 0 ? "" : "disable")>
+                <div class="d-flex flex-wrap gap-4 justify-content-end">
+                    <div class="dataTables_length" id="example_length">
+                        <div class="d-flex align-items-center gap-2 pt-1">
+                            <span>Show Items</span>
+                            <select id="txtitems" name="txtitems" aria-controls="example" onchange="UserBind();" class="form-select form-select-sm w-auto">
+                                <option @(Items == 25 ? "selected=selected" : "") value="25">25</option>
+                                <option @(Items == 50 ? "selected=selected" : "") value="50">50</option>
+                                <option @(Items == 75 ? "selected=selected" : "") value="75">75</option>
+                                <option @(Items == 100 ? "selected=selected" : "") value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="dataTables_paginate paging_simple_numbers" id="example_paginate">
+                        @Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref Total, (Int64)ViewBag.pageno, "pagination pb-0"))
+                    </div>
+                </div>
+            </div>
+        </div>*@
+
+</div>
+
+
+<script type="text/javascript">
+        function MenuItemsStatus(MenuItemId) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("MenuItemsStatus", "MenuItems")', // the URL of the controller action method
+                data: { MenuItemId: MenuItemId }, // optional data
+                datatype: "JSON",
+                success: function (result) {
+                    showLobiboxNotification(result.messageType, result.message);
+                    if (result.ok) {
+                        $('#divmessage').html(result.data);
+                        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        MenuItemsBind();
+                       
+                    }
+                    else {
+                        $('#divmessage').html(result.data);
+                        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                    }
+                }
+            });
+        }
+
+            function UpdateOrderNo(i, MenuItemId) {
+                var Position = parseInt($('#Position' + i).val());
+        $.ajax({
+            type: 'POST',
+            url: '@Url.Action("MenuItemsOrderNo", "MenuItems")',
+            data: { Position: Position, MenuItemId: MenuItemId },
+            success: function (result) {
+                showLobiboxNotification(result.messageType, result.message);
+                var div = '';
+                if (result.ok) {
+                    $('#divmessage').html(result.data);
+                    $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                    ThemeBannerBind(1);
+                }
+                else {
+                    $('#divmessage').html(result.data);
+                    $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                }
+            }
+        });
+    }
+
+
+
+        function MenuItemsDelete(MenuItemId) {
+
+            var conf = confirm('Do you want to delete MenuItems?');
+
+            if (conf) {
+                $.ajax({
+                    type: "POST",
+                    url: '@Url.Action("MenuItemsDelete", "MenuItems")', // the URL of the controller action method
+                    data: { MenuItemId: MenuItemId }, // optional data
+                    datatype: "JSON",
+                    success: function (result) {
+                        showLobiboxNotification(result.messageType, result.message);
+                        if (result.ok) {
+                            //$('#divmessage').html(result.data);
+                            //$('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                            //$('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                            MenuItemsBind();
+                          
+                        }
+                        else {
+                            $('#divmessage').html(result.data);
+                            $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                            $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+                        }
+                    }
+                });
+            }
+        }
+</script>

@@ -1,0 +1,126 @@
+﻿@{ Layout = null;}
+@{
+    string sortcolumn = (string)ViewBag.sortcolumn;
+    string sortorder = (string)ViewBag.sortorder;
+    Int64 Total = (Int64)ViewBag.total;
+    var PageNo = (Int64)ViewBag.pageno;
+    var Items = (Int64)ViewBag.items;
+
+
+    List<CMS.Entities.MailTemplates> lstMailTemplate = ViewBag.lstMailTemplate;
+
+    string userRole = null;
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+
+    bool IsEdit = Convert.ToBoolean(Session["IsEdit"]);
+    bool IsView = Convert.ToBoolean(Session["IsView"]);
+    bool IsDelete = Convert.ToBoolean(Session["IsDelete"]);
+    bool IsExport = Convert.ToBoolean(Session["IsExport"]);
+
+}
+<link type="text/css" media="screen" rel="stylesheet" href="colorbox/colorbox.css" />
+<script type="text/javascript" src="colorbox/jquery.colorbox.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("a[rel]").colorbox({ transition: "fade" });
+        $(".viewdetails").colorbox({ iframe: true, innerWidth: 750, innerHeight: 500 });
+    });
+</script>
+<script type="text/javascript">
+    $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+</script>
+
+<div class="card-body">
+    <div class="table-responsive">
+
+        <table class="table table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th width="10%" style="text-align: center">S.No.</th>
+                    <th>
+                        <a onclick="javascript:sortresult('Heading');" class="aws-h-a" style="color:black">
+                            Heading @if (sortcolumn == "Heading")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+                    </th>
+                    <th width="22%" >
+                        <a onclick="javascript:sortresult('MailType');" class="aws-h-a" style="color:black">
+                            Mail Type @if (sortcolumn == "MailType")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+                    </th>
+                    <th width="17%" style="text-align: center">Action</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                @if (lstMailTemplate.Count != 0)
+                {
+                    foreach (var item in lstMailTemplate)
+                    {
+                <tr>
+                    <td style="text-align: center">@item.RId</td>
+                    <td style="text-align: left">@item.Heading </td>
+                    <td style="text-align: left">@(item.MailType == "" ? "N/A" : item.MailType)</td>
+
+                    <td style="text-align: center" class="t-t-c">
+                        <div class="table-actions  gap-3 fs-6">
+                            @if (ViewBag.IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-primary cursor-pointer" href="@Url.Action("ViewMailTemplate", "MailTemplates", new { MailTemplateId = item.MailTemplateId })" title=" Edit" aria-label="Edit"><i class="fa fa-eye"></i></a>
+                            }
+                            @if (ViewBag.IsEdit == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-warning cursor-pointer" href="@Url.Action("EditMailTemplate", "MailTemplates", new { MailTemplateId = item.MailTemplateId, mid = ViewBag.Mid })" title=" Edit" aria-label="Edit"><i class="bi bi-pencil-fill"></i></a>
+                            }
+                            @if (ViewBag.IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                            {
+                                <a class="text-danger cursor-pointer" onclick="javascript:Delete(@item.MailTemplateId);" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                            }
+                        </div>
+                    </td>
+
+
+
+                </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                    <tr class="odd"><td valign="top" colspan="10" class="font-14 text-center">No  Records found</td></tr>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+
+    </div>
+
+    <div class="row pt-3">
+        <div class="col-sm-4 col-md-5">
+            <div class="dataTables_info" id="example_info" role="status" aria-live="polite">
+                Showing @((PageNo * Items) - (Items - 1)) - @((PageNo * Items) > Total ? Total : (PageNo * Items)) of @Total entries
+            </div>
+        </div>
+        <div class="col-sm-3 col-md-7 " @(Total > 0 ? "" : "disable")>
+            <div class="d-flex flex-wrap gap-4 justify-content-end">
+                <div class="dataTables_length" id="example_length">
+                    <div class="d-flex align-items-center gap-2 pt-1">
+                        <span>Show Items</span>
+                        <select id="txtitems" name="txtitems" aria-controls="example" onchange="MailTemplateBind();" class="form-select form-select-sm w-auto">
+                            <option @(Items == 25 ? "selected=selected" : "") value="25">25</option>
+                            <option @(Items == 50 ? "selected=selected" : "") value="50">50</option>
+                            <option @(Items == 75 ? "selected=selected" : "") value="75">75</option>
+                            <option @(Items == 100 ? "selected=selected" : "") value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="dataTables_paginate paging_simple_numbers" id="example_paginate">
+                    @Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref Total, (Int64)ViewBag.pageno, "pagination pb-0"))
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

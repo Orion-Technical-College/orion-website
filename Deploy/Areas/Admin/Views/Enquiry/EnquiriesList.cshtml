@@ -1,0 +1,163 @@
+﻿@{ Layout = null;}
+@{
+    string sortcolumn = (string)ViewBag.sortcolumn;
+    string sortorder = (string)ViewBag.sortorder;
+    Int64 Total = (Int64)ViewBag.total;
+    var PageNo = (Int64)ViewBag.pageno;
+    var Items = (Int64)ViewBag.items;
+
+
+
+    List<CMS.Entities.Enquiries> lstEnquiries = ViewBag.lstEnquiries;
+
+
+    string userRole = null;
+    userRole = Session["userrole"] != null ? Session["userrole"].ToString() : string.Empty;
+    var EventId = ViewBag.EventId;
+}
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('#MWebsite').addClass('active');
+    });
+</script>
+<div class="card-body">
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+
+                    <th width="80">S.No</th>
+                    <th>
+
+                        <a class="cursor-pointer aws-h-a " style="color: black;" onclick="javascript:sortresult('Name');">
+                            Name @if (sortcolumn == "Name")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="cursor-pointer aws-h-a " style="color: black;" onclick="javascript:sortresult('Email');">
+                            Email @if (sortcolumn == "Email")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+
+                        
+                    </th>
+                    <th width="150">
+                        <a class="cursor-pointer aws-h-a " style="color: black;" onclick="javascript:sortresult('InsertedTime');">
+                            Posted Date @if (sortcolumn == "InsertedTime")
+                            {<img alt="@(sortorder)" title="@(sortorder)" src="Content/Admin/images/sort_@(sortorder).gif" />}
+                        </a>
+
+                    </th>
+                    <th width="120">Status</th>
+                    <th  width="120">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+               
+                    @if (lstEnquiries.Count != 0)
+                    {
+                        foreach (var item in lstEnquiries)
+                        {
+                            <tr>
+                                <td>@item.RId</td>
+                                <td style="text-align:left">
+
+                                    <div class="d-flex align-items-center gap-3 cursor-pointer">
+                                        <div class="">
+                                            <p class="mb-0">@item.Name</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align:left">@item.Email</td>
+                                <td style="text-align:left">@item.InsertedTime.ToString("MM/dd/yyyy")</td>
+
+                                <td>
+                                    <div class="menu-hover">
+                                        @{ var isChecked = item.IsActive ? "checked" : ""; }
+                                        @{var titleValue = item.IsActive ? "Active" : "Disabled";}
+                                        <div>
+                                            <label class="switch" title="@titleValue">
+                                                <input type="checkbox" onclick="EnquiryStatus(@item.EnquiryId)" @isChecked>
+                                                <span class="slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="table-actions d-flex align-items-center gap-3 fs-6">
+                                        @if (ViewBag.IsView == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                        {
+                                            <a href="@Url.Action("ViewEnquiry", "Enquiry", new { EnquiryId = item.EnquiryId, mid = ViewBag.Mid })" class="text-warning cursor-pointer" title="View" aria-label="View"><i class="fa fa-eye"></i></a>
+                                        }
+                                        @if (ViewBag.IsDelete == true || userRole.Contains("SuperAdmin") || userRole.Contains("DeveloperAdmin"))
+                                        {
+                                            <a class="text-danger cursor-pointer" onclick="Delete(@item.EnquiryId, '@item.Name');" title="Delete" aria-label="Delete"><i class="bi bi-trash-fill"></i></a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr class="odd"><td valign="top" colspan="10" class="font-14 text-center">No  Records found</td></tr>
+                    }
+
+                </tbody>
+        </table>
+    </div>
+
+    <div class="row pt-3">
+        <div class="col-sm-4 col-md-5">
+            <div class="dataTables_info" id="example_info" role="status" aria-live="polite">
+                Showing @((PageNo * Items) - (Items - 1)) - @((PageNo * Items) > Total ? Total : (PageNo * Items)) of @Total entries
+            </div>
+        </div>
+        <div class="col-sm-3 col-md-7 " @(Total > 0 ? "" : "disable")>
+            <div class="d-flex flex-wrap gap-4 justify-content-end">
+                <div class="dataTables_length" id="example_length">
+                    <div class="d-flex align-items-center gap-2 pt-1">
+                        <span>Show Items</span>
+                        <select id="txtitems" name="txtitems" aria-controls="example" onchange="ThemeBannerBind();" class="form-select form-select-sm w-auto">
+                            <option @(Items == 25 ? "selected=selected" : "") value="25">25</option>
+                            <option @(Items == 50 ? "selected=selected" : "") value="50">50</option>
+                            <option @(Items == 75 ? "selected=selected" : "") value="75">75</option>
+                            <option @(Items == 100 ? "selected=selected" : "") value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="dataTables_paginate paging_simple_numbers" id="example_paginate">
+                    @Html.Raw(CMS.BLL.Common.SetPaging((Int64)ViewBag.items, ref Total, (Int64)ViewBag.pageno, "pagination pb-0"))
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+<style>
+    .aws-h-a {
+        text-decoration: none;
+        position: relative;
+    }
+
+        .aws-h-a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            border-bottom: 2px solid #0756ca;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .aws-h-a:hover::after {
+            transform: scaleX(1);
+        }
+</style>

@@ -1,0 +1,40 @@
+-------------------START-------------2/16/2023 8:56:17 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Entered Into Telugu Ammai Registration Process
+-------------------END-------------2/16/2023 8:56:17 AM
+-------------------START-------------2/16/2023 8:56:17 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Inserted the Telugu Ammai Registration Successfully
+-------------------END-------------2/16/2023 8:56:17 AM
+-------------------START-------------2/16/2023 8:56:17 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Entered Into Payment Process
+-------------------END-------------2/16/2023 8:56:17 AM
+-------------------START-------------2/16/2023 8:56:20 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Payment Responsive Get Approved
+-------------------END-------------2/16/2023 8:56:20 AM
+-------------------START-------------2/16/2023 8:56:20 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Updated Telugu Ammai Registrations
+-------------------END-------------2/16/2023 8:56:20 AM
+-------------------START-------------2/16/2023 8:56:20 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Telugu Ammai Registrations Mailling section entry
+-------------------END-------------2/16/2023 8:56:20 AM
+-------------------START-------------2/16/2023 8:56:25 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+User Telugu Ammai Registration Notification Email Sent Succefully
+-------------------END-------------2/16/2023 8:56:25 AM
+-------------------START-------------2/16/2023 8:56:26 AM
+Page :/User/TeluguAmmaiRegistrations/AddTeluguAmmaiRegistration
+Admin Service Donations Notification Email Sent Succefully
+-------------------END-------------2/16/2023 8:56:26 AM
+-------------------START-------------2/16/2023 8:56:26 AM
+Page :/teluguammai-acknowledgement
+Successfully Payment done
+-------------------END-------------2/16/2023 8:56:26 AM
+-------------------START-------------2/16/2023 8:56:27 AM
+Page :/teluguammai-acknowledgement
+Telugu Ammai Registration getting By Id Succefully
+-------------------END-------------2/16/2023 8:56:27 AM

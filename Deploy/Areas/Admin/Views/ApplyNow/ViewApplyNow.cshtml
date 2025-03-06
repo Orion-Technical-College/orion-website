@@ -1,0 +1,113 @@
+﻿@{
+    ViewBag.Title = "Apply Now";
+    ViewBag.Pageheading = "View Apply Now";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    CMS.Entities.ApplyNow objApplyNow = ViewBag.objApplyNow;
+}
+<script>
+
+    $(document).ready(function () {
+        $('#wApplyNow, #wOthers').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+</script>
+
+<div class="content">
+    <!-- Main content -->
+
+    <div class="clearfix sepH_b"></div>
+    <div class="nav-tabs-custom">
+
+        <div class="tab-content">
+            <div class="tab-pane active">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="box validation">
+                            <div class="box-header">
+
+                                <h4 class="box-title dis-in">Apply Now Details </h4>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>First Name : </label>
+                                        @objApplyNow.FirstName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Last Name : </label>
+                                        @objApplyNow.LastName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Phone No : </label>
+                                        @objApplyNow.PhoneNo
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Email : </label>
+                                        @objApplyNow.Email
+                                    </div>
+
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Address : </label>
+                                        @objApplyNow.Address
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>City : </label>
+                                        @objApplyNow.City
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>State: </label>
+                                        @objApplyNow.State
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Zip Code : </label>
+                                        @objApplyNow.ZipCode
+                                    </div>
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Program Interest : </label>
+                                        @objApplyNow.ProgramInterest
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Program  Begin : </label>
+                                        @objApplyNow.ProgramBegin
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Description : </label>
+                                        @objApplyNow.Description
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Posted Date: </label>
+                                        @objApplyNow.InsertedDate.ToString("dd/MM/yyyy")
+                                    </div>
+                                </div>
+
+                              
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="box">
+                    <!-- /.box-header -->
+                    <div class="box-body text-end">
+                        <a class="btn btn-info" style="margin-left:500px;" href="@Url.Action("Index", "ApplyNow", new { mid = ViewBag.Mid})">Cancel</a>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,101 @@
+﻿@{
+    ViewBag.Title = "Employee Opportunities";
+    ViewBag.Pageheading = "View Employee Opportunities";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    CMS.Entities.EmployeeOpportunities objEmployeeOpportunities = ViewBag.objEmployeeOpportunities;
+}
+<script>
+
+    $(document).ready(function () {
+        $('#wEmployeeOpportunities, #wOthers').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+</script>
+
+<div class="content">
+    <!-- Main content -->
+
+    <div class="clearfix sepH_b"></div>
+    <div class="nav-tabs-custom">
+
+        <div class="tab-content">
+            <div class="tab-pane active">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="box validation">
+                            <div class="box-header">
+
+                                <h4 class="box-title dis-in">Employee Opportunities Details </h4>
+                            </div>
+                            <div class="box-body">
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>First Name : </label>
+                                        @objEmployeeOpportunities.FirstName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Last Name : </label>
+                                        @objEmployeeOpportunities.LastName
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Phone No : </label>
+                                        @objEmployeeOpportunities.PhoneNo
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Email : </label>
+                                        @objEmployeeOpportunities.Email
+                                    </div>
+
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Current Job : </label>
+                                        @objEmployeeOpportunities.CurrentJob
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Current live : </label>
+                                        @objEmployeeOpportunities.Currentlive
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>LinkedIn Url: </label>
+                                        @objEmployeeOpportunities.LinkedInUrl
+                                    </div>
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Description : </label>
+                                        @objEmployeeOpportunities.Description
+                                    </div>
+
+                                </div>
+                                <div class="row">
+                                    <div class="col-xs-12 col-lg-3 col-sm-6">
+                                        <label>Posted Date: </label>
+                                        @objEmployeeOpportunities.InsertedDate.ToString("dd/MM/yyyy")
+                                    </div>
+                                </div>
+
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="box">
+                    <!-- /.box-header -->
+                    <div class="box-body text-end">
+                        <a class="btn btn-info" style="margin-left:500px;" href="@Url.Action("Index", "EmployeeOpportunities", new { mid = ViewBag.Mid})">Cancel</a>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+

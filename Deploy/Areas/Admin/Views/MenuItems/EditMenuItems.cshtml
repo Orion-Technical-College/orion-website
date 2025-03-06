@@ -1,0 +1,304 @@
+﻿@{
+    ViewBag.Pageheading = "Edit Menu items";
+    Layout = "~/Areas/Admin/Views/Shared/_MainLayout.cshtml";
+
+    List<CMS.Entities.Chapters> lstChapters = ViewBag.lstChapters;
+    List<CMS.Entities.MenuItems> lstMenuItems = ViewBag.lstMenuItems;
+    List<CMS.Entities.MenuItems> lstMenuItems2 = ViewBag.lstMenuItems2;
+    List<CMS.Entities.MenuItems> lstMenuItems3 = ViewBag.lstMenuItems3;
+    List<CMS.Entities.MenuItems> lstMenuItems4 = ViewBag.lstMenuItems4;
+
+    CMS.Entities.MenuItems objMenuItems = ViewBag.objMenuItems;
+    int status = 0;
+    CMS.BLL.AppInfo _AppInfo = new CMS.BLL.AppInfo();
+    CMS.Entities.AppInfo objAppInfo = new CMS.Entities.AppInfo();
+    objAppInfo = _AppInfo.GetAppInfoDetails(ref status);
+
+
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        MenuItemBind();
+        //  $('#wMenuItems').addClass('active');
+        $('#wWebPages, #wMenuItems').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+
+
+    function ValidateMenuItems() {
+        if ($('#ChapterId').val() == '') { $('#ChapterId').focus().addClass("validate"); return false; } else { $('#ChapterId').removeClass("validate"); }
+        if ($('#InstituteId').val() == '') { $('#InstituteId').focus().addClass("validate"); return false; } else { $('#InstituteId').removeClass("validate"); }
+        if ($('#DisplayName').val() == '') { $('#DisplayName').focus().addClass("validate"); return false; } else { $('#DisplayName').removeClass("validate"); }
+
+        return true;
+    }
+
+    @*function MenuItemBind() {
+        var InstituteId = $('#InstituteId').val();
+        //var InstituteId = 1;
+        $.ajax({
+            url: '@Url.Action("MenuItemsByInstitute", "MenuItems")',
+            type: 'POST',
+            data: { InstituteId: InstituteId }, // optional data
+            datatype: "JSON",
+            success: function (result) {
+                if (result.ok) {
+                    var sb = "<option value=\"0\">---- Root Level ----</option>";
+                    MenuItems = result.data;
+                    MenuItems2 = result.data2;
+                    MenuItems3 = result.data3;
+                    MenuItems4 = result.data4;
+                    if (MenuItems != null) {
+                        for (var i = 0; i < MenuItems.length; i++) {
+                            sb = sb + "<option  value=\"" + MenuItems[i].MenuItemId + "\">" + MenuItems[i].DisplayName + "</option>";
+                            if (MenuItems2 != null) {
+                                for (var j = 0; j < MenuItems2.length; j++) {
+                                    if (MenuItems[i].MenuItemId == MenuItems2[j].PageParentId) {
+                                        sb = sb + "<option  value=\"" + MenuItems2[j].MenuItemId + "\">| " + MenuItems2[j].DisplayName + "</option>";
+                                        if (MenuItems3 != null) {
+                                            for (var k = 0; k < MenuItems3.length; k++) {
+                                                if (MenuItems2[j].MenuItemId == MenuItems3[k].PageParentId) {
+                                                    sb = sb + "<option  value=\"" + MenuItems3[k].MenuItemId + "\">| | " + MenuItems3[k].DisplayName + "</option>";
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    $('#PageParentId').html(sb);
+                }
+            }
+        });
+    }*@
+
+    $(document).ready(function () {
+        $('#wMenuItems').addClass('active');
+        $('.alert-danger').append('<i class="fa fa-ban"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+        $('.alert-success').append('<i class="fa fa-check"></i><button class="close" aria-hidden="true" data-dismiss="alert" type="button">×</button>');
+    });
+</script>
+<script type="text/javascript" src="ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="ckfinder/ckfinder.js"></script>
+
+
+
+@using (Html.BeginForm("CreateMenuItems", "MenuItems", FormMethod.Post, new { enctype = "multipart/form-data", @id = "FormMenuItems", @name = "FormMenuItems" }))
+{
+    @Html.Hidden("MenuItemId", (Int64)@objMenuItems.MenuItemId)
+
+
+    if (objAppInfo.chapterStatus == "No")
+    {
+        <input id="ChapterId" name="ChapterId" value="1" type="hidden" />
+    }
+
+    <input id="mid" name="mid" value="@ViewBag.mid" type="hidden" />
+    @*<input id="PageParentId" name="PageParentId" value="@objMenuItems.PageParentId" type="hidden" />*@
+
+  
+
+
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="row  g-3">
+                @if (objAppInfo.chapterStatus == "Yes")
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="input-box">
+                            <label class="form-label">Chapter<span class="text-danger">*</span></label>
+                            <select class="single-select" name="ChapterId" id="ChapterId" onchange="MenuItemBind();">
+
+
+                                <option value="">Select Chapter</option>
+                                @if (lstChapters != null && lstChapters.Count != 0)
+                                {
+                                    foreach (var item in lstChapters)
+                                    {
+                                        <option @(item.ChapterId == objMenuItems.ChapterId ? "selected=selected" : "") value="@item.ChapterId">@item.ChapterName</option>
+                                    }
+                                }
+
+
+                            </select>
+                        </div>
+                    </div>
+
+                }
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Menu Item Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="DisplayName" id="DisplayName" value="@objMenuItems.DisplayName" placeholder="Menu Item Name">
+                    </div>
+                </div>
+
+
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Parent Menu Item</label>
+                        <select class="single-select" name="PageParentId" id="PageParentId">
+                            <option value="0">---- Root Level ----</option>
+                            @if (lstMenuItems != null && lstMenuItems.Count != 0)
+                            {
+                                foreach (var item in lstMenuItems)
+                                {
+                                    <option @(item.MenuItemId == objMenuItems.PageParentId ? "selected=selected" : "") value="@(item.MenuItemId)">@item.DisplayName</option>
+
+                                    if (lstMenuItems2 != null && lstMenuItems2.Count != 0)
+                                    {
+                                        foreach (var item2 in lstMenuItems2)
+                                        {
+                                            if (item2.PageParentId == item.MenuItemId)
+                                            {
+                                                @*<option @(item2.MenuItemId == objMenuItems.MenuItemId ? "selected=selected" : "") value="@(item2.MenuItemId)">| @item2.DisplayName</option>*@
+                                                if (lstMenuItems3 != null && lstMenuItems3.Count != 0)
+                                                {
+                                                    foreach (var item3 in lstMenuItems3)
+                                                    {
+                                                        if (item3.PageParentId == item2.MenuItemId)
+                                                        {
+                                                            <option @(item3.MenuItemId == objMenuItems.PageParentId ? "selected=selected" : "") value="@item3.MenuItemId">| | @item3.DisplayName</option>
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+
+
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="input-box">
+                        <label class="form-label">Display Order</label>
+                        <input type="text" class="form-control" maxlength="3" value="@objMenuItems.Position" onkeypress="return Common.isNumberKey(event)" name="Position" placeholder="Display Order">
+
+                    </div>
+                </div>
+
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="box validation">
+
+                <div class="box-body">
+                    <div class="row  g-3">
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsMenuBar" id="IsMenuBar" @(objMenuItems.IsMenuBar ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is MenuBar
+                            </label>
+                        </div>
+
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsQuickLinks" id="IsQuickLinks" @(objMenuItems.IsQuickLinks ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is QuickLinks
+                            </label>
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+                            <label style="display: block;">&nbsp;</label>
+                            <label class="checkbox-in">
+                                <input type="checkbox" name="IsFooterBar" id="IsFooterBar" @(objMenuItems.IsFooterBar ? "checked=checked" : "") class="flat-red" value="true" />
+                                Is Footer Bar
+                            </label>
+                        </div>
+
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="col-lg-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success px-3 me-2">@*<i class="bi bi-plus-circle m-0"></i>*@ Submit</button>
+            <a class="btn btn-primary px-3" href="@Url.Action("Index", "MenuItems", new { mid = ViewBag.mid })">Cancel</a>
+        </div>
+    </div>
+
+
+
+
+
+
+}
+
+
+
+
+
+<script>
+    $(document).ready(function () {
+        $("#FormMenuItems").validate({
+            rules: {
+                DisplayName: "required",
+                /* PageParentId: "required",*/
+            },
+            messages: {
+                DisplayName: "Please Enter Your Menu Display Name",
+                /* PageParentId: "please Select Parent menu ",*/
+            },
+
+            errorElement: "em",
+            errorPlacement: function (error, element) {
+                // Add the `help-block` class to the error element
+                error.addClass("help-block");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Move the error element after the fieldset element
+                if (element.closest("fieldset").length) {
+                    element.closest("fieldset").after(error);
+                }
+            },
+            highlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-error").removeClass("has-success");
+            },
+            unhighlight: function (element, errorClass, validClass) {
+                $(element).parents("fieldset").addClass("has-success").removeClass("has-error");
+            },
+
+        });
+
+
+    });
+
+
+</script>
+
