@@ -88,34 +88,42 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
       
-      - name: Deploy SQL Scripts
+      - name: Check for SQL scripts
+        id: check-scripts
         run: |
-          # Check if database scripts exist
-          if (Test-Path -Path "${{ github.workspace }}\Database-Script") {
-            # Get the script files in order
-            $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
+            echo "has_scripts=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "has_scripts=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
+          }
+        shell: pwsh
+      
+      # Only run the next steps if SQL scripts are found
+      - name: Deploy SQL Scripts
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        run: |
+          # Get the script files in order
+          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          
+          if ($scriptFiles.Count -gt 0) {
+            Write-Host "Found SQL scripts to execute. Running in order..."
             
-            if ($scriptFiles.Count -gt 0) {
-              Write-Host "Found SQL scripts to execute. Running in order..."
+            foreach ($script in $scriptFiles) {
+              Write-Host "Executing: $($script.Name)"
               
-              foreach ($script in $scriptFiles) {
-                Write-Host "Executing: $($script.Name)"
-                
-                # Execute each script against Azure SQL Database
-                # Using sqlcmd or az cli based on your preference
-                az sql db query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orion-sqlserver --name OrionWebDB --file "$($script.FullName)"
-                
-                if ($LASTEXITCODE -ne 0) {
-                  Write-Error "Error executing SQL script: $($script.Name)"
-                  exit 1
-                }
+              # Execute each script against Azure SQL Database
+              az sql db query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orionweb-sqlserver --name OrionWebDB --file "$($script.FullName)"
+              
+              if ($LASTEXITCODE -ne 0) {
+                Write-Error "Error executing SQL script: $($script.Name)"
+                exit 1
               }
-            } else {
-              Write-Host "No SQL scripts found in Database-Script folder."
             }
           } else {
-            Write-Host "No Database-Script folder found. Skipping database deployment."
+            Write-Host "No SQL scripts found in Database-Script folder."
           }
         shell: pwsh
 
@@ -140,6 +148,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
       
       - name: Deploy to Azure Web App Staging Slot
         id: deploy-to-webapp
@@ -202,6 +211,7 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
       
       - name: Swap staging to production
         run: |
