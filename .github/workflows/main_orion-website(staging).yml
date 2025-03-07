@@ -112,7 +112,8 @@ jobs:
               Write-Host "Executing: $($script.Name)"
               
               # Execute each script against Azure SQL Database
-              az sql db query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orionweb-sqlserver --name OrionWebDB --file "$($script.FullName)"
+              # The correct command is 'az sql db run-query' not 'az sql db query'
+              az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orionweb-sqlserver --name OrionWebDB --file "$($script.FullName)"
               
               if ($LASTEXITCODE -ne 0) {
                 Write-Error "Error executing SQL script: $($script.Name)"
