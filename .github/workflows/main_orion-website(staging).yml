@@ -176,7 +176,7 @@ jobs:
                       
                       # Use Azure AD token authentication with proper token formatting
                       # The space after -AccessToken is critical
-                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken "$env:SQL_ACCESS_TOKEN" -i $ScriptPath
+                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken $env:SQL_ACCESS_TOKEN -i $ScriptPath
                       
                       if ($LASTEXITCODE -eq 0) {
                           $success = $true
