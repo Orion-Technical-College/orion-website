@@ -230,16 +230,26 @@ jobs:
           }
         shell: pwsh
       
-      # Fallback to SQL authentication if token is not available
-      - name: Deploy SQL Scripts with SQL Auth
+      # Check if SQL credentials are available
+      - name: Check SQL credentials
         if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true'
+        id: check-sql-creds
         run: |
-          # Verify SQL credentials are available
-          if ([string]::IsNullOrEmpty("${{ secrets.AZURE_SQL_USERNAME }}") -or [string]::IsNullOrEmpty("${{ secrets.AZURE_SQL_PASSWORD }}")) {
-            Write-Error "SQL authentication credentials are not available and token authentication failed."
-            exit 1
-          }
+          $hasUsername = "${{ secrets.AZURE_SQL_USERNAME }}" -ne ""
+          $hasPassword = "${{ secrets.AZURE_SQL_PASSWORD }}" -ne ""
           
+          if ($hasUsername -and $hasPassword) {
+            echo "sql_creds_available=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "sql_creds_available=false" >> $env:GITHUB_OUTPUT
+            Write-Warning "SQL credentials are not available. Skipping SQL script execution."
+          }
+        shell: pwsh
+        
+      # Fallback to SQL authentication if token is not available and credentials exist
+      - name: Deploy SQL Scripts with SQL Auth
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true' && steps.check-sql-creds.outputs.sql_creds_available == 'true'
+        run: |
           # Function to execute SQL with retry logic
           function Invoke-SqlCmdWithRetry {
               param (
