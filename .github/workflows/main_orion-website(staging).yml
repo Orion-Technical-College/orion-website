@@ -176,7 +176,7 @@ jobs:
                       
                       # Use Azure AD token authentication with proper token formatting
                       # The space after -AccessToken is critical
-                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken $env:SQL_ACCESS_TOKEN -i $ScriptPath
+                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken "$env:SQL_ACCESS_TOKEN" -i $ScriptPath
                       
                       if ($LASTEXITCODE -eq 0) {
                           $success = $true
@@ -230,26 +230,19 @@ jobs:
           }
         shell: pwsh
       
-      # Check if SQL credentials are available
-      - name: Check SQL credentials
-        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true'
-        id: check-sql-creds
-        run: |
-          $hasUsername = "${{ secrets.AZURE_SQL_USERNAME }}" -ne ""
-          $hasPassword = "${{ secrets.AZURE_SQL_PASSWORD }}" -ne ""
-          
-          if ($hasUsername -and $hasPassword) {
-            echo "sql_creds_available=true" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "sql_creds_available=false" >> $env:GITHUB_OUTPUT
-            Write-Warning "SQL credentials are not available. Skipping SQL script execution."
-          }
-        shell: pwsh
-        
-      # Fallback to SQL authentication if token is not available and credentials exist
+      # Fallback to SQL authentication if token is not available
       - name: Deploy SQL Scripts with SQL Auth
-        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true' && steps.check-sql-creds.outputs.sql_creds_available == 'true'
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true'
+        env:
+          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
         run: |
+          # Verify SQL credentials are available
+          if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
+            Write-Error "SQL authentication credentials are not available and token authentication failed."
+            exit 1
+          }
+          
           # Function to execute SQL with retry logic
           function Invoke-SqlCmdWithRetry {
               param (
@@ -307,7 +300,7 @@ jobs:
             foreach ($script in $scriptFiles) {
               Write-Host "Executing: $($script.Name)"
               
-              $result = Invoke-SqlCmdWithRetry -ServerName "${{ env.SQL_SERVER_NAME }}" -DatabaseName "${{ env.SQL_DATABASE_NAME }}" -ScriptPath "$($script.FullName)" -Username "${{ secrets.AZURE_SQL_USERNAME }}" -Password "${{ secrets.AZURE_SQL_PASSWORD }}"
+              $result = Invoke-SqlCmdWithRetry -ServerName "${{ env.SQL_SERVER_NAME }}" -DatabaseName "${{ env.SQL_DATABASE_NAME }}" -ScriptPath "$($script.FullName)" -Username "$env:SQL_USERNAME" -Password "$env:SQL_PASSWORD"
               
               if (-not $result) {
                 Write-Error "Error executing SQL script: $($script.Name)"
