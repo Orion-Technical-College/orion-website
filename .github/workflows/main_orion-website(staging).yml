@@ -174,8 +174,9 @@ jobs:
                   try {
                       Write-Host "Executing SQL script: $ScriptPath"
                       
-                      # Use Azure AD token authentication
-                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken $env:SQL_ACCESS_TOKEN -i $ScriptPath
+                      # Use Azure AD token authentication with proper token formatting
+                      # The space after -AccessToken is critical
+                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken "$env:SQL_ACCESS_TOKEN" -i $ScriptPath
                       
                       if ($LASTEXITCODE -eq 0) {
                           $success = $true
