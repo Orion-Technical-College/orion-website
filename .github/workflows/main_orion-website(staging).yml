@@ -1,78 +1,4 @@
-# Get the script files in order
-          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
-          
-          if ($scriptFiles.Count -gt 0) {
-            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
-            $hasErrors = $false
-            
-            foreach ($script in $scriptFiles) {
-              Write-Host "Executing: $($script.Name)"
-              
-              $result = Invoke-SqlCmdWithRetry -ServerName "${{ env.SQL_SERVER_NAME }}" -DatabaseName "${{ env.SQL_DATABASE_NAME }}" -ScriptPath "$($script.FullName)" -Username "$env:SQL_USERNAME" -Password "$env:SQL_PASSWORD"
-              
-              if (-not $result) {
-                Write-Error "Error executing SQL script: $($script.Name)"
-                $hasErrors = $true
-                break
-              }
-            }
-            
-            if ($hasErrors) {
-              exit 1
-            }
-          } else {
-            Write-Host "No SQL scripts found in Database-Script folder."
-          }          # Function to execute SQL with retry logic
-          function Invoke-SqlCmdWithRetry {
-              param (
-                  [string]$ServerName,
-                  [string]$DatabaseName,
-                  [string]$ScriptPath,
-                  [string]$Username,
-                  [string]$Password,
-                  [int]$MaxRetries = 3,
-                  [int]$RetryDelaySeconds = 10
-              )
-              
-              $retryCount = 0
-              $success = $false
-              
-              while (-not $success -and $retryCount -lt $MaxRetries) {
-                  try {
-                      Write-Host "Executing SQL script: $ScriptPath"
-                      
-                      # Use SQL authentication
-                      & sqlcmd -S $ServerName -d $DatabaseName -U $Username -P $Password -i $ScriptPath
-                      
-                      if ($LASTEXITCODE -eq 0) {
-                          $success = $true
-                          Write-Host "SQL script executed successfully"
-                      } else {
-                          throw "sqlcmd exited with code $LASTEXITCODE"
-                      }
-                  }
-                  catch {
-                      $retryCount++
-                      Write-Warning "Attempt $retryCount of $MaxRetries failed: $_"
-                      if ($retryCount -lt $MaxRetries) {
-                          Write-Host "Waiting $RetryDelaySeconds seconds before retry..."
-                          Start-Sleep -Seconds $RetryDelaySeconds
-                      }
-                  }
-              }
-              
-              if (-not $success) {
-                  Write-Error "Failed to execute SQL script after $MaxRetries attempts"
-                  return $false
-              }
-              
-              return $true
-          }        run: |
-          # Verify SQL credentials are available
-          if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
-            Write-Error "SQL authentication credentials are not available and token authentication failed."
-            exit 1
-          }name: Build and Deploy Orion Website
+name: Build and Deploy Orion Website
 
 on:
   push:
@@ -310,6 +236,7 @@ jobs:
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
           SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+          SQLCMDPASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
         run: |
           # Verify SQL credentials are available
           if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
@@ -390,8 +317,6 @@ jobs:
             Write-Host "No SQL scripts found in Database-Script folder."
           }
         shell: pwsh
-        env:
-          SQLCMDPASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
 
   deploy-website:
     runs-on: windows-latest
