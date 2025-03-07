@@ -12,6 +12,8 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'orion-website'
   AZURE_RESOURCE_GROUP: 'orion-website-rg'
+  SQL_SERVER_NAME: 'orionweb-sqlserver.database.windows.net'
+  SQL_DATABASE_NAME: 'OrionWebDB'
 
 jobs:
   build:
@@ -98,32 +100,220 @@ jobs:
           }
         shell: pwsh
       
-      # Only run the next steps if SQL scripts are found
-      - name: Deploy SQL Scripts
+      # Get Azure AD token for SQL authentication
+      - name: Get Access Token for Azure SQL
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        id: get-token
+        run: |
+          try {
+            $token = az account get-access-token --resource https://database.windows.net/ | ConvertFrom-Json
+            echo "::add-mask::$($token.accessToken)"
+            echo "token_available=true" >> $env:GITHUB_OUTPUT
+            echo "SQL_ACCESS_TOKEN=$($token.accessToken)" >> $env:GITHUB_ENV
+            Write-Host "Successfully obtained SQL access token"
+          } catch {
+            Write-Warning "Unable to get access token for SQL: $_"
+            echo "token_available=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Will fall back to SQL authentication if available"
+          }
+        shell: pwsh
+      
+      # Install sqlcmd if scripts need to be executed
+      - name: Install sqlcmd utility
         if: steps.check-scripts.outputs.has_scripts == 'true'
         run: |
+          Write-Host "Installing sqlcmd utility..."
+          Invoke-WebRequest -Uri "https://aka.ms/mssql-tools-windows" -OutFile "SQLCMD.msi"
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i SQLCMD.msi /quiet /qn" -Wait
+          
+          # Add to PATH
+          $env:Path = "$env:Path;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn"
+          
+          # Verify installation
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              if (Get-Command sqlcmd -ErrorAction Stop) {
+                Write-Host "sqlcmd is installed and available."
+                $success = $true
+              }
+            } catch {
+              $retryCount++
+              Write-Warning "Attempt $retryCount of $maxRetries: sqlcmd not found yet. Waiting 10 seconds..."
+              Start-Sleep -Seconds 10
+            }
+          }
+          
+          if (-not $success) {
+            Write-Error "sqlcmd was not installed successfully after $maxRetries attempts."
+            exit 1
+          }
+        shell: pwsh
+      
+      # Execute SQL scripts - Preferring token-based authentication
+      - name: Deploy SQL Scripts with Token Auth
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available == 'true'
+        run: |
+          # Function to execute SQL with retry logic
+          function Invoke-SqlCmdWithRetry {
+              param (
+                  [string]$ServerName,
+                  [string]$DatabaseName,
+                  [string]$ScriptPath,
+                  [int]$MaxRetries = 3,
+                  [int]$RetryDelaySeconds = 10
+              )
+              
+              $retryCount = 0
+              $success = $false
+              
+              while (-not $success -and $retryCount -lt $MaxRetries) {
+                  try {
+                      Write-Host "Executing SQL script: $ScriptPath"
+                      
+                      # Use Azure AD token authentication
+                      & sqlcmd -S $ServerName -d $DatabaseName -G -AccessToken $env:SQL_ACCESS_TOKEN -i $ScriptPath
+                      
+                      if ($LASTEXITCODE -eq 0) {
+                          $success = $true
+                          Write-Host "SQL script executed successfully"
+                      } else {
+                          throw "sqlcmd exited with code $LASTEXITCODE"
+                      }
+                  }
+                  catch {
+                      $retryCount++
+                      Write-Warning "Attempt $retryCount of $MaxRetries failed: $_"
+                      if ($retryCount -lt $MaxRetries) {
+                          Write-Host "Waiting $RetryDelaySeconds seconds before retry..."
+                          Start-Sleep -Seconds $RetryDelaySeconds
+                      }
+                  }
+              }
+              
+              if (-not $success) {
+                  Write-Error "Failed to execute SQL script after $MaxRetries attempts"
+                  return $false
+              }
+              
+              return $true
+          }
+          
           # Get the script files in order
           $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
           
           if ($scriptFiles.Count -gt 0) {
-            Write-Host "Found SQL scripts to execute. Running in order..."
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
+            $hasErrors = $false
             
             foreach ($script in $scriptFiles) {
               Write-Host "Executing: $($script.Name)"
               
-              # Execute each script against Azure SQL Database
-              # The correct command is 'az sql db run-query' not 'az sql db query'
-              az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orionweb-sqlserver --name OrionWebDB --file "$($script.FullName)"
+              $result = Invoke-SqlCmdWithRetry -ServerName "${{ env.SQL_SERVER_NAME }}" -DatabaseName "${{ env.SQL_DATABASE_NAME }}" -ScriptPath "$($script.FullName)"
               
-              if ($LASTEXITCODE -ne 0) {
+              if (-not $result) {
                 Write-Error "Error executing SQL script: $($script.Name)"
-                exit 1
+                $hasErrors = $true
+                break
               }
+            }
+            
+            if ($hasErrors) {
+              exit 1
             }
           } else {
             Write-Host "No SQL scripts found in Database-Script folder."
           }
         shell: pwsh
+      
+      # Fallback to SQL authentication if token is not available
+      - name: Deploy SQL Scripts with SQL Auth
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.get-token.outputs.token_available != 'true'
+        run: |
+          # Verify SQL credentials are available
+          if ([string]::IsNullOrEmpty("${{ secrets.AZURE_SQL_USERNAME }}") -or [string]::IsNullOrEmpty("${{ secrets.AZURE_SQL_PASSWORD }}")) {
+            Write-Error "SQL authentication credentials are not available and token authentication failed."
+            exit 1
+          }
+          
+          # Function to execute SQL with retry logic
+          function Invoke-SqlCmdWithRetry {
+              param (
+                  [string]$ServerName,
+                  [string]$DatabaseName,
+                  [string]$ScriptPath,
+                  [string]$Username,
+                  [string]$Password,
+                  [int]$MaxRetries = 3,
+                  [int]$RetryDelaySeconds = 10
+              )
+              
+              $retryCount = 0
+              $success = $false
+              
+              while (-not $success -and $retryCount -lt $MaxRetries) {
+                  try {
+                      Write-Host "Executing SQL script: $ScriptPath"
+                      
+                      # Use SQL authentication
+                      & sqlcmd -S $ServerName -d $DatabaseName -U $Username -P $Password -i $ScriptPath
+                      
+                      if ($LASTEXITCODE -eq 0) {
+                          $success = $true
+                          Write-Host "SQL script executed successfully"
+                      } else {
+                          throw "sqlcmd exited with code $LASTEXITCODE"
+                      }
+                  }
+                  catch {
+                      $retryCount++
+                      Write-Warning "Attempt $retryCount of $MaxRetries failed: $_"
+                      if ($retryCount -lt $MaxRetries) {
+                          Write-Host "Waiting $RetryDelaySeconds seconds before retry..."
+                          Start-Sleep -Seconds $RetryDelaySeconds
+                      }
+                  }
+              }
+              
+              if (-not $success) {
+                  Write-Error "Failed to execute SQL script after $MaxRetries attempts"
+                  return $false
+              }
+              
+              return $true
+          }
+          
+          # Get the script files in order
+          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          
+          if ($scriptFiles.Count -gt 0) {
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
+            $hasErrors = $false
+            
+            foreach ($script in $scriptFiles) {
+              Write-Host "Executing: $($script.Name)"
+              
+              $result = Invoke-SqlCmdWithRetry -ServerName "${{ env.SQL_SERVER_NAME }}" -DatabaseName "${{ env.SQL_DATABASE_NAME }}" -ScriptPath "$($script.FullName)" -Username "${{ secrets.AZURE_SQL_USERNAME }}" -Password "${{ secrets.AZURE_SQL_PASSWORD }}"
+              
+              if (-not $result) {
+                Write-Error "Error executing SQL script: $($script.Name)"
+                $hasErrors = $true
+                break
+              }
+            }
+            
+            if ($hasErrors) {
+              exit 1
+            }
+          } else {
+            Write-Host "No SQL scripts found in Database-Script folder."
+          }
+        shell: pwsh
+        env:
+          SQLCMDPASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
 
   deploy-website:
     runs-on: windows-latest
