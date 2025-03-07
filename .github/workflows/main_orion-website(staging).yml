@@ -1,69 +1,236 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy ASP app to Azure Web App - orion-website
+name: Build and Deploy Orion Website
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: 'orion-website'
+  AZURE_RESOURCE_GROUP: 'orion-website-rg'
 
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup MSBuild path
-        uses: microsoft/setup-msbuild@v1.0.2
-
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v1.0.5
-
-      - name: Restore NuGet packages
-        run: nuget restore
-
-      - name: Publish to folder
-        run: msbuild /nologo /verbosity:m /t:Build /t:pipelinePreDeployCopyAllFilesToOneFolder /p:_PackageTempDir="\published\"
-
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Option 1: If it's a .NET Framework 4.8 application with solution file
+      - name: Setup MSBuild (if needed)
+        uses: microsoft/setup-msbuild@v1.1
+        if: hashFiles('**/*.sln') != ''
+      
+      - name: Setup NuGet (if needed)
+        uses: NuGet/setup-nuget@v1.2.0
+        if: hashFiles('**/*.sln') != ''
+      
+      - name: Restore NuGet packages (if needed)
+        run: |
+          if (Test-Path -Path "*.sln") {
+            nuget restore *.sln
+          }
+        shell: pwsh
+      
+      - name: Build solution (if needed)
+        run: |
+          if (Test-Path -Path "*.sln") {
+            msbuild /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{ github.workspace }}\published"
+          }
+        shell: pwsh
+      
+      # Option 2: If it's just static files or simpler web application
+      - name: Package website content
+        run: |
+          # Create a deployment package for the website
+          if (-not (Test-Path -Path "${{ github.workspace }}\published")) {
+            # If we didn't build a .NET app above, package directly
+            New-Item -Path "${{ github.workspace }}\published" -ItemType Directory -Force
+            
+            # Get website files but exclude database scripts and github workflow files
+            Get-ChildItem -Path "${{ github.workspace }}" -Exclude ".git", ".github", "Database-Script" | 
+              Copy-Item -Destination "${{ github.workspace }}\published" -Recurse -Force
+            
+            # Create a zip package
+            Compress-Archive -Path "${{ github.workspace }}\published\*" -DestinationPath "${{ github.workspace }}\published\site.zip" -Force
+          }
+        shell: pwsh
+      
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: ASP-app
-          path: '/published/**'
+          name: website-package
+          path: ${{ github.workspace }}\published\**\*.zip
 
-  deploy:
+  deploy-database:
     runs-on: windows-latest
     needs: build
-    environment:
-      name: 'staging'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
+    if: github.event_name != 'pull_request'
+    
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: ASP-app
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BE48B02AF55F4F44BE2C3C0167FD8F74 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E8857D41A0B34DD8B727F093005116E3 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_719D95AE914E4128B523F028EE1D64AD }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Deploy SQL Scripts
+        run: |
+          # Check if database scripts exist
+          if (Test-Path -Path "${{ github.workspace }}\Database-Script") {
+            # Get the script files in order
+            $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+            
+            if ($scriptFiles.Count -gt 0) {
+              Write-Host "Found SQL scripts to execute. Running in order..."
+              
+              foreach ($script in $scriptFiles) {
+                Write-Host "Executing: $($script.Name)"
+                
+                # Execute each script against Azure SQL Database
+                # Using sqlcmd or az cli based on your preference
+                az sql db query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server orion-sqlserver --name OrionWebDB --file "$($script.FullName)"
+                
+                if ($LASTEXITCODE -ne 0) {
+                  Write-Error "Error executing SQL script: $($script.Name)"
+                  exit 1
+                }
+              }
+            } else {
+              Write-Host "No SQL scripts found in Database-Script folder."
+            }
+          } else {
+            Write-Host "No Database-Script folder found. Skipping database deployment."
+          }
+        shell: pwsh
 
-      - name: Deploy to Azure Web App
+  deploy-website:
+    runs-on: windows-latest
+    needs: [build, deploy-database]
+    if: github.event_name != 'pull_request'
+    environment:
+      name: 'staging'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: website-package
+          path: ${{ github.workspace }}
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Deploy to Azure Web App Staging Slot
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'orion-website'
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
-          package: .
+          package: ${{ github.workspace }}/**/*.zip
+      
+      - name: Wait for deployment to stabilize
+        run: |
+          Start-Sleep -Seconds 30
+          Write-Host "Waiting for deployment to stabilize..."
+        shell: pwsh
+      
+      - name: Validate staging deployment
+        run: |
+          $maxRetries = 5
+          $retryCount = 0
+          $success = $false
           
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net" -UseBasicParsing
+              $statusCode = $response.StatusCode
+              
+              if ($statusCode -eq 200) {
+                Write-Host "Deployment validation successful!"
+                $success = $true
+              } else {
+                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                $retryCount++
+                Start-Sleep -Seconds 10
+              }
+            } catch {
+              Write-Host "Request failed: $_. Retrying..."
+              $retryCount++
+              Start-Sleep -Seconds 10
+            }
+          }
+          
+          if (-not $success) {
+            Write-Error "Staging validation failed after $maxRetries attempts!"
+            exit 1
+          }
+        shell: pwsh
+
+  swap-to-production:
+    runs-on: windows-latest
+    needs: deploy-website
+    if: github.event_name != 'pull_request'
+    environment:
+      name: 'production'
+      url: 'https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net'
+    
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Swap staging to production
+        run: |
+          Write-Host "Swapping staging slot to production..."
+          az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
+        shell: pwsh
+      
+      - name: Validate production deployment
+        run: |
+          $maxRetries = 5
+          $retryCount = 0
+          $success = $false
+          
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net" -UseBasicParsing
+              $statusCode = $response.StatusCode
+              
+              if ($statusCode -eq 200) {
+                Write-Host "Production deployment validation successful!"
+                $success = $true
+              } else {
+                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                $retryCount++
+                Start-Sleep -Seconds 10
+              }
+            } catch {
+              Write-Host "Request failed: $_. Retrying..."
+              $retryCount++
+              Start-Sleep -Seconds 10
+            }
+          }
+          
+          if (-not $success) {
+            Write-Error "Production validation failed after $maxRetries attempts!"
+            exit 1
+          }
+        shell: pwsh
