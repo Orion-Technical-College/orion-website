@@ -142,7 +142,7 @@ jobs:
               }
             } catch {
               $retryCount++
-              Write-Warning "Attempt $retryCount of $maxRetries: sqlcmd not found yet. Waiting 10 seconds..."
+              Write-Warning "Attempt $retryCount of ${maxRetries}: sqlcmd not found yet. Waiting 10 seconds..."
               Start-Sleep -Seconds 10
             }
           }
