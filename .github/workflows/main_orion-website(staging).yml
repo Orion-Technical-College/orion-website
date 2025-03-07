@@ -48,16 +48,22 @@ jobs:
       - name: Package website content
         run: |
           # Create a deployment package for the website
-          if (-not (Test-Path -Path "${{ github.workspace }}\published")) {
+          if (-not (Test-Path -Path "${{ github.workspace }}\published\*.zip")) {
             # If we didn't build a .NET app above, package directly
+            New-Item -Path "${{ github.workspace }}\_temp" -ItemType Directory -Force
+            
+            # Get website files but exclude database scripts, github workflow files, and the published directory itself
+            Get-ChildItem -Path "${{ github.workspace }}" -Exclude ".git", ".github", "Database-Script", "published", "_temp" | 
+              Copy-Item -Destination "${{ github.workspace }}\_temp" -Recurse -Force
+            
+            # Create published directory
             New-Item -Path "${{ github.workspace }}\published" -ItemType Directory -Force
             
-            # Get website files but exclude database scripts and github workflow files
-            Get-ChildItem -Path "${{ github.workspace }}" -Exclude ".git", ".github", "Database-Script" | 
-              Copy-Item -Destination "${{ github.workspace }}\published" -Recurse -Force
-            
             # Create a zip package
-            Compress-Archive -Path "${{ github.workspace }}\published\*" -DestinationPath "${{ github.workspace }}\published\site.zip" -Force
+            Compress-Archive -Path "${{ github.workspace }}\_temp\*" -DestinationPath "${{ github.workspace }}\published\site.zip" -Force
+            
+            # Clean up temp directory
+            Remove-Item -Path "${{ github.workspace }}\_temp" -Recurse -Force -ErrorAction SilentlyContinue
           }
         shell: pwsh
       
