@@ -46,6 +46,39 @@ jobs:
           }
         shell: pwsh
       
+      - name: Prepare Web.config for Azure deployment
+        run: |
+          # Create a temporary copy of Web.config
+          Copy-Item -Path "${{ github.workspace }}/Web.config" -Destination "${{ github.workspace }}/Web.config.original" -Force
+          
+          # Read the Web.config file
+          $webConfig = Get-Content -Path "${{ github.workspace }}/Web.config" -Raw
+          
+          # Add defaultDocument configuration if it doesn't exist
+          if ($webConfig -notmatch '<defaultDocument>') {
+            $webConfig = $webConfig -replace '<system.webServer>', @'
+<system.webServer>
+  <defaultDocument>
+    <files>
+      <clear/>
+      <add value="Default.aspx" />
+      <add value="default.aspx" />
+      <add value="index.html" />
+    </files>
+  </defaultDocument>
+'@
+          }
+          
+          # Update connection string to use Azure SQL
+          $azureSqlConnectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
+          $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$azureSqlConnectionString`""
+          
+          # Write updated Web.config
+          Set-Content -Path "${{ github.workspace }}/Web.config" -Value $webConfig
+          
+          Write-Host "Web.config prepared for Azure deployment"
+        shell: pwsh
+      
       # Option 2: If it's just static files or simpler web application
       - name: Package website content
         run: |
@@ -290,89 +323,79 @@ jobs:
           slot-name: 'staging'
           package: ${{ github.workspace }}/**/*.zip
       
-      - name: Wait for deployment to stabilize
+      - name: Configure Azure Web App Settings
         run: |
-          Start-Sleep -Seconds 30
-          Write-Host "Waiting for deployment to stabilize..."
+          # Enable default document functionality
+          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --default-documents "Default.aspx,default.aspx,index.html"
+          
+          # Set runtime configuration settings
+          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --settings WEBSITE_NODE_DEFAULT_VERSION=10.14.1 ASPNETCORE_ENVIRONMENT=Production SCM_DO_BUILD_DURING_DEPLOYMENT=true
+          
+          # Disable automatic ASP.NET Core detection (since this is .NET Framework)
+          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --settings WEBSITE_ASPNET_CORE_DETECTION=0
+          
+          # Set proper connection string at app setting level for redundancy
+          az webapp config connection-string set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --connection-string-type SQLAzure --settings TestConnectionString="Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
+          
+          # Ensure authentication settings are properly configured
+          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --auth-enabled false
+          
+          # Enable directory browsing in portal but keep it disabled in web.config
+          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --auto-heal-enabled true
+          
+          # Restart the web app to apply all configuration changes
+          az webapp restart --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging
+          
+          # Allow time for restart to complete
+          Write-Host "Waiting for application restart to complete..."
+          Start-Sleep -Seconds 60
         shell: pwsh
       
-      - name: Validate staging deployment
+      - name: Validate deployment with content verification
         run: |
-          # Try multiple validation approaches
-          $maxRetries = 5
+          # Allow time for application to initialize
+          Write-Host "Waiting for application to fully initialize..."
+          Start-Sleep -Seconds 60
+          
+          $maxRetries = 6
           $retryCount = 0
           $success = $false
+          $stagingUrl = "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net"
           
-          # First try Azure CLI status check instead of direct HTTP request
-          while ($retryCount -lt 3 -and -not $success) {
+          while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              Write-Host "Validating deployment using Azure CLI - Attempt $($retryCount + 1)"
-              $appStatus = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
+              Write-Host "Validation attempt $($retryCount + 1) - checking $stagingUrl"
               
-              if ($appStatus -eq "Running") {
-                Write-Host "Azure CLI validation successful! App status: $appStatus"
-                $success = $true
-                break
-              } else {
-                Write-Host "App not in running state. Current status: $appStatus. Retrying..."
-                $retryCount++
-                Start-Sleep -Seconds 15
-              }
-            } catch {
-              Write-Warning "Azure CLI validation failed: $_"
-              $retryCount++
-              Start-Sleep -Seconds 15
-            }
-          }
-          
-          # If Azure CLI validation succeeded, we can skip HTTP validation
-          if ($success) {
-            Write-Host "Deployment validated via Azure CLI. Skipping HTTP validation."
-          } else {
-            # Reset for HTTP validation attempts
-            $retryCount = 0
-            
-            # Construct the URL correctly
-            $stagingUrl = "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net"
-            Write-Host "Attempting HTTP validation at: $stagingUrl"
-            
-            # Wait a bit longer before first HTTP attempt
-            Write-Host "Waiting 30 seconds for site to become available..."
-            Start-Sleep -Seconds 30
-            
-            while ($retryCount -lt $maxRetries -and -not $success) {
-              try {
-                Write-Host "Sending HTTP request - Attempt $($retryCount + 1)"
-                $response = Invoke-WebRequest -Uri $stagingUrl -UseBasicParsing -TimeoutSec 30
-                $statusCode = $response.StatusCode
-                
-                if ($statusCode -eq 200) {
-                  Write-Host "HTTP validation successful! Status code: $statusCode"
+              # First check app status via Azure CLI
+              $appStatus = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
+              Write-Host "App status according to Azure: $appStatus"
+              
+              # Then check actual HTTP response
+              $response = Invoke-WebRequest -Uri $stagingUrl -UseBasicParsing -TimeoutSec 30
+              
+              if ($response.StatusCode -eq 200) {
+                if ($response.Content -notmatch "You do not have permission") {
+                  Write-Host "Validation successful - site returned proper content"
                   $success = $true
                 } else {
-                  Write-Host "Unexpected status code: $statusCode. Retrying..."
+                  Write-Host "Permission error still present in the content. Retrying after app configuration changes take effect..."
                   $retryCount++
-                  Start-Sleep -Seconds 15
+                  Start-Sleep -Seconds 20
                 }
-              } catch {
-                $errorMsg = $_.Exception.Message
-                Write-Host "HTTP request failed: $errorMsg"
-                
-                # Handle different error types
-                if ($errorMsg -match "No such host is known") {
-                  Write-Host "DNS resolution issue. The app might not be deployed yet or hostname is incorrect."
-                } elseif ($errorMsg -match "timed out") {
-                  Write-Host "Request timed out. The app might be starting up."
-                }
-                
+              } else {
+                Write-Host "Unexpected status code: $($response.StatusCode). Retrying..."
                 $retryCount++
-                Start-Sleep -Seconds 15
+                Start-Sleep -Seconds 20
               }
+            } catch {
+              Write-Host "Request failed: $_. Retrying..."
+              $retryCount++
+              Start-Sleep -Seconds 20
             }
           }
           
           if (-not $success) {
-            Write-Error "Deployment validation failed after multiple attempts."
+            Write-Error "Deployment validation failed after multiple attempts. Please check application logs in Azure Portal."
             exit 1
           }
         shell: pwsh
@@ -428,47 +451,53 @@ jobs:
           
           # If Azure CLI validation succeeded, we can skip HTTP validation
           if ($success) {
-            Write-Host "Production deployment validated via Azure CLI. Skipping HTTP validation."
-          } else {
-            # Reset for HTTP validation attempts
-            $retryCount = 0
-            
-            # Construct the URL correctly
-            $productionUrl = "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-            Write-Host "Attempting HTTP validation at: $productionUrl"
-            
-            # Wait a bit longer before first HTTP attempt
-            Write-Host "Waiting 30 seconds for production site to become available..."
-            Start-Sleep -Seconds 30
-            
-            while ($retryCount -lt $maxRetries -and -not $success) {
-              try {
-                Write-Host "Sending HTTP request - Attempt $($retryCount + 1)"
-                $response = Invoke-WebRequest -Uri $productionUrl -UseBasicParsing -TimeoutSec 30
-                $statusCode = $response.StatusCode
-                
-                if ($statusCode -eq 200) {
-                  Write-Host "HTTP validation successful! Production status code: $statusCode"
+            Write-Host "Production deployment validated via Azure CLI. Proceeding to HTTP validation."
+          }
+          
+          # Reset for HTTP validation attempts
+          $retryCount = 0
+          $success = $false
+          
+          # Construct the URL correctly
+          $productionUrl = "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          Write-Host "Attempting HTTP validation at: $productionUrl"
+          
+          # Wait a bit longer before first HTTP attempt
+          Write-Host "Waiting 30 seconds for production site to become available..."
+          Start-Sleep -Seconds 30
+          
+          while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+              Write-Host "Sending HTTP request - Attempt $($retryCount + 1)"
+              $response = Invoke-WebRequest -Uri $productionUrl -UseBasicParsing -TimeoutSec 30
+              
+              if ($response.StatusCode -eq 200) {
+                if ($response.Content -notmatch "You do not have permission") {
+                  Write-Host "HTTP validation successful! Production returns proper content."
                   $success = $true
                 } else {
-                  Write-Host "Unexpected status code: $statusCode. Retrying..."
+                  Write-Host "Permission error still present in production. Retrying..."
                   $retryCount++
                   Start-Sleep -Seconds 15
                 }
-              } catch {
-                $errorMsg = $_.Exception.Message
-                Write-Host "HTTP request failed: $errorMsg"
-                
-                # Handle different error types
-                if ($errorMsg -match "No such host is known") {
-                  Write-Host "DNS resolution issue. The production app might not be deployed yet or hostname is incorrect."
-                } elseif ($errorMsg -match "timed out") {
-                  Write-Host "Request timed out. The production app might be starting up."
-                }
-                
+              } else {
+                Write-Host "Unexpected status code: $($response.StatusCode). Retrying..."
                 $retryCount++
                 Start-Sleep -Seconds 15
               }
+            } catch {
+              $errorMsg = $_.Exception.Message
+              Write-Host "HTTP request failed: $errorMsg"
+              
+              # Handle different error types
+              if ($errorMsg -match "No such host is known") {
+                Write-Host "DNS resolution issue. The production app might not be deployed yet or hostname is incorrect."
+              } elseif ($errorMsg -match "timed out") {
+                Write-Host "Request timed out. The production app might be starting up."
+              }
+              
+              $retryCount++
+              Start-Sleep -Seconds 15
             }
           }
           
