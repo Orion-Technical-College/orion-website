@@ -100,8 +100,20 @@ jobs:
           }
         shell: pwsh
       
-      - name: Deploy SQL Scripts Using Azure CLI
+      - name: Install SQL Server PowerShell Module
         if: steps.check-scripts.outputs.has_scripts == 'true'
+        run: |
+          Write-Host "Installing SqlServer PowerShell module..."
+          Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck
+          Import-Module SqlServer
+          Write-Host "SqlServer module installed successfully."
+        shell: pwsh
+        
+      - name: Deploy SQL Scripts Using PowerShell
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        env:
+          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
         run: |
           # Get the script files in order
           $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
@@ -110,25 +122,37 @@ jobs:
             Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
             $hasErrors = $false
             
+            # Define connection parameters
+            $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
+            $databaseName = "${{ env.SQL_DATABASE_NAME }}"
+            
+            # Verify SQL credentials are available
+            if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
+              Write-Error "SQL authentication credentials are not available. Please set AZURE_SQL_USERNAME and AZURE_SQL_PASSWORD secrets."
+              exit 1
+            }
+            
             foreach ($script in $scriptFiles) {
               Write-Host "Executing: $($script.Name)"
               
-              # Execute SQL query using Azure CLI
+              # Execute SQL using Invoke-Sqlcmd
               $maxRetries = 3
               $retryCount = 0
               $success = $false
               
               while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
-                  # Execute the script using Azure CLI instead of sqlcmd
-                  az sql db query --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --server "${{ env.SQL_SERVER_NAME }}" --name "${{ env.SQL_DATABASE_NAME }}" --file "$($script.FullName)"
+                  # Execute the script using PowerShell's Invoke-Sqlcmd
+                  Invoke-Sqlcmd -ServerInstance $serverName `
+                                -Database $databaseName `
+                                -Username $env:SQL_USERNAME `
+                                -Password $env:SQL_PASSWORD `
+                                -InputFile "$($script.FullName)" `
+                                -QueryTimeout 300 `
+                                -ErrorAction Stop
                   
-                  if ($LASTEXITCODE -eq 0) {
-                    $success = $true
-                    Write-Host "SQL script executed successfully"
-                  } else {
-                    throw "Azure CLI exited with code $LASTEXITCODE"
-                  }
+                  $success = $true
+                  Write-Host "SQL script executed successfully"
                 }
                 catch {
                   $retryCount++
