@@ -48,35 +48,37 @@ jobs:
       
       - name: Prepare Web.config for Azure deployment
         run: |
-          # Create a temporary copy of Web.config
+          # Create a backup of Web.config
           Copy-Item -Path "${{ github.workspace }}/Web.config" -Destination "${{ github.workspace }}/Web.config.original" -Force
           
-          # Read the Web.config file
+          # Read the existing Web.config file
           $webConfig = Get-Content -Path "${{ github.workspace }}/Web.config" -Raw
           
-          # Add defaultDocument configuration if it doesn't exist
+          # Define XML block as a string (avoiding YAML conflicts)
+          $xmlContent = '<system.webServer>
+            <defaultDocument>
+              <files>
+                <clear/>
+                <add value="Default.aspx" />
+                <add value="default.aspx" />
+                <add value="index.html" />
+              </files>
+            </defaultDocument>
+          </system.webServer>'
+
+          # Add the XML block if <defaultDocument> does not exist
           if ($webConfig -notmatch '<defaultDocument>') {
-            $webConfig = $webConfig -replace '<system.webServer>', @"
-<system.webServer>
-  <defaultDocument>
-    <files>
-      <clear/>
-      <add value="Default.aspx" />
-      <add value="default.aspx" />
-      <add value="index.html" />
-    </files>
-  </defaultDocument>
-"@
+            $webConfig = $webConfig -replace '</configuration>', "$xmlContent`n</configuration>"
           }
           
-          # Update connection string to use Azure SQL
+          # Update connection string for Azure SQL
           $azureSqlConnectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
           $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$azureSqlConnectionString`""
-          
-          # Write updated Web.config
+
+          # Write the updated Web.config
           Set-Content -Path "${{ github.workspace }}/Web.config" -Value $webConfig
           
-          Write-Host "Web.config prepared for Azure deployment"
+          Write-Host "Web.config successfully prepared for Azure deployment."
         shell: pwsh
       
       # Option 2: If it's just static files or simpler web application
@@ -449,7 +451,7 @@ jobs:
             }
           }
           
-          # If Azure CLI validation succeeded, we can skip HTTP validation
+          # If Azure CLI validation succeeded, we can proceed to HTTP validation
           if ($success) {
             Write-Host "Production deployment validated via Azure CLI. Proceeding to HTTP validation."
           }
