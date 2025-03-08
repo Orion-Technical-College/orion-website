@@ -137,7 +137,7 @@ jobs:
             Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
             $hasErrors = $false
             
-            # Define connection parameters
+            # Define connection parameters - use the fully qualified server name
             $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
             $databaseName = "${{ env.SQL_DATABASE_NAME }}"
             
@@ -147,24 +147,28 @@ jobs:
               exit 1
             }
             
+            # Build a connection string instead of using separate parameters
+            $connectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            
+            Write-Host "Using server: $serverName"
+            Write-Host "Using database: $databaseName"
+            Write-Host "Using username: $($env:SQL_USERNAME)"
+            
             foreach ($script in $scriptFiles) {
               Write-Host "Executing: $($script.Name)"
               
-              # Execute SQL using Invoke-Sqlcmd
+              # Execute SQL using Invoke-Sqlcmd with connection string
               $maxRetries = 3
               $retryCount = 0
               $success = $false
               
               while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
-                  # Execute the script using PowerShell's Invoke-Sqlcmd
-                  Invoke-Sqlcmd -ServerInstance $serverName `
-                                -Database $databaseName `
-                                -Username $env:SQL_USERNAME `
-                                -Password $env:SQL_PASSWORD `
-                                -InputFile "$($script.FullName)" `
-                                -QueryTimeout 300 `
-                                -ErrorAction Stop
+                  # Read the script content directly
+                  $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
+                  
+                  # Execute the script using connection string
+                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop
                   
                   $success = $true
                   Write-Host "SQL script executed successfully"
