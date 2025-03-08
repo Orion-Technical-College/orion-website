@@ -199,7 +199,7 @@ jobs:
                   if ($retryCount -lt $maxRetries) {
                     Write-Host "Waiting 10 seconds before retry..."
                     Start-Sleep -Seconds 10
-                  } else if ($containsVariables) {
+                  } elseif ($containsVariables) {
                     # Last attempt with further modifications for Step2-SP.sql
                     try {
                       Write-Host "Making final attempt with additional modifications..."
