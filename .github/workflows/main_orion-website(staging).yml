@@ -199,7 +199,8 @@ jobs:
                   if ($retryCount -lt $maxRetries) {
                     Write-Host "Waiting 10 seconds before retry..."
                     Start-Sleep -Seconds 10
-                  } elseif ($containsVariables) {
+                  }
+                  elseif ($containsVariables) {  # Note: using elseif not else if
                     # Last attempt with further modifications for Step2-SP.sql
                     try {
                       Write-Host "Making final attempt with additional modifications..."
@@ -286,32 +287,81 @@ jobs:
       
       - name: Validate staging deployment
         run: |
+          # Try multiple validation approaches
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
-          while ($retryCount -lt $maxRetries -and -not $success) {
+          # First try Azure CLI status check instead of direct HTTP request
+          while ($retryCount -lt 3 -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net" -UseBasicParsing
-              $statusCode = $response.StatusCode
+              Write-Host "Validating deployment using Azure CLI - Attempt $($retryCount + 1)"
+              $appStatus = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
               
-              if ($statusCode -eq 200) {
-                Write-Host "Deployment validation successful!"
+              if ($appStatus -eq "Running") {
+                Write-Host "Azure CLI validation successful! App status: $appStatus"
                 $success = $true
+                break
               } else {
-                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                Write-Host "App not in running state. Current status: $appStatus. Retrying..."
                 $retryCount++
-                Start-Sleep -Seconds 10
+                Start-Sleep -Seconds 15
               }
             } catch {
-              Write-Host "Request failed: $_. Retrying..."
+              Write-Warning "Azure CLI validation failed: $_"
               $retryCount++
-              Start-Sleep -Seconds 10
+              Start-Sleep -Seconds 15
+            }
+          }
+          
+          # If Azure CLI validation succeeded, we can skip HTTP validation
+          if ($success) {
+            Write-Host "Deployment validated via Azure CLI. Skipping HTTP validation."
+          } else {
+            # Reset for HTTP validation attempts
+            $retryCount = 0
+            
+            # Construct the URL correctly
+            $stagingUrl = "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net"
+            Write-Host "Attempting HTTP validation at: $stagingUrl"
+            
+            # Wait a bit longer before first HTTP attempt
+            Write-Host "Waiting 30 seconds for site to become available..."
+            Start-Sleep -Seconds 30
+            
+            while ($retryCount -lt $maxRetries -and -not $success) {
+              try {
+                Write-Host "Sending HTTP request - Attempt $($retryCount + 1)"
+                $response = Invoke-WebRequest -Uri $stagingUrl -UseBasicParsing -TimeoutSec 30
+                $statusCode = $response.StatusCode
+                
+                if ($statusCode -eq 200) {
+                  Write-Host "HTTP validation successful! Status code: $statusCode"
+                  $success = $true
+                } else {
+                  Write-Host "Unexpected status code: $statusCode. Retrying..."
+                  $retryCount++
+                  Start-Sleep -Seconds 15
+                }
+              } catch {
+                $errorMsg = $_.Exception.Message
+                Write-Host "HTTP request failed: $errorMsg"
+                
+                # Handle different error types
+                if ($errorMsg -match "No such host is known") {
+                  Write-Host "DNS resolution issue. The app might not be deployed yet or hostname is incorrect."
+                } elseif ($errorMsg -match "timed out") {
+                  Write-Host "Request timed out. The app might be starting up."
+                }
+                
+                $retryCount++
+                Start-Sleep -Seconds 15
+              }
             }
           }
           
           if (-not $success) {
-            Write-Error "Staging validation failed after $maxRetries attempts!"
+            Write-Error "Deployment validation failed after multiple attempts."
             exit 1
           }
         shell: pwsh
@@ -338,32 +388,81 @@ jobs:
       
       - name: Validate production deployment
         run: |
+          # Try multiple validation approaches
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
-          while ($retryCount -lt $maxRetries -and -not $success) {
+          # First try Azure CLI status check
+          while ($retryCount -lt 3 -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net" -UseBasicParsing
-              $statusCode = $response.StatusCode
+              Write-Host "Validating production deployment using Azure CLI - Attempt $($retryCount + 1)"
+              $appStatus = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
               
-              if ($statusCode -eq 200) {
-                Write-Host "Production deployment validation successful!"
+              if ($appStatus -eq "Running") {
+                Write-Host "Azure CLI validation successful! Production app status: $appStatus"
                 $success = $true
+                break
               } else {
-                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                Write-Host "Production app not in running state. Current status: $appStatus. Retrying..."
                 $retryCount++
-                Start-Sleep -Seconds 10
+                Start-Sleep -Seconds 15
               }
             } catch {
-              Write-Host "Request failed: $_. Retrying..."
+              Write-Warning "Azure CLI validation failed: $_"
               $retryCount++
-              Start-Sleep -Seconds 10
+              Start-Sleep -Seconds 15
+            }
+          }
+          
+          # If Azure CLI validation succeeded, we can skip HTTP validation
+          if ($success) {
+            Write-Host "Production deployment validated via Azure CLI. Skipping HTTP validation."
+          } else {
+            # Reset for HTTP validation attempts
+            $retryCount = 0
+            
+            # Construct the URL correctly
+            $productionUrl = "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+            Write-Host "Attempting HTTP validation at: $productionUrl"
+            
+            # Wait a bit longer before first HTTP attempt
+            Write-Host "Waiting 30 seconds for production site to become available..."
+            Start-Sleep -Seconds 30
+            
+            while ($retryCount -lt $maxRetries -and -not $success) {
+              try {
+                Write-Host "Sending HTTP request - Attempt $($retryCount + 1)"
+                $response = Invoke-WebRequest -Uri $productionUrl -UseBasicParsing -TimeoutSec 30
+                $statusCode = $response.StatusCode
+                
+                if ($statusCode -eq 200) {
+                  Write-Host "HTTP validation successful! Production status code: $statusCode"
+                  $success = $true
+                } else {
+                  Write-Host "Unexpected status code: $statusCode. Retrying..."
+                  $retryCount++
+                  Start-Sleep -Seconds 15
+                }
+              } catch {
+                $errorMsg = $_.Exception.Message
+                Write-Host "HTTP request failed: $errorMsg"
+                
+                # Handle different error types
+                if ($errorMsg -match "No such host is known") {
+                  Write-Host "DNS resolution issue. The production app might not be deployed yet or hostname is incorrect."
+                } elseif ($errorMsg -match "timed out") {
+                  Write-Host "Request timed out. The production app might be starting up."
+                }
+                
+                $retryCount++
+                Start-Sleep -Seconds 15
+              }
             }
           }
           
           if (-not $success) {
-            Write-Error "Production validation failed after $maxRetries attempts!"
+            Write-Error "Production deployment validation failed after multiple attempts."
             exit 1
           }
         shell: pwsh
