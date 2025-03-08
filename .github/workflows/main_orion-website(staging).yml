@@ -100,13 +100,28 @@ jobs:
           }
         shell: pwsh
       
-      - name: Install SQL Server PowerShell Module
+      - name: Prepare SQL Server PowerShell Module
         if: steps.check-scripts.outputs.has_scripts == 'true'
         run: |
-          Write-Host "Installing SqlServer PowerShell module..."
-          Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck
-          Import-Module SqlServer
-          Write-Host "SqlServer module installed successfully."
+          Write-Host "Preparing SqlServer PowerShell module..."
+          # Check if we need to install the module or if we can use existing cmdlets
+          if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
+            try {
+              Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
+            } catch {
+              Write-Host "Installation failed, but cmdlets may still be available: $_"
+            }
+          } else {
+            Write-Host "Invoke-Sqlcmd is already available. Using existing cmdlets."
+          }
+          
+          # Verify Invoke-Sqlcmd is available
+          if (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
+            Write-Host "Invoke-Sqlcmd cmdlet is available and ready to use."
+          } else {
+            Write-Error "Invoke-Sqlcmd cmdlet is not available. SQL script execution will fail."
+            exit 1
+          }
         shell: pwsh
         
       - name: Deploy SQL Scripts Using PowerShell
