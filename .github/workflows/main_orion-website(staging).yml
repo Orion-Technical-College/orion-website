@@ -23,7 +23,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Option 1: If it's a .NET Framework 4.8 application with solution file
+      # Setup build tools if needed
       - name: Setup MSBuild (if needed)
         uses: microsoft/setup-msbuild@v1.1
         if: hashFiles('**/*.sln') != ''
@@ -48,48 +48,63 @@ jobs:
       
       - name: Prepare Web.config for Azure deployment
         run: |
-          # Create a backup of Web.config
-          Copy-Item -Path "${{ github.workspace }}/Web.config" -Destination "${{ github.workspace }}/Web.config.original" -Force
+          # Correct path to Web.config based on your repository structure
+          $webConfigPath = "${{ github.workspace }}/Deploy/Web.config"
           
-          # Read the existing Web.config file
-          $webConfig = Get-Content -Path "${{ github.workspace }}/Web.config" -Raw
-          
-          # Define XML block as a string (avoiding YAML conflicts)
-          $xmlContent = '<system.webServer>
-            <defaultDocument>
+          if (Test-Path $webConfigPath) {
+            Write-Host "Found Web.config at $webConfigPath"
+            
+            # Create a backup of Web.config
+            Copy-Item -Path $webConfigPath -Destination "$webConfigPath.original" -Force
+            
+            # Read the existing Web.config file
+            $webConfig = Get-Content -Path $webConfigPath -Raw
+            
+            # Define XML block as a string (avoiding YAML conflicts)
+            $defaultDocXml = '<defaultDocument>
               <files>
                 <clear/>
                 <add value="Default.aspx" />
                 <add value="default.aspx" />
                 <add value="index.html" />
               </files>
-            </defaultDocument>
-          </system.webServer>'
-
-          # Add the XML block if <defaultDocument> does not exist
-          if ($webConfig -notmatch '<defaultDocument>') {
-            $webConfig = $webConfig -replace '</configuration>', "$xmlContent`n</configuration>"
+            </defaultDocument>'
+            
+            # Add the defaultDocument if it doesn't exist
+            if ($webConfig -notmatch '<defaultDocument>') {
+              # Check if system.webServer section exists
+              if ($webConfig -match '<system\.webServer>') {
+                # Add defaultDocument inside existing system.webServer section
+                $webConfig = $webConfig -replace '<system\.webServer>', "<system.webServer>`n    $defaultDocXml"
+              } else {
+                # Add system.webServer section with defaultDocument before end of configuration
+                $systemWebServerXml = "<system.webServer>`n    $defaultDocXml`n  </system.webServer>"
+                $webConfig = $webConfig -replace '</configuration>', "  $systemWebServerXml`n</configuration>"
+              }
+            }
+            
+            # Update connection string for Azure SQL
+            $azureSqlConnectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
+            $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$azureSqlConnectionString`""
+            
+            # Write the updated Web.config
+            Set-Content -Path $webConfigPath -Value $webConfig
+            
+            Write-Host "Web.config successfully prepared for Azure deployment."
+          } else {
+            Write-Error "Web.config not found at expected path: $webConfigPath"
+            exit 1
           }
-          
-          # Update connection string for Azure SQL
-          $azureSqlConnectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
-          $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$azureSqlConnectionString`""
-
-          # Write the updated Web.config
-          Set-Content -Path "${{ github.workspace }}/Web.config" -Value $webConfig
-          
-          Write-Host "Web.config successfully prepared for Azure deployment."
         shell: pwsh
       
-      # Option 2: If it's just static files or simpler web application
       - name: Package website content
         run: |
           # Create a deployment package for the website
           if (-not (Test-Path -Path "${{ github.workspace }}\published\*.zip")) {
-            # If we didn't build a .NET app above, package directly
+            # Create temp directory for packaging
             New-Item -Path "${{ github.workspace }}\_temp" -ItemType Directory -Force
             
-            # Get website files but exclude database scripts, github workflow files, and the published directory itself
+            # Copy all website files but exclude irrelevant items
             Get-ChildItem -Path "${{ github.workspace }}" -Exclude ".git", ".github", "Database-Script", "published", "_temp" | 
               Copy-Item -Destination "${{ github.workspace }}\_temp" -Recurse -Force
             
@@ -139,7 +154,6 @@ jobs:
         if: steps.check-scripts.outputs.has_scripts == 'true'
         run: |
           Write-Host "Preparing SqlServer PowerShell module..."
-          # Check if we need to install the module or if we can use existing cmdlets
           if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
             try {
               Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
@@ -150,7 +164,6 @@ jobs:
             Write-Host "Invoke-Sqlcmd is already available. Using existing cmdlets."
           }
           
-          # Verify Invoke-Sqlcmd is available
           if (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
             Write-Host "Invoke-Sqlcmd cmdlet is available and ready to use."
           } else {
@@ -449,11 +462,6 @@ jobs:
               $retryCount++
               Start-Sleep -Seconds 15
             }
-          }
-          
-          # If Azure CLI validation succeeded, we can proceed to HTTP validation
-          if ($success) {
-            Write-Host "Production deployment validated via Azure CLI. Proceeding to HTTP validation."
           }
           
           # Reset for HTTP validation attempts
