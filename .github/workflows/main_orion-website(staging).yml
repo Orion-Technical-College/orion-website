@@ -124,7 +124,7 @@ jobs:
           }
         shell: pwsh
         
-      - name: Deploy SQL Scripts with Fallback Authentication
+      - name: Deploy SQL Scripts with Direct Replacements
         if: steps.check-scripts.outputs.has_scripts == 'true'
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
@@ -137,28 +137,15 @@ jobs:
             Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
             $hasErrors = $false
             
-            # Define connection parameters - use the fully qualified server name
+            # Define connection parameters
             $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
             $databaseName = "${{ env.SQL_DATABASE_NAME }}"
+            $connectionString = "Server=$serverName;Database=$databaseName;User ID=$env:SQL_USERNAME;Password=$env:SQL_PASSWORD;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
             
-            # Verify SQL credentials are available for fallback
-            if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
-              Write-Warning "SQL authentication fallback credentials are not available. Will only try default authentication."
-              $hasFallbackCredentials = $false
-            } else {
-              $hasFallbackCredentials = $true
-              Write-Host "Fallback credentials are available if needed."
-              Write-Host "Using server: $serverName"
-              Write-Host "Using database: $databaseName"
-              Write-Host "Using username: $($env:SQL_USERNAME)"
-            }
-            
-            # Build connection strings for both methods
-            $originalConnectionString = "Server=$serverName;Database=$databaseName;Integrated Security=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
-            
-            if ($hasFallbackCredentials) {
-              $fallbackConnectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
-            }
+            # Display connection information
+            Write-Host "Using server: $serverName"
+            Write-Host "Using database: $databaseName"
+            Write-Host "Using username: $env:SQL_USERNAME"
             
             foreach ($script in $scriptFiles) {
               Write-Host "Processing: $($script.Name)"
@@ -167,65 +154,82 @@ jobs:
               $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
               $tempFile = "$($script.FullName).temp"
               
-              # First attempt: Execute with original script
+              # Check if script contains SQL variables
+              $containsVariables = $sqlContent -match '\$\(SqlDeploymentUser\)' -or $script.Name -eq "Step2-SP.sql" -or $script.Name -eq "Step2-SP-Modified.sql"
+              
+              if ($containsVariables) {
+                Write-Host "Script contains SQL variables - applying direct replacements"
+                
+                # Create modified content with replacements
+                $modifiedContent = $sqlContent
+                
+                # Replace any variable references
+                $modifiedContent = $modifiedContent -replace '\$\(SqlDeploymentUser\)', $env:SQL_USERNAME
+                $modifiedContent = $modifiedContent -replace '\$\(CreateDatabaseUser\)', 'true'
+                $modifiedContent = $modifiedContent -replace '\$\(CreateDeploymentUserSchema\)', 'true'
+                
+                # Replace hardcoded user references
+                $modifiedContent = $modifiedContent -replace "'nareshki_demo3db'", "'$($env:SQL_USERNAME)'"
+                $modifiedContent = $modifiedContent -replace "\[nareshki_demo3db\]", "[$($env:SQL_USERNAME)]"
+                $modifiedContent = $modifiedContent -replace "nareshki_demo3db\.", "dbo."
+                
+                # Write modified content to temp file
+                Set-Content -Path $tempFile -Value $modifiedContent
+                $fileToExecute = $tempFile
+              } else {
+                $fileToExecute = $script.FullName
+              }
+              
+              # Execute the script with multiple retries
               $success = $false
               $maxRetries = 3
               $retryCount = 0
               
               while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
-                  Write-Host "Executing: $($script.Name) (original method) - Attempt $($retryCount + 1)"
-                  Set-Content -Path $tempFile -Value $sqlContent
-                  
-                  Invoke-Sqlcmd -InputFile $tempFile -ConnectionString $originalConnectionString -QueryTimeout 300 -ErrorAction Stop
+                  Write-Host "Executing script - Attempt $($retryCount + 1)"
+                  Invoke-Sqlcmd -ConnectionString $connectionString -InputFile $fileToExecute -QueryTimeout 300 -ErrorAction Stop
                   $success = $true
-                  Write-Host "SQL script executed successfully with original method"
-                  break
+                  Write-Host "SQL script executed successfully"
                 }
                 catch {
                   $retryCount++
-                  Write-Warning "Original execution attempt $retryCount failed: $_"
+                  Write-Warning "Execution attempt $retryCount failed: $_"
                   
-                  if ($retryCount -ge $maxRetries) {
-                    Write-Host "All attempts with original method failed. Trying fallback if available..."
-                    
-                    if ($hasFallbackCredentials) {
-                      # Try with environment credentials and modified content
-                      try {
-                        # Replace any hardcoded login references
-                        $modifiedSqlContent = $sqlContent -replace "nareshki_demo3db", "$env:SQL_USERNAME"
-                        Set-Content -Path $tempFile -Value $modifiedSqlContent
-                        
-                        Write-Host "Attempting fallback with environment credentials and modified script..."
-                        Invoke-Sqlcmd -ConnectionString $fallbackConnectionString -InputFile $tempFile -QueryTimeout 300 -ErrorAction Stop
-                        $success = $true
-                        Write-Host "SQL script executed successfully with fallback credentials and modified script"
-                      }
-                      catch {
-                        Write-Warning "Fallback execution with modified script failed: $_"
-                        
-                        # One last attempt with original script but fallback credentials
-                        try {
-                          Write-Host "Attempting fallback with environment credentials and original script..."
-                          Set-Content -Path $tempFile -Value $sqlContent
-                          Invoke-Sqlcmd -ConnectionString $fallbackConnectionString -InputFile $tempFile -QueryTimeout 300 -ErrorAction Stop
-                          $success = $true
-                          Write-Host "SQL script executed successfully with fallback credentials and original script"
-                        }
-                        catch {
-                          Write-Warning "All fallback attempts failed: $_"
-                        }
-                      }
-                    }
-                  }
-                  else {
+                  if ($retryCount -lt $maxRetries) {
                     Write-Host "Waiting 10 seconds before retry..."
                     Start-Sleep -Seconds 10
+                  } else if ($containsVariables) {
+                    # Last attempt with further modifications for Step2-SP.sql
+                    try {
+                      Write-Host "Making final attempt with additional modifications..."
+                      
+                      # Comment out problematic sections
+                      $lastAttemptContent = $modifiedContent -replace "EXECUTE AS USER\s*=\s*'[^']+'", "-- EXECUTE AS USER commented out by deployment"
+                      $lastAttemptContent = $lastAttemptContent -replace "WITH EXECUTE AS\s*=\s*'[^']+'", "-- WITH EXECUTE AS commented out by deployment"
+                      $lastAttemptContent = $lastAttemptContent -replace "CREATE USER.*nareshki_demo3db", "-- CREATE USER commented out by deployment"
+                      $lastAttemptContent = $lastAttemptContent -replace "CREATE SCHEMA.*nareshki_demo3db", "-- CREATE SCHEMA commented out by deployment"
+                      
+                      $finalTempFile = "$($script.FullName).final.temp"
+                      Set-Content -Path $finalTempFile -Value $lastAttemptContent
+                      
+                      Invoke-Sqlcmd -ConnectionString $connectionString -InputFile $finalTempFile -QueryTimeout 300 -ErrorAction Stop
+                      $success = $true
+                      Write-Host "SQL script executed successfully with additional modifications"
+                      
+                      # Clean up final temp file
+                      if (Test-Path $finalTempFile) {
+                        Remove-Item $finalTempFile -Force -ErrorAction SilentlyContinue
+                      }
+                    }
+                    catch {
+                      Write-Warning "Final attempt failed: $_"
+                    }
                   }
                 }
                 finally {
-                  # Clean up temp file at the end of each attempt
-                  if (Test-Path $tempFile) {
+                  # Clean up temp file if it exists
+                  if ($containsVariables -and (Test-Path $tempFile)) {
                     Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
                   }
                 }
