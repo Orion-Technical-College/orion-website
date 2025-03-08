@@ -124,7 +124,7 @@ jobs:
           }
         shell: pwsh
         
-      - name: Deploy SQL Scripts Using PowerShell
+      - name: Deploy SQL Scripts with Fallback Authentication
         if: steps.check-scripts.outputs.has_scripts == 'true'
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
@@ -141,50 +141,98 @@ jobs:
             $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
             $databaseName = "${{ env.SQL_DATABASE_NAME }}"
             
-            # Verify SQL credentials are available
+            # Verify SQL credentials are available for fallback
             if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
-              Write-Error "SQL authentication credentials are not available. Please set AZURE_SQL_USERNAME and AZURE_SQL_PASSWORD secrets."
-              exit 1
+              Write-Warning "SQL authentication fallback credentials are not available. Will only try default authentication."
+              $hasFallbackCredentials = $false
+            } else {
+              $hasFallbackCredentials = $true
+              Write-Host "Fallback credentials are available if needed."
+              Write-Host "Using server: $serverName"
+              Write-Host "Using database: $databaseName"
+              Write-Host "Using username: $($env:SQL_USERNAME)"
             }
             
-            # Build a connection string instead of using separate parameters
-            $connectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            # Build connection strings for both methods
+            $originalConnectionString = "Server=$serverName;Database=$databaseName;Integrated Security=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
             
-            Write-Host "Using server: $serverName"
-            Write-Host "Using database: $databaseName"
-            Write-Host "Using username: $($env:SQL_USERNAME)"
+            if ($hasFallbackCredentials) {
+              $fallbackConnectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            }
             
             foreach ($script in $scriptFiles) {
-              Write-Host "Executing: $($script.Name)"
+              Write-Host "Processing: $($script.Name)"
               
-              # Execute SQL using Invoke-Sqlcmd with connection string
+              # Read the script content
+              $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
+              $tempFile = "$($script.FullName).temp"
+              
+              # First attempt: Execute with original script
+              $success = $false
               $maxRetries = 3
               $retryCount = 0
-              $success = $false
               
               while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
-                  # Read the script content directly
-                  $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
+                  Write-Host "Executing: $($script.Name) (original method) - Attempt $($retryCount + 1)"
+                  Set-Content -Path $tempFile -Value $sqlContent
                   
-                  # Execute the script using connection string
-                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop
-                  
+                  Invoke-Sqlcmd -InputFile $tempFile -ConnectionString $originalConnectionString -QueryTimeout 300 -ErrorAction Stop
                   $success = $true
-                  Write-Host "SQL script executed successfully"
+                  Write-Host "SQL script executed successfully with original method"
+                  break
                 }
                 catch {
                   $retryCount++
-                  Write-Warning "Attempt $retryCount of $maxRetries failed: $_"
-                  if ($retryCount -lt $maxRetries) {
+                  Write-Warning "Original execution attempt $retryCount failed: $_"
+                  
+                  if ($retryCount -ge $maxRetries) {
+                    Write-Host "All attempts with original method failed. Trying fallback if available..."
+                    
+                    if ($hasFallbackCredentials) {
+                      # Try with environment credentials and modified content
+                      try {
+                        # Replace any hardcoded login references
+                        $modifiedSqlContent = $sqlContent -replace "nareshki_demo3db", "$env:SQL_USERNAME"
+                        Set-Content -Path $tempFile -Value $modifiedSqlContent
+                        
+                        Write-Host "Attempting fallback with environment credentials and modified script..."
+                        Invoke-Sqlcmd -ConnectionString $fallbackConnectionString -InputFile $tempFile -QueryTimeout 300 -ErrorAction Stop
+                        $success = $true
+                        Write-Host "SQL script executed successfully with fallback credentials and modified script"
+                      }
+                      catch {
+                        Write-Warning "Fallback execution with modified script failed: $_"
+                        
+                        # One last attempt with original script but fallback credentials
+                        try {
+                          Write-Host "Attempting fallback with environment credentials and original script..."
+                          Set-Content -Path $tempFile -Value $sqlContent
+                          Invoke-Sqlcmd -ConnectionString $fallbackConnectionString -InputFile $tempFile -QueryTimeout 300 -ErrorAction Stop
+                          $success = $true
+                          Write-Host "SQL script executed successfully with fallback credentials and original script"
+                        }
+                        catch {
+                          Write-Warning "All fallback attempts failed: $_"
+                        }
+                      }
+                    }
+                  }
+                  else {
                     Write-Host "Waiting 10 seconds before retry..."
                     Start-Sleep -Seconds 10
+                  }
+                }
+                finally {
+                  # Clean up temp file at the end of each attempt
+                  if (Test-Path $tempFile) {
+                    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
                   }
                 }
               }
               
               if (-not $success) {
-                Write-Error "Failed to execute SQL script after $maxRetries attempts: $($script.Name)"
+                Write-Error "Failed to execute SQL script after all attempts: $($script.Name)"
                 $hasErrors = $true
                 break
               }
