@@ -9,7 +9,6 @@ on:
 env:
   AZURE_WEBAPP_NAME: 'orion-website'
   AZURE_RESOURCE_GROUP: 'orion-website-rg'
-  AZURE_KEYVAULT_NAME: 'orion-website-kv'
   SQL_SERVER_NAME: 'orionweb-sqlserver'
   SQL_DATABASE_NAME: 'OrionWebDB'
 
@@ -28,7 +27,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Setup MSBuild and NuGet
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
 
       - name: Setup NuGet
@@ -81,122 +80,123 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
-      # Allow GitHub Actions IP in Azure SQL Firewall
-      - name: Configure SQL firewall for GitHub Actions
+      # Configure Azure SQL Server to allow Azure services
+      - name: Allow Azure Services to access SQL Server
+        run: |
+          Write-Host "Configuring SQL Server to allow Azure services..."
+          az sql server update --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.SQL_SERVER_NAME }} --enable-public-network true --set publicNetworkAccess="Enabled"
+          
+          # Enable the "Allow Azure services and resources to access this server" setting
+          az sql server firewall-rule create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "AllowAllAzureServices" --start-ip-address "0.0.0.0" --end-ip-address "0.0.0.0"
+          
+          Write-Host "SQL Server configured to allow Azure services"
+        shell: pwsh
+      
+      # Add GitHub Actions IP to firewall
+      - name: Add GitHub Actions IP to SQL Firewall
         run: |
           # Get GitHub Actions IP address
           $currentIP = (Invoke-WebRequest -Uri https://api.ipify.org).Content
           Write-Host "Current GitHub Actions IP: $currentIP"
           
-          # Add firewall rule to allow this IP
+          # Add firewall rule
           Write-Host "Adding firewall rule for GitHub Actions IP..."
           az sql server firewall-rule create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp" --start-ip-address $currentIP --end-ip-address $currentIP
+          
+          # Set IP for cleanup
+          echo "GITHUB_ACTIONS_IP=$currentIP" >> $env:GITHUB_ENV
           
           Write-Host "Firewall rule added successfully."
         shell: pwsh
       
-      - name: Install SqlServer module
+      - name: Install sqlcmd utility
         run: |
+          Write-Host "Installing sqlcmd from direct download..."
+          Invoke-WebRequest -Uri "https://aka.ms/sqlpackage-windows" -OutFile "sqlpackage.zip"
+          Expand-Archive -Path "sqlpackage.zip" -DestinationPath "./sqlpackage"
+          $env:PATH = "$env:PATH;$(Get-Location)\sqlpackage"
+          
+          # Install the SqlServer PowerShell module as a fallback
+          Write-Host "Installing SqlServer module..."
           Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
         shell: pwsh
       
-      - name: Deploy SQL Scripts
+      - name: Execute SQL scripts with direct connection
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
           SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
         run: |
-          # Function with retry logic for SQL connection
-          function Invoke-SqlCmdWithRetry {
-              param (
-                  [string]$ServerName,
-                  [string]$DatabaseName,
-                  [string]$Username,
-                  [string]$Password,
-                  [string]$ScriptPath,
-                  [int]$MaxRetries = 5,
-                  [int]$RetryDelaySeconds = 30,
-                  [int]$CommandTimeout = 600
-              )
-              
+          if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
+            $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+            $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
+            $databaseName = "${{ env.SQL_DATABASE_NAME }}"
+            
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute..."
+            
+            foreach ($script in $scriptFiles) {
+              Write-Host "`nExecuting script: $($script.Name)"
+              $maxRetries = 3
               $retryCount = 0
               $success = $false
               
-              while (-not $success -and $retryCount -lt $MaxRetries) {
-                  try {
-                      Write-Host "Attempt $($retryCount + 1) of $MaxRetries to execute SQL script: $ScriptPath"
-                      
-                      # Build connection string with longer timeout
-                      $connectionString = "Server=$ServerName;Database=$DatabaseName;User ID=$Username;Password=$Password;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
-                      
-                      # Use connection string instead of individual parameters for better control
-                      Invoke-Sqlcmd -ConnectionString $connectionString -InputFile $ScriptPath -QueryTimeout $CommandTimeout -ErrorAction Stop
-                      
+              while (-not $success -and $retryCount -lt $maxRetries) {
+                try {
+                  # Try using sqlcmd first
+                  Write-Host "Attempt $($retryCount + 1) using sqlcmd..."
+                  
+                  if (Get-Command sqlcmd -ErrorAction SilentlyContinue) {
+                    $cmdArgs = "-S `"$serverName`" -d `"$databaseName`" -U `"$env:SQL_USERNAME`" -P `"$env:SQL_PASSWORD`" -i `"$($script.FullName)`" -t 300 -C"
+                    # Write arguments without password for logs
+                    $logArgs = $cmdArgs -replace "-P `"[^`"]*`"", "-P `"***`""
+                    Write-Host "Running: sqlcmd $logArgs"
+                    
+                    # Execute sqlcmd
+                    & sqlcmd $cmdArgs.Split(" ")
+                    
+                    if ($LASTEXITCODE -eq 0) {
                       $success = $true
-                      Write-Host "SQL script executed successfully!"
+                      Write-Host "SQL script executed successfully with sqlcmd!"
+                    } else {
+                      throw "sqlcmd returned exit code $LASTEXITCODE"
+                    }
+                  } else {
+                    # Fallback to Invoke-Sqlcmd
+                    Write-Host "sqlcmd not available, using Invoke-Sqlcmd..."
+                    $connString = "Server=$serverName;Database=$databaseName;User ID=$env:SQL_USERNAME;Password=$env:SQL_PASSWORD;Trusted_Connection=False;Encrypt=True;Connection Timeout=120;"
+                    Invoke-Sqlcmd -ConnectionString $connString -InputFile $script.FullName -QueryTimeout 300 -ErrorAction Stop
+                    $success = $true
+                    Write-Host "SQL script executed successfully with Invoke-Sqlcmd!"
                   }
-                  catch {
-                      $retryCount++
-                      $errorMsg = $_.Exception.Message
-                      
-                      if ($errorMsg -match "Violation of PRIMARY KEY constraint" -or 
-                          $errorMsg -match "Cannot insert duplicate key") {
-                          Write-Host "Duplicate key detected - treating as success"
-                          $success = $true
-                      }
-                      elseif ($retryCount -lt $MaxRetries) {
-                          Write-Warning "SQL connection failed: $errorMsg"
-                          Write-Host "Waiting $RetryDelaySeconds seconds before retry..."
-                          Start-Sleep -Seconds $RetryDelaySeconds
-                      }
-                      else {
-                          Write-Error "Failed to execute SQL script after $MaxRetries attempts: $errorMsg"
-                          return $false
-                      }
-                  }
-              }
-              
-              return $success
-          }
-          
-          # Check for SQL scripts
-          if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
-              $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
-              $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
-              $databaseName = "${{ env.SQL_DATABASE_NAME }}"
-              
-              # Diagnostic info
-              Write-Host "Server: $serverName"
-              Write-Host "Database: $databaseName"
-              Write-Host "Username: $env:SQL_USERNAME"
-              Write-Host "Found $($scriptFiles.Count) SQL scripts to execute"
-              
-              $hasErrors = $false
-              
-              foreach ($script in $scriptFiles) {
-                  Write-Host "Processing: $($script.Name)"
+                }
+                catch {
+                  $retryCount++
+                  $errorMessage = $_.Exception.Message
                   
-                  $result = Invoke-SqlCmdWithRetry -ServerName $serverName -DatabaseName $databaseName -Username $env:SQL_USERNAME -Password $env:SQL_PASSWORD -ScriptPath $script.FullName
-                  
-                  if (-not $result) {
-                      $hasErrors = $true
-                      break
+                  if ($errorMessage -match "Violation of PRIMARY KEY constraint" -or $errorMessage -match "Cannot insert duplicate key") {
+                    Write-Host "Duplicate key detected - considering this a success..."
+                    $success = $true
+                  } elseif ($retryCount -lt $maxRetries) {
+                    Write-Warning "SQL execution failed: $errorMessage"
+                    Write-Host "Waiting 30 seconds before retry..."
+                    Start-Sleep -Seconds 30
+                  } else {
+                    Write-Error "Failed to execute SQL script after $maxRetries attempts: $errorMessage"
+                    exit 1
                   }
+                }
               }
-              
-              if ($hasErrors) {
-                  exit 1
-              }
+            }
           } else {
-              Write-Host "No SQL scripts found. Skipping database deployment."
+            Write-Host "No SQL scripts found. Skipping database deployment."
           }
         shell: pwsh
       
-      # Clean up the temporary firewall rule
+      # Clean up temporary firewall rule
       - name: Remove temporary firewall rule
         if: always()
         run: |
           Write-Host "Removing temporary firewall rule..."
-          az sql server firewall-rule delete --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp" --yes
+          az sql server firewall-rule delete --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp"
         shell: pwsh
 
   deploy-website:
@@ -218,13 +218,57 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
+      - name: Configure Web.config with Connection String
+        run: |
+          $zipFile = Get-ChildItem -Path "${{ github.workspace }}" -Filter "*.zip" | Select-Object -First 1
+          if ($zipFile) {
+            # Extract zip temporarily
+            $extractPath = "${{ github.workspace }}\extract"
+            Expand-Archive -Path $zipFile.FullName -DestinationPath $extractPath -Force
+            
+            # Find Web.config
+            $webConfigPath = Get-ChildItem -Path $extractPath -Filter "Web.config" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+            
+            if ($webConfigPath) {
+              # Update connection string directly
+              $webConfig = Get-Content -Path $webConfigPath -Raw
+              $connectionString = "Server=${{ env.SQL_SERVER_NAME }}.database.windows.net;Database=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};Trusted_Connection=False;Encrypt=True;Connection Timeout=60;"
+              
+              if ($webConfig -match 'connectionString="[^"]*"') {
+                $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$connectionString`""
+                Set-Content -Path $webConfigPath -Value $webConfig
+                Write-Host "Updated Web.config with connection string"
+              } else {
+                Write-Host "Connection string pattern not found in Web.config"
+              }
+              
+              # Repackage the zip
+              Compress-Archive -Path "$extractPath\*" -DestinationPath "${{ github.workspace }}\updated_site.zip" -Force
+              
+              # Clean up
+              Remove-Item -Path $extractPath -Recurse -Force
+            } else {
+              Write-Host "Web.config not found in extracted package"
+            }
+          }
+        shell: pwsh
+      
       - name: Deploy to Azure Web App Staging Slot
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
-          package: ${{ github.workspace }}/**/*.zip
+          package: ${{ github.workspace }}/updated_site.zip
+      
+      - name: Configure App Service settings
+        run: |
+          # Set App Service settings including connection string for backup/redundancy
+          az webapp config connection-string set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --connection-string-type SQLAzure --settings "DefaultConnection=Server=${{ env.SQL_SERVER_NAME }}.database.windows.net;Database=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};Trusted_Connection=False;Encrypt=True;Connection Timeout=60;"
+          
+          # Set default document and other configuration
+          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --default-documents "default.aspx,index.html,Default.aspx"
+        shell: pwsh
       
       - name: Validate staging deployment
         run: |
@@ -252,6 +296,7 @@ jobs:
           }
           
           if (-not $success) {
+            # Even if the validation fails, check if the app is running via Azure API
             $appState = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
             if ($appState -eq "Running") {
               Write-Host "App is running but validation requests failed. Proceeding with caution."
@@ -278,6 +323,15 @@ jobs:
       - name: Swap staging to production
         run: |
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
+        shell: pwsh
+      
+      - name: Configure production App Service settings
+        run: |
+          # Set App Service settings including connection string for backup/redundancy
+          az webapp config connection-string set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --connection-string-type SQLAzure --settings "DefaultConnection=Server=${{ env.SQL_SERVER_NAME }}.database.windows.net;Database=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};Trusted_Connection=False;Encrypt=True;Connection Timeout=60;"
+          
+          # Set default document and other configuration
+          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --default-documents "default.aspx,index.html,Default.aspx"
         shell: pwsh
       
       - name: Validate production deployment
