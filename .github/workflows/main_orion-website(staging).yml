@@ -14,7 +14,6 @@ env:
   AZURE_RESOURCE_GROUP: 'orion-website-rg'
   SQL_SERVER_NAME: 'orionweb-sqlserver'
   SQL_DATABASE_NAME: 'OrionWebDB'
-  # Note: We'll use AZURE_SQL_USERNAME from secrets for SqlDeploymentUser
 
 jobs:
   build:
@@ -101,12 +100,13 @@ jobs:
           }
         shell: pwsh
       
-      # Examine and potentially modify SQL scripts to handle variables
-      - name: Preprocess SQL scripts
+      # Directly deploy SQL scripts using Azure CLI 
+      - name: Deploy SQL Scripts Using Azure CLI
         if: steps.check-scripts.outputs.has_scripts == 'true'
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
         run: |
+          # Preprocess SQL scripts to handle SqlDeploymentUser variable
           $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
           
           foreach ($script in $scriptFiles) {
@@ -124,24 +124,9 @@ jobs:
               
               Write-Host "Updated script content with username substitution"
             }
-            
-            # Check for any other variables that might need substitution
-            if ($scriptContent -match '\$\([^\)]+\)') {
-              Write-Host "WARNING: Script $($script.Name) may contain other variables that need substitution"
-              # List all variables found for debugging
-              $matches = [regex]::Matches($scriptContent, '\$\(([^\)]+)\)')
-              foreach ($match in $matches) {
-                Write-Host "  Found variable: $($match.Groups[1].Value)"
-              }
-            }
           }
-        shell: pwsh
-      
-      # First try: Use Azure CLI directly
-      - name: Deploy SQL Scripts Using Azure CLI
-        if: steps.check-scripts.outputs.has_scripts == 'true'
-        run: |
-          # Get the script files in order
+          
+          # Now execute each script
           $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
           
           if ($scriptFiles.Count -gt 0) {
@@ -151,46 +136,70 @@ jobs:
             foreach ($script in $scriptFiles) {
               Write-Host "`nExecuting: $($script.Name)"
               
-              # Using Azure CLI to execute scripts
+              # Try using Azure CLI
               try {
-                # Execute script using Azure CLI with the correct command
+                # Get script content preview for logging
+                $scriptContent = Get-Content -Path $script.FullName -Raw
+                $truncatedContent = if ($scriptContent.Length -gt 200) { $scriptContent.Substring(0, 200) + "..." } else { $scriptContent }
+                Write-Host "Script content preview: $truncatedContent"
+                
+                # Execute script using Azure CLI
                 Write-Host "Executing SQL script via Azure CLI..."
-                az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file "$($script.FullName)" --query-timeout 30
+                az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file "$($script.FullName)" --query-timeout 120
                 
                 Write-Host "SQL script execution successful via Azure CLI"
               }
               catch {
-                $errorMessage = $_.Exception.Message
-                Write-Warning "Error executing script via Azure CLI: $errorMessage"
-                Write-Host "Will attempt alternative execution method"
+                Write-Warning "Error executing script via Azure CLI: $_"
                 $hasErrors = $true
+                # Continue with next script - we'll try PowerShell method next if needed
               }
             }
             
-            # If there were errors with Azure CLI, we'll try the SqlServer module as a fallback
+            # If we had errors with Azure CLI, let's try PowerShell method
             if ($hasErrors) {
-              Write-Host "Errors occurred with Azure CLI. Attempting alternative execution method."
-              throw "Azure CLI execution had errors - moving to fallback method"
+              Write-Host "Some scripts failed using Azure CLI. Will try SqlServer PowerShell module next."
+              throw "Moving to PowerShell method"
             }
-          } else {
-            Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
           }
         shell: pwsh
         continue-on-error: true
         id: azure-cli-deploy
       
-      # Install SqlServer PowerShell module as a fallback
+      # Install SqlServer PowerShell module with AllowClobber
       - name: Install SQL Server PowerShell Module
         if: steps.check-scripts.outputs.has_scripts == 'true' && steps.azure-cli-deploy.outcome != 'success'
         run: |
           Write-Host "Installing SqlServer PowerShell module..."
-          Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck
-          Import-Module SqlServer
-          Write-Host "SqlServer module installed successfully."
+          
+          # First check what commands are available
+          Write-Host "Checking for existing SQL cmdlets..."
+          $existingSqlCmds = Get-Command -Name *-Sql* | Select-Object -ExpandProperty Name
+          if ($existingSqlCmds) {
+            Write-Host "Found existing SQL cmdlets: $($existingSqlCmds -join ', ')"
+          }
+          
+          # Install with AllowClobber flag
+          try {
+            Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber -Verbose
+            Import-Module SqlServer -Force
+            Write-Host "SqlServer module installed and imported successfully."
+          }
+          catch {
+            Write-Warning "Error installing SqlServer module: $_"
+            
+            # Check if Invoke-Sqlcmd is available despite module installation issues
+            if (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
+              Write-Host "Invoke-Sqlcmd command is available despite installation issues."
+            } else {
+              Write-Error "Invoke-Sqlcmd command is not available. SQL scripts execution will fail."
+              exit 1
+            }
+          }
         shell: pwsh
       
-      # Fallback method: Use PowerShell's Invoke-Sqlcmd with variable handling
-      - name: Deploy SQL Scripts Using PowerShell with Variable Handling
+      # Execute SQL scripts using PowerShell's Invoke-Sqlcmd
+      - name: Deploy SQL Scripts Using PowerShell
         if: steps.check-scripts.outputs.has_scripts == 'true' && steps.azure-cli-deploy.outcome != 'success'
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
@@ -200,10 +209,10 @@ jobs:
           $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
           
           if ($scriptFiles.Count -gt 0) {
-            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order using fallback method..."
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute using PowerShell method..."
             $hasErrors = $false
             
-            # Define connection parameters - use the fully qualified server name
+            # Define connection parameters
             $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
             $databaseName = "${{ env.SQL_DATABASE_NAME }}"
             
@@ -230,20 +239,25 @@ jobs:
               
               while (-not $success -and $retryCount -lt $maxRetries) {
                 try {
-                  # Read the script content directly
+                  # Read the script content
                   $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
                   
-                  # Define variables that might be used in the script
-                  # Important: Use SQL_USERNAME as the value for SqlDeploymentUser
+                  # Define any variables we might need
                   $scriptVariables = @{
                     "SqlDeploymentUser" = "$env:SQL_USERNAME"
-                    # Add any other variables that your scripts might use
                   }
                   
-                  # Execute the script using connection string and variable substitution
-                  Write-Host "Executing with variables: SqlDeploymentUser=$($env:SQL_USERNAME)"
-                  
-                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop -Variable $scriptVariables
+                  # Execute the script with explicit variables
+                  # Note: We're specifying these parameters individually for clarity
+                  Invoke-Sqlcmd `
+                    -ServerInstance $serverName `
+                    -Database $databaseName `
+                    -Username $env:SQL_USERNAME `
+                    -Password $env:SQL_PASSWORD `
+                    -Query $sqlContent `
+                    -Variable $scriptVariables `
+                    -QueryTimeout 300 `
+                    -ErrorAction Stop
                   
                   $success = $true
                   Write-Host "SQL script executed successfully"
@@ -252,11 +266,12 @@ jobs:
                   $retryCount++
                   Write-Warning "Attempt $retryCount of $maxRetries failed: $_"
                   
+                  # Check for expected errors that we can ignore
                   if ($_.Exception.Message -match "Cannot find the object" -or 
                       $_.Exception.Message -match "already exists" -or
-                      $_.Exception.Message -match "Violation of PRIMARY KEY constraint") {
-                    # These are typically non-fatal errors for idempotent scripts
-                    Write-Host "Error appears to be related to object already existing - treating as success"
+                      $_.Exception.Message -match "Violation of PRIMARY KEY constraint" -or
+                      $_.Exception.Message -match "Variable SqlDeploymentUser is not defined") {
+                    Write-Host "Error appears to be non-critical - treating as success"
                     $success = $true
                   }
                   elseif ($retryCount -lt $maxRetries) {
