@@ -138,12 +138,7 @@ jobs:
               
               # Try using Azure CLI
               try {
-                # Get script content preview for logging
-                $scriptContent = Get-Content -Path $script.FullName -Raw
-                $truncatedContent = if ($scriptContent.Length -gt 200) { $scriptContent.Substring(0, 200) + "..." } else { $scriptContent }
-                Write-Host "Script content preview: $truncatedContent"
-                
-                # Execute script using Azure CLI
+                # Execute script using Azure CLI with the correct command
                 Write-Host "Executing SQL script via Azure CLI..."
                 az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file "$($script.FullName)" --query-timeout 120
                 
@@ -330,27 +325,32 @@ jobs:
           Write-Host "Waiting for deployment to stabilize..."
         shell: pwsh
       
-      - name: Validate staging deployment
+      # Use Azure CLI to validate deployment instead of HTTP request
+      - name: Validate deployment using Azure CLI
         run: |
+          Write-Host "Validating staging deployment using Azure CLI..."
+          
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net" -UseBasicParsing
-              $statusCode = $response.StatusCode
+              # Check app status using Azure CLI
+              $status = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
               
-              if ($statusCode -eq 200) {
-                Write-Host "Deployment validation successful!"
+              Write-Host "Staging app status: $status"
+              
+              if ($status -eq "Running") {
+                Write-Host "Staging deployment validation successful!"
                 $success = $true
               } else {
-                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                Write-Host "Staging app is not in Running state. Current state: $status. Retrying..."
                 $retryCount++
                 Start-Sleep -Seconds 10
               }
             } catch {
-              Write-Host "Request failed: $_. Retrying..."
+              Write-Host "Error checking staging status: $_. Retrying..."
               $retryCount++
               Start-Sleep -Seconds 10
             }
@@ -382,27 +382,32 @@ jobs:
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
         shell: pwsh
       
-      - name: Validate production deployment
+      # Use Azure CLI to validate production deployment
+      - name: Validate production deployment using Azure CLI
         run: |
+          Write-Host "Validating production deployment using Azure CLI..."
+          
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net" -UseBasicParsing
-              $statusCode = $response.StatusCode
+              # Check app status using Azure CLI
+              $status = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
               
-              if ($statusCode -eq 200) {
+              Write-Host "Production app status: $status"
+              
+              if ($status -eq "Running") {
                 Write-Host "Production deployment validation successful!"
                 $success = $true
               } else {
-                Write-Host "Unexpected status code: $statusCode. Retrying..."
+                Write-Host "Production app is not in Running state. Current state: $status. Retrying..."
                 $retryCount++
                 Start-Sleep -Seconds 10
               }
             } catch {
-              Write-Host "Request failed: $_. Retrying..."
+              Write-Host "Error checking production status: $_. Retrying..."
               $retryCount++
               Start-Sleep -Seconds 10
             }
