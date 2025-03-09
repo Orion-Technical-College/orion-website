@@ -81,30 +81,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
-      # Retrieve connection string from Key Vault to extract credentials
-      - name: Retrieve SqlConnectionString
-        id: get-connection-string
+      # Allow GitHub Actions IP in Azure SQL Firewall
+      - name: Configure SQL firewall for GitHub Actions
         run: |
-          $connectionString = az keyvault secret show --name 'SqlConnectionString' --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --query 'value' -o tsv
+          # Get GitHub Actions IP address
+          $currentIP = (Invoke-WebRequest -Uri https://api.ipify.org).Content
+          Write-Host "Current GitHub Actions IP: $currentIP"
           
-          # Parse connection string to extract username and password
-          # Using regex to extract parameters from connection string
-          $userMatch = [regex]::Match($connectionString, "User ID=([^;]+)")
-          $passMatch = [regex]::Match($connectionString, "Password=([^;]+)")
+          # Add firewall rule to allow this IP
+          Write-Host "Adding firewall rule for GitHub Actions IP..."
+          az sql server firewall-rule create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp" --start-ip-address $currentIP --end-ip-address $currentIP
           
-          if ($userMatch.Success -and $passMatch.Success) {
-            $username = $userMatch.Groups[1].Value
-            $password = $passMatch.Groups[1].Value
-            
-            echo "CONNECTION_STRING=$connectionString" >> $env:GITHUB_ENV
-            echo "SQL_USERNAME=$username" >> $env:GITHUB_ENV
-            echo "SQL_PASSWORD=$password" >> $env:GITHUB_ENV
-            echo "Credentials extracted successfully from connection string."
-          } else {
-            echo "Could not extract credentials from connection string. Using GitHub secrets as fallback."
-            echo "SQL_USERNAME=${{ secrets.AZURE_SQL_USERNAME }}" >> $env:GITHUB_ENV
-            echo "SQL_PASSWORD=${{ secrets.AZURE_SQL_PASSWORD }}" >> $env:GITHUB_ENV
-          }
+          Write-Host "Firewall rule added successfully."
         shell: pwsh
       
       - name: Install SqlServer module
@@ -113,33 +101,102 @@ jobs:
         shell: pwsh
       
       - name: Deploy SQL Scripts
+        env:
+          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
         run: |
-          if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
-            $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
-            
-            $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
-            $databaseName = "${{ env.SQL_DATABASE_NAME }}"
-            
-            foreach ($script in $scriptFiles) {
-              Write-Host "Executing: $($script.Name)"
+          # Function with retry logic for SQL connection
+          function Invoke-SqlCmdWithRetry {
+              param (
+                  [string]$ServerName,
+                  [string]$DatabaseName,
+                  [string]$Username,
+                  [string]$Password,
+                  [string]$ScriptPath,
+                  [int]$MaxRetries = 5,
+                  [int]$RetryDelaySeconds = 30,
+                  [int]$CommandTimeout = 600
+              )
               
-              try {
-                Invoke-Sqlcmd -ServerInstance $serverName -Database $databaseName -Username $env:SQL_USERNAME -Password $env:SQL_PASSWORD -InputFile "$($script.FullName)" -QueryTimeout 300
-                Write-Host "SQL script executed successfully"
+              $retryCount = 0
+              $success = $false
+              
+              while (-not $success -and $retryCount -lt $MaxRetries) {
+                  try {
+                      Write-Host "Attempt $($retryCount + 1) of $MaxRetries to execute SQL script: $ScriptPath"
+                      
+                      # Build connection string with longer timeout
+                      $connectionString = "Server=$ServerName;Database=$DatabaseName;User ID=$Username;Password=$Password;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
+                      
+                      # Use connection string instead of individual parameters for better control
+                      Invoke-Sqlcmd -ConnectionString $connectionString -InputFile $ScriptPath -QueryTimeout $CommandTimeout -ErrorAction Stop
+                      
+                      $success = $true
+                      Write-Host "SQL script executed successfully!"
+                  }
+                  catch {
+                      $retryCount++
+                      $errorMsg = $_.Exception.Message
+                      
+                      if ($errorMsg -match "Violation of PRIMARY KEY constraint" -or 
+                          $errorMsg -match "Cannot insert duplicate key") {
+                          Write-Host "Duplicate key detected - treating as success"
+                          $success = $true
+                      }
+                      elseif ($retryCount -lt $MaxRetries) {
+                          Write-Warning "SQL connection failed: $errorMsg"
+                          Write-Host "Waiting $RetryDelaySeconds seconds before retry..."
+                          Start-Sleep -Seconds $RetryDelaySeconds
+                      }
+                      else {
+                          Write-Error "Failed to execute SQL script after $MaxRetries attempts: $errorMsg"
+                          return $false
+                      }
+                  }
               }
-              catch {
-                if ($_.Exception.Message -match "Violation of PRIMARY KEY constraint" -or 
-                    $_.Exception.Message -match "Cannot insert duplicate key") {
-                  Write-Host "Duplicate key detected - continuing deployment"
-                } else {
-                  Write-Warning "Error executing SQL script: $_"
-                  exit 1
-                }
-              }
-            }
-          } else {
-            Write-Host "No SQL scripts found. Skipping database deployment."
+              
+              return $success
           }
+          
+          # Check for SQL scripts
+          if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
+              $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+              $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
+              $databaseName = "${{ env.SQL_DATABASE_NAME }}"
+              
+              # Diagnostic info
+              Write-Host "Server: $serverName"
+              Write-Host "Database: $databaseName"
+              Write-Host "Username: $env:SQL_USERNAME"
+              Write-Host "Found $($scriptFiles.Count) SQL scripts to execute"
+              
+              $hasErrors = $false
+              
+              foreach ($script in $scriptFiles) {
+                  Write-Host "Processing: $($script.Name)"
+                  
+                  $result = Invoke-SqlCmdWithRetry -ServerName $serverName -DatabaseName $databaseName -Username $env:SQL_USERNAME -Password $env:SQL_PASSWORD -ScriptPath $script.FullName
+                  
+                  if (-not $result) {
+                      $hasErrors = $true
+                      break
+                  }
+              }
+              
+              if ($hasErrors) {
+                  exit 1
+              }
+          } else {
+              Write-Host "No SQL scripts found. Skipping database deployment."
+          }
+        shell: pwsh
+      
+      # Clean up the temporary firewall rule
+      - name: Remove temporary firewall rule
+        if: always()
+        run: |
+          Write-Host "Removing temporary firewall rule..."
+          az sql server firewall-rule delete --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp" --yes
         shell: pwsh
 
   deploy-website:
@@ -168,21 +225,6 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
           package: ${{ github.workspace }}/**/*.zip
-      
-      - name: Configure App Service for Key Vault access
-        run: |
-          # Enable managed identity
-          az webapp identity assign --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
-          
-          # Get the principal ID
-          $principalId = $(az webapp identity show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query principalId -o tsv)
-          
-          # Grant Key Vault access
-          az keyvault set-policy --name ${{ env.AZURE_KEYVAULT_NAME }} --object-id $principalId --secret-permissions get list
-          
-          # Configure app to use Key Vault reference
-          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --settings "ConnectionString=@Microsoft.KeyVault(SecretUri=https://${{ env.AZURE_KEYVAULT_NAME }}.vault.azure.net/secrets/SqlConnectionString/)"
-        shell: pwsh
       
       - name: Validate staging deployment
         run: |
@@ -236,21 +278,6 @@ jobs:
       - name: Swap staging to production
         run: |
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
-        shell: pwsh
-      
-      - name: Configure production for Key Vault access
-        run: |
-          # Enable managed identity for production
-          az webapp identity assign --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
-          
-          # Get the principal ID
-          $principalId = $(az webapp identity show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query principalId -o tsv)
-          
-          # Grant Key Vault access
-          az keyvault set-policy --name ${{ env.AZURE_KEYVAULT_NAME }} --object-id $principalId --secret-permissions get list
-          
-          # Configure app to use Key Vault reference
-          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "ConnectionString=@Microsoft.KeyVault(SecretUri=https://${{ env.AZURE_KEYVAULT_NAME }}.vault.azure.net/secrets/SqlConnectionString/)"
         shell: pwsh
       
       - name: Validate production deployment
