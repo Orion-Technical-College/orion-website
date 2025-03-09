@@ -14,6 +14,7 @@ env:
   AZURE_RESOURCE_GROUP: 'orion-website-rg'
   SQL_SERVER_NAME: 'orionweb-sqlserver'
   SQL_DATABASE_NAME: 'OrionWebDB'
+  # Note: We'll use AZURE_SQL_USERNAME from secrets for SqlDeploymentUser
 
 jobs:
   build:
@@ -100,89 +101,43 @@ jobs:
           }
         shell: pwsh
       
-      # Get Azure AD token for SQL authentication
-      - name: Get Access Token for Azure SQL
+      # Examine and potentially modify SQL scripts to handle variables
+      - name: Preprocess SQL scripts
         if: steps.check-scripts.outputs.has_scripts == 'true'
-        id: get-token
+        env:
+          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
         run: |
-          try {
-            $token = az account get-access-token --resource https://database.windows.net/ | ConvertFrom-Json
+          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          
+          foreach ($script in $scriptFiles) {
+            $scriptContent = Get-Content -Path $script.FullName -Raw
             
-            # Mask the token to prevent exposure in logs
-            echo "::add-mask::$($token.accessToken)"
-            
-            # Verify token was retrieved (length only, for security)
-            if ($token.accessToken) {
-              $tokenLength = $token.accessToken.Length
-              Write-Host "Successfully obtained SQL access token (Length: $tokenLength characters)"
+            # Check if the script contains variables that need substitution
+            if ($scriptContent -match '\$\(SqlDeploymentUser\)') {
+              Write-Host "Script $($script.Name) contains SqlDeploymentUser variable - replacing with $env:SQL_USERNAME"
               
-              # Set the token as an environment variable
-              echo "token_available=true" >> $env:GITHUB_OUTPUT
-              echo "SQL_ACCESS_TOKEN=$($token.accessToken)" >> $env:GITHUB_ENV
-            } else {
-              Write-Warning "Token was retrieved but appears to be empty"
-              echo "token_available=false" >> $env:GITHUB_OUTPUT
+              # Replace the variable with the actual username
+              $updatedContent = $scriptContent.Replace('$(SqlDeploymentUser)', $env:SQL_USERNAME)
+              
+              # Write back the modified script
+              Set-Content -Path $script.FullName -Value $updatedContent
+              
+              Write-Host "Updated script content with username substitution"
             }
-          } catch {
-            Write-Warning "Unable to get access token for SQL: $_"
-            echo "token_available=false" >> $env:GITHUB_OUTPUT
-            Write-Host "Will fall back to SQL authentication if available"
-          }
-        shell: pwsh
-      
-      # Install sqlcmd if scripts need to be executed (ensuring latest version)
-      - name: Install sqlcmd utility
-        if: steps.check-scripts.outputs.has_scripts == 'true'
-        run: |
-          Write-Host "Installing sqlcmd utility..."
-          
-          # Download the latest SQL command line tools
-          Invoke-WebRequest -Uri "https://aka.ms/mssql-tools-windows" -OutFile "SQLCMD.msi"
-          
-          # Install with logging
-          $installProcess = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i SQLCMD.msi /quiet /qn /log sqlcmdinstall.log" -Wait -PassThru
-          
-          if ($installProcess.ExitCode -ne 0) {
-            Write-Error "Failed to install sqlcmd. Exit code: $($installProcess.ExitCode)"
-            if (Test-Path "sqlcmdinstall.log") {
-              Write-Host "Installation log:"
-              Get-Content "sqlcmdinstall.log" | Select-Object -Last 20
-            }
-            exit 1
-          }
-          
-          # Add to PATH
-          $env:Path = "$env:Path;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn"
-          Write-Host "Updated PATH: $env:Path"
-          
-          # Verify installation
-          $maxRetries = 3
-          $retryCount = 0
-          $success = $false
-          
-          while (-not $success -and $retryCount -lt $maxRetries) {
-            try {
-              if (Get-Command sqlcmd -ErrorAction Stop) {
-                # Show sqlcmd version to verify it's correctly installed and supports -AccessToken
-                $versionInfo = & sqlcmd -?
-                Write-Host "sqlcmd is installed and available."
-                Write-Host "Version info: $versionInfo"
-                $success = $true
+            
+            # Check for any other variables that might need substitution
+            if ($scriptContent -match '\$\([^\)]+\)') {
+              Write-Host "WARNING: Script $($script.Name) may contain other variables that need substitution"
+              # List all variables found for debugging
+              $matches = [regex]::Matches($scriptContent, '\$\(([^\)]+)\)')
+              foreach ($match in $matches) {
+                Write-Host "  Found variable: $($match.Groups[1].Value)"
               }
-            } catch {
-              $retryCount++
-              Write-Warning "Attempt $retryCount of ${maxRetries}: sqlcmd not found yet. Waiting 10 seconds..."
-              Start-Sleep -Seconds 10
             }
-          }
-          
-          if (-not $success) {
-            Write-Error "sqlcmd was not installed successfully after $maxRetries attempts."
-            exit 1
           }
         shell: pwsh
       
-      # Primary SQL Script Execution Method: Using Azure CLI
+      # First try: Use Azure CLI directly
       - name: Deploy SQL Scripts Using Azure CLI
         if: steps.check-scripts.outputs.has_scripts == 'true'
         run: |
@@ -196,13 +151,8 @@ jobs:
             foreach ($script in $scriptFiles) {
               Write-Host "`nExecuting: $($script.Name)"
               
-              # Using Azure CLI to execute scripts - this can bypass connection issues
+              # Using Azure CLI to execute scripts
               try {
-                # Get script content and truncate for log
-                $scriptContent = Get-Content -Path $script.FullName -Raw
-                $truncatedContent = if ($scriptContent.Length -gt 200) { $scriptContent.Substring(0, 200) + "..." } else { $scriptContent }
-                Write-Host "Script content preview: $truncatedContent"
-                
                 # Execute script using Azure CLI with the correct command
                 Write-Host "Executing SQL script via Azure CLI..."
                 az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file "$($script.FullName)" --query-timeout 30
@@ -211,70 +161,37 @@ jobs:
               }
               catch {
                 $errorMessage = $_.Exception.Message
-                
-                if ($errorMessage -match "Violation of PRIMARY KEY constraint" -or 
-                    $errorMessage -match "Cannot insert duplicate key") {
-                  Write-Host "Duplicate key detected - treating as success"
-                } else {
-                  Write-Warning "Error executing SQL script via Azure CLI: $errorMessage"
-                  Write-Host "Attempting alternative execution methods..."
-                  
-                  # Try executing with token-based authentication
-                  if ($env:SQL_ACCESS_TOKEN) {
-                    try {
-                      Write-Host "Attempting token-based authentication with sqlcmd..."
-                      & sqlcmd -S "${{ env.SQL_SERVER_NAME }}.database.windows.net" -d "${{ env.SQL_DATABASE_NAME }}" -G -AccessToken "$env:SQL_ACCESS_TOKEN" -i "$($script.FullName)"
-                      
-                      if ($LASTEXITCODE -eq 0) {
-                        Write-Host "SQL script execution successful via token-based authentication"
-                      } else {
-                        throw "sqlcmd exited with code $LASTEXITCODE"
-                      }
-                    }
-                    catch {
-                      Write-Warning "Error executing SQL script via token-based authentication: $_"
-                      Write-Host "Continuing despite errors - this is expected if objects already exist"
-                    }
-                  } else {
-                    Write-Warning "No SQL access token available. Continuing with standard execution."
-                    Write-Host "Continuing despite errors - this is expected if objects already exist"
-                  }
-                }
+                Write-Warning "Error executing script via Azure CLI: $errorMessage"
+                Write-Host "Will attempt alternative execution method"
+                $hasErrors = $true
               }
+            }
+            
+            # If there were errors with Azure CLI, we'll try the SqlServer module as a fallback
+            if ($hasErrors) {
+              Write-Host "Errors occurred with Azure CLI. Attempting alternative execution method."
+              throw "Azure CLI execution had errors - moving to fallback method"
             }
           } else {
             Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
           }
         shell: pwsh
-        
-      # Fallback Method: Using SQL Server PowerShell Module
-      - name: Prepare SQL Server PowerShell Module (Fallback)
-        if: steps.check-scripts.outputs.has_scripts == 'true' && failure()
+        continue-on-error: true
+        id: azure-cli-deploy
+      
+      # Install SqlServer PowerShell module as a fallback
+      - name: Install SQL Server PowerShell Module
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.azure-cli-deploy.outcome != 'success'
         run: |
-          Write-Host "Preparing SQL Server PowerShell module as fallback..."
-          # Check if we need to install the module or if we can use existing cmdlets
-          if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
-            try {
-              Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
-            } catch {
-              Write-Host "Installation failed, but cmdlets may still be available: $_"
-            }
-          } else {
-            Write-Host "Invoke-Sqlcmd is already available. Using existing cmdlets."
-          }
-          
-          # Verify Invoke-Sqlcmd is available
-          if (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
-            Write-Host "Invoke-Sqlcmd cmdlet is available and ready to use."
-          } else {
-            Write-Error "Invoke-Sqlcmd cmdlet is not available. SQL script execution will fail."
-            exit 1
-          }
+          Write-Host "Installing SqlServer PowerShell module..."
+          Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck
+          Import-Module SqlServer
+          Write-Host "SqlServer module installed successfully."
         shell: pwsh
-        
-      # Fallback SQL Script Execution Method: Using PowerShell
-      - name: Deploy SQL Scripts Using PowerShell (Fallback)
-        if: steps.check-scripts.outputs.has_scripts == 'true' && failure()
+      
+      # Fallback method: Use PowerShell's Invoke-Sqlcmd with variable handling
+      - name: Deploy SQL Scripts Using PowerShell with Variable Handling
+        if: steps.check-scripts.outputs.has_scripts == 'true' && steps.azure-cli-deploy.outcome != 'success'
         env:
           SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
           SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
@@ -296,7 +213,7 @@ jobs:
               exit 1
             }
             
-            # Build a connection string instead of using separate parameters
+            # Build a connection string
             $connectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
             
             Write-Host "Using server: $serverName"
@@ -316,8 +233,17 @@ jobs:
                   # Read the script content directly
                   $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
                   
-                  # Execute the script using connection string
-                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop
+                  # Define variables that might be used in the script
+                  # Important: Use SQL_USERNAME as the value for SqlDeploymentUser
+                  $scriptVariables = @{
+                    "SqlDeploymentUser" = "$env:SQL_USERNAME"
+                    # Add any other variables that your scripts might use
+                  }
+                  
+                  # Execute the script using connection string and variable substitution
+                  Write-Host "Executing with variables: SqlDeploymentUser=$($env:SQL_USERNAME)"
+                  
+                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop -Variable $scriptVariables
                   
                   $success = $true
                   Write-Host "SQL script executed successfully"
@@ -325,7 +251,15 @@ jobs:
                 catch {
                   $retryCount++
                   Write-Warning "Attempt $retryCount of $maxRetries failed: $_"
-                  if ($retryCount -lt $maxRetries) {
+                  
+                  if ($_.Exception.Message -match "Cannot find the object" -or 
+                      $_.Exception.Message -match "already exists" -or
+                      $_.Exception.Message -match "Violation of PRIMARY KEY constraint") {
+                    # These are typically non-fatal errors for idempotent scripts
+                    Write-Host "Error appears to be related to object already existing - treating as success"
+                    $success = $true
+                  }
+                  elseif ($retryCount -lt $maxRetries) {
                     Write-Host "Waiting 10 seconds before retry..."
                     Start-Sleep -Seconds 10
                   }
@@ -366,39 +300,6 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-      
-      - name: Verify staging slot exists
-        id: check-staging-slot
-        run: |
-          try {
-            $slot = az webapp deployment slot list --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --query "[?name=='staging']" -o json | ConvertFrom-Json
-            
-            if ($slot -and $slot.Length -gt 0) {
-              Write-Host "Staging slot exists."
-              echo "slot_exists=true" >> $env:GITHUB_OUTPUT
-            } else {
-              Write-Host "Staging slot does not exist. Will create it."
-              echo "slot_exists=false" >> $env:GITHUB_OUTPUT
-            }
-          } catch {
-            Write-Warning "Error checking if staging slot exists: $_"
-            echo "slot_exists=false" >> $env:GITHUB_OUTPUT
-            Write-Host "Will attempt to create staging slot if needed."
-          }
-        shell: pwsh
-        
-      - name: Create staging slot if needed
-        if: steps.check-staging-slot.outputs.slot_exists != 'true'
-        run: |
-          try {
-            Write-Host "Creating staging slot..."
-            az webapp deployment slot create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging
-            Write-Host "Staging slot created successfully."
-          } catch {
-            Write-Warning "Error creating staging slot: $_"
-            Write-Host "Will attempt to deploy directly to staging slot in case it was created but the command failed."
-          }
-        shell: pwsh
       
       - name: Deploy to Azure Web App Staging Slot
         id: deploy-to-webapp
@@ -496,21 +397,4 @@ jobs:
             Write-Error "Production validation failed after $maxRetries attempts!"
             exit 1
           }
-        shell: pwsh
-        
-      - name: Save deployment record for rollback purposes
-        run: |
-          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-          $deploymentRecord = @{
-            "timestamp" = $timestamp
-            "commitId" = "${{ github.sha }}"
-            "workflow" = "${{ github.workflow }}"
-            "runId" = "${{ github.run_id }}"
-          }
-          
-          $deploymentJson = $deploymentRecord | ConvertTo-Json
-          Write-Host "Saving deployment record: $deploymentJson"
-          
-          # In a real implementation, you might save this to a Blob Storage or other persistent location
-          # for automated rollback capability
         shell: pwsh
