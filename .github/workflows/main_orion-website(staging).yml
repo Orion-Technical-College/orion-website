@@ -141,8 +141,35 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
-      # Web.config transformation with Key Vault integration
-      - name: Configure Azure Key Vault references in web.config
+      - name: Retrieve connection string from Key Vault
+        run: |
+          $connectionString = az keyvault secret show --name 'SqlConnectionString' --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --query 'value' -o tsv
+          echo "CONNECTION_STRING=$connectionString" >> $env:GITHUB_ENV
+        shell: pwsh
+      
+      - name: Create SqlConnectionString if it doesn't exist
+        run: |
+          # Check if SqlConnectionString exists in Key Vault
+          $exists = az keyvault secret list --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --query "[?name=='SqlConnectionString']" -o tsv
+          
+          # If it doesn't exist, create it
+          if (-not $exists) {
+            Write-Host "Creating SqlConnectionString in Key Vault..."
+            # Get SQL credentials from Key Vault
+            $sqlUsername = az keyvault secret show --name 'AZURE-SQL-USERNAME' --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --query 'value' -o tsv
+            $sqlPassword = az keyvault secret show --name 'AZURE-SQL-PASSWORD' --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --query 'value' -o tsv
+            
+            # Create connection string
+            $connectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User ID=$sqlUsername;Password=$sqlPassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            
+            # Store in Key Vault
+            az keyvault secret set --vault-name ${{ env.AZURE_KEYVAULT_NAME }} --name 'SqlConnectionString' --value "$connectionString"
+            
+            echo "CONNECTION_STRING=$connectionString" >> $env:GITHUB_ENV
+          }
+        shell: pwsh
+      
+      - name: Configure Web.config with Key Vault references
         run: |
           $zipFile = Get-ChildItem -Path "${{ github.workspace }}" -Filter "*.zip" | Select-Object -First 1
           if ($zipFile) {
@@ -154,21 +181,21 @@ jobs:
             $webConfigPath = Get-ChildItem -Path $extractPath -Filter "Web.config" -Recurse | Select-Object -First 1 -ExpandProperty FullName
             
             if ($webConfigPath) {
-              # Update web.config to use Key Vault references
+              # Update web.config with direct connection string for now
+              # We'll later set up the app to use Key Vault references
               $webConfig = Get-Content -Path $webConfigPath -Raw
-              $connectionString = "@Microsoft.KeyVault(SecretUri=https://${{ env.AZURE_KEYVAULT_NAME }}.vault.azure.net/secrets/SqlConnectionString/)"
               
-              $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$connectionString`""
-              Set-Content -Path $webConfigPath -Value $webConfig
+              if ($webConfig -match 'connectionString="[^"]*"') {
+                $webConfig = $webConfig -replace 'connectionString="[^"]*"', "connectionString=`"$env:CONNECTION_STRING`""
+                Set-Content -Path $webConfigPath -Value $webConfig
+                Write-Host "Updated Web.config with connection string"
+              }
               
               # Repackage the zip
               Compress-Archive -Path "$extractPath\*" -DestinationPath "${{ github.workspace }}\updated_site.zip" -Force
               
               # Clean up
               Remove-Item -Path $extractPath -Recurse -Force
-              
-              # Update zip file reference for deployment
-              $zipFile = "${{ github.workspace }}\updated_site.zip"
             }
           }
         shell: pwsh
@@ -179,18 +206,29 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
-          package: ${{ github.workspace }}/**/*.zip
+          package: ${{ github.workspace }}/updated_site.zip
       
-      - name: Configure managed identity for App Service
+      - name: Configure App Service for Key Vault access
         run: |
-          # Ensure system-assigned managed identity is enabled
+          # Enable managed identity
           az webapp identity assign --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
           
-          # Get the assigned identity's principal ID
+          # Get the principal ID of the managed identity
           $principalId = $(az webapp identity show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query principalId -o tsv)
           
-          # Grant the identity access to Key Vault
-          az keyvault set-policy --name ${{ env.AZURE_KEYVAULT_NAME }} --object-id $principalId --secret-permissions get list
+          # Check if this identity already has access to Key Vault
+          $hasAccess = az keyvault show --name ${{ env.AZURE_KEYVAULT_NAME }} --query "properties.accessPolicies[?objectId=='$principalId']" -o tsv
+          
+          if (-not $hasAccess) {
+            # Grant Key Vault access
+            Write-Host "Granting Key Vault access to App Service managed identity..."
+            az keyvault set-policy --name ${{ env.AZURE_KEYVAULT_NAME }} --object-id $principalId --secret-permissions get list
+          } else {
+            Write-Host "App Service already has access to Key Vault"
+          }
+          
+          # Configure app settings to use Key Vault reference
+          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --settings "SqlConnectionString=@Microsoft.KeyVault(SecretUri=https://${{ env.AZURE_KEYVAULT_NAME }}.vault.azure.net/secrets/SqlConnectionString/)"
         shell: pwsh
       
       - name: Validate staging deployment
@@ -245,6 +283,29 @@ jobs:
       - name: Swap staging to production
         run: |
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
+        shell: pwsh
+      
+      - name: Configure production for Key Vault access
+        run: |
+          # Ensure production slot has managed identity enabled
+          az webapp identity assign --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+          
+          # Get the principal ID of the managed identity
+          $principalId = $(az webapp identity show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query principalId -o tsv)
+          
+          # Check if this identity already has access to Key Vault
+          $hasAccess = az keyvault show --name ${{ env.AZURE_KEYVAULT_NAME }} --query "properties.accessPolicies[?objectId=='$principalId']" -o tsv
+          
+          if (-not $hasAccess) {
+            # Grant Key Vault access
+            Write-Host "Granting Key Vault access to production App Service managed identity..."
+            az keyvault set-policy --name ${{ env.AZURE_KEYVAULT_NAME }} --object-id $principalId --secret-permissions get list
+          } else {
+            Write-Host "Production App Service already has access to Key Vault"
+          }
+          
+          # Configure app settings to use Key Vault reference in production
+          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "SqlConnectionString=@Microsoft.KeyVault(SecretUri=https://${{ env.AZURE_KEYVAULT_NAME }}.vault.azure.net/secrets/SqlConnectionString/)"
         shell: pwsh
       
       - name: Validate production deployment
