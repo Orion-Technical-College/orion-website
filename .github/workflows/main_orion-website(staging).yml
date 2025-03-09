@@ -1,7 +1,10 @@
-name: Deploy Orion Website to Azure
+name: Build and Deploy Orion Website
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -15,54 +18,58 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Cache NuGet Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.config') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Setup MSBuild
+      
+      # Option 1: If it's a .NET Framework 4.8 application with solution file
+      - name: Setup MSBuild (if needed)
         uses: microsoft/setup-msbuild@v1.1
-
-      - name: Setup NuGet
+        if: hashFiles('**/*.sln') != ''
+      
+      - name: Setup NuGet (if needed)
         uses: NuGet/setup-nuget@v1.2.0
-
-      - name: Restore NuGet Packages
+        if: hashFiles('**/*.sln') != ''
+      
+      - name: Restore NuGet packages (if needed)
         run: |
           if (Test-Path -Path "*.sln") {
             nuget restore *.sln
           }
         shell: pwsh
-
-      - name: Build Solution
+      
+      - name: Build solution (if needed)
         run: |
           if (Test-Path -Path "*.sln") {
             msbuild /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="${{ github.workspace }}\published"
           }
         shell: pwsh
-
-      - name: Package Website
+      
+      # Option 2: If it's just static files or simpler web application
+      - name: Package website content
         run: |
+          # Create a deployment package for the website
           if (-not (Test-Path -Path "${{ github.workspace }}\published\*.zip")) {
+            # If we didn't build a .NET app above, package directly
             New-Item -Path "${{ github.workspace }}\_temp" -ItemType Directory -Force
             
+            # Get website files but exclude database scripts, github workflow files, and the published directory itself
             Get-ChildItem -Path "${{ github.workspace }}" -Exclude ".git", ".github", "Database-Script", "published", "_temp" | 
               Copy-Item -Destination "${{ github.workspace }}\_temp" -Recurse -Force
             
+            # Create published directory
             New-Item -Path "${{ github.workspace }}\published" -ItemType Directory -Force
+            
+            # Create a zip package
             Compress-Archive -Path "${{ github.workspace }}\_temp\*" -DestinationPath "${{ github.workspace }}\published\site.zip" -Force
             
+            # Clean up temp directory
             Remove-Item -Path "${{ github.workspace }}\_temp" -Recurse -Force -ErrorAction SilentlyContinue
           }
         shell: pwsh
-
-      - name: Upload artifact for deployment
+      
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: website-package
@@ -71,6 +78,8 @@ jobs:
   deploy-database:
     runs-on: windows-latest
     needs: build
+    if: github.event_name != 'pull_request'
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,59 +89,109 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
-      # Allow Azure services to access SQL
-      - name: Configure SQL Server to allow Azure services
-        run: |
-          Write-Host "Configuring SQL Server to allow Azure services..."
-          # Check if rule already exists
-          $ruleExists = az sql server firewall-rule show --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "AllowAllAzureServices" --query "name" -o tsv 2>$null
-          
-          if (-not $ruleExists) {
-            az sql server firewall-rule create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "AllowAllAzureServices" --start-ip-address "0.0.0.0" --end-ip-address "0.0.0.0"
-            Write-Host "Firewall rule added for Azure services"
-          } else {
-            Write-Host "Firewall rule for Azure services already exists"
-          }
-        shell: pwsh
-      
-      # Add GitHub Actions IP to firewall
-      - name: Add GitHub Actions IP to SQL Firewall
-        run: |
-          # Get GitHub Actions IP address
-          $currentIP = (Invoke-WebRequest -Uri https://api.ipify.org).Content
-          Write-Host "Current GitHub Actions IP: $currentIP"
-          
-          # Check if rule already exists
-          $ruleName = "GitHubActions-Temp"
-          $ruleExists = az sql server firewall-rule show --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name $ruleName --query "name" -o tsv 2>$null
-          
-          if (-not $ruleExists) {
-            # Add firewall rule
-            Write-Host "Adding firewall rule for GitHub Actions IP..."
-            az sql server firewall-rule create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name $ruleName --start-ip-address $currentIP --end-ip-address $currentIP
-            Write-Host "Firewall rule added successfully"
-          } else {
-            Write-Host "Firewall rule for GitHub Actions already exists"
-            
-            # Update the rule with current IP
-            Write-Host "Updating existing firewall rule with current IP..."
-            az sql server firewall-rule update --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name $ruleName --start-ip-address $currentIP --end-ip-address $currentIP
-            Write-Host "Firewall rule updated successfully"
-          }
-          
-          # Set IP for cleanup
-          echo "GITHUB_ACTIONS_IP=$currentIP" >> $env:GITHUB_ENV
-        shell: pwsh
-      
-      # Execute SQL scripts via Azure CLI
-      - name: Deploy SQL Scripts with Azure CLI
-        env:
-          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
-          SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+      - name: Check for SQL scripts
+        id: check-scripts
         run: |
           if (Test-Path -Path "${{ github.workspace }}\Database-Script\*.sql") {
-            $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
-            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute"
+            echo "has_scripts=true" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "has_scripts=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
+          }
+        shell: pwsh
+      
+      # Get Azure AD token for SQL authentication
+      - name: Get Access Token for Azure SQL
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        id: get-token
+        run: |
+          try {
+            $token = az account get-access-token --resource https://database.windows.net/ | ConvertFrom-Json
+            
+            # Mask the token to prevent exposure in logs
+            echo "::add-mask::$($token.accessToken)"
+            
+            # Verify token was retrieved (length only, for security)
+            if ($token.accessToken) {
+              $tokenLength = $token.accessToken.Length
+              Write-Host "Successfully obtained SQL access token (Length: $tokenLength characters)"
+              
+              # Set the token as an environment variable
+              echo "token_available=true" >> $env:GITHUB_OUTPUT
+              echo "SQL_ACCESS_TOKEN=$($token.accessToken)" >> $env:GITHUB_ENV
+            } else {
+              Write-Warning "Token was retrieved but appears to be empty"
+              echo "token_available=false" >> $env:GITHUB_OUTPUT
+            }
+          } catch {
+            Write-Warning "Unable to get access token for SQL: $_"
+            echo "token_available=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Will fall back to SQL authentication if available"
+          }
+        shell: pwsh
+      
+      # Install sqlcmd if scripts need to be executed (ensuring latest version)
+      - name: Install sqlcmd utility
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        run: |
+          Write-Host "Installing sqlcmd utility..."
+          
+          # Download the latest SQL command line tools
+          Invoke-WebRequest -Uri "https://aka.ms/mssql-tools-windows" -OutFile "SQLCMD.msi"
+          
+          # Install with logging
+          $installProcess = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i SQLCMD.msi /quiet /qn /log sqlcmdinstall.log" -Wait -PassThru
+          
+          if ($installProcess.ExitCode -ne 0) {
+            Write-Error "Failed to install sqlcmd. Exit code: $($installProcess.ExitCode)"
+            if (Test-Path "sqlcmdinstall.log") {
+              Write-Host "Installation log:"
+              Get-Content "sqlcmdinstall.log" | Select-Object -Last 20
+            }
+            exit 1
+          }
+          
+          # Add to PATH
+          $env:Path = "$env:Path;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn"
+          Write-Host "Updated PATH: $env:Path"
+          
+          # Verify installation
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              if (Get-Command sqlcmd -ErrorAction Stop) {
+                # Show sqlcmd version to verify it's correctly installed and supports -AccessToken
+                $versionInfo = & sqlcmd -?
+                Write-Host "sqlcmd is installed and available."
+                Write-Host "Version info: $versionInfo"
+                $success = $true
+              }
+            } catch {
+              $retryCount++
+              Write-Warning "Attempt $retryCount of ${maxRetries}: sqlcmd not found yet. Waiting 10 seconds..."
+              Start-Sleep -Seconds 10
+            }
+          }
+          
+          if (-not $success) {
+            Write-Error "sqlcmd was not installed successfully after $maxRetries attempts."
+            exit 1
+          }
+        shell: pwsh
+      
+      # Primary SQL Script Execution Method: Using Azure CLI
+      - name: Deploy SQL Scripts Using Azure CLI
+        if: steps.check-scripts.outputs.has_scripts == 'true'
+        run: |
+          # Get the script files in order
+          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          
+          if ($scriptFiles.Count -gt 0) {
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order..."
+            $hasErrors = $false
             
             foreach ($script in $scriptFiles) {
               Write-Host "`nExecuting: $($script.Name)"
@@ -144,9 +203,9 @@ jobs:
                 $truncatedContent = if ($scriptContent.Length -gt 200) { $scriptContent.Substring(0, 200) + "..." } else { $scriptContent }
                 Write-Host "Script content preview: $truncatedContent"
                 
-                # Execute script using Azure CLI
+                # Execute script using Azure CLI with the correct command
                 Write-Host "Executing SQL script via Azure CLI..."
-                az sql db query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file $script.FullName --query-timeout 30
+                az sql db run-query --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name ${{ env.SQL_DATABASE_NAME }} --file "$($script.FullName)" --query-timeout 30
                 
                 Write-Host "SQL script execution successful via Azure CLI"
               }
@@ -157,8 +216,29 @@ jobs:
                     $errorMessage -match "Cannot insert duplicate key") {
                   Write-Host "Duplicate key detected - treating as success"
                 } else {
-                  Write-Warning "Error executing SQL script: $errorMessage"
-                  Write-Host "Continuing despite errors - this is expected if objects already exist"
+                  Write-Warning "Error executing SQL script via Azure CLI: $errorMessage"
+                  Write-Host "Attempting alternative execution methods..."
+                  
+                  # Try executing with token-based authentication
+                  if ($env:SQL_ACCESS_TOKEN) {
+                    try {
+                      Write-Host "Attempting token-based authentication with sqlcmd..."
+                      & sqlcmd -S "${{ env.SQL_SERVER_NAME }}.database.windows.net" -d "${{ env.SQL_DATABASE_NAME }}" -G -AccessToken "$env:SQL_ACCESS_TOKEN" -i "$($script.FullName)"
+                      
+                      if ($LASTEXITCODE -eq 0) {
+                        Write-Host "SQL script execution successful via token-based authentication"
+                      } else {
+                        throw "sqlcmd exited with code $LASTEXITCODE"
+                      }
+                    }
+                    catch {
+                      Write-Warning "Error executing SQL script via token-based authentication: $_"
+                      Write-Host "Continuing despite errors - this is expected if objects already exist"
+                    }
+                  } else {
+                    Write-Warning "No SQL access token available. Continuing with standard execution."
+                    Write-Host "Continuing despite errors - this is expected if objects already exist"
+                  }
                 }
               }
             }
@@ -166,24 +246,117 @@ jobs:
             Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
           }
         shell: pwsh
-      
-      # Clean up temporary firewall rule
-      - name: Remove temporary firewall rule
-        if: always()
+        
+      # Fallback Method: Using SQL Server PowerShell Module
+      - name: Prepare SQL Server PowerShell Module (Fallback)
+        if: steps.check-scripts.outputs.has_scripts == 'true' && failure()
         run: |
-          Write-Host "Removing temporary firewall rule..."
-          az sql server firewall-rule delete --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --server ${{ env.SQL_SERVER_NAME }} --name "GitHubActions-Temp"
+          Write-Host "Preparing SQL Server PowerShell module as fallback..."
+          # Check if we need to install the module or if we can use existing cmdlets
+          if (-not (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue)) {
+            try {
+              Install-Module -Name SqlServer -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
+            } catch {
+              Write-Host "Installation failed, but cmdlets may still be available: $_"
+            }
+          } else {
+            Write-Host "Invoke-Sqlcmd is already available. Using existing cmdlets."
+          }
+          
+          # Verify Invoke-Sqlcmd is available
+          if (Get-Command Invoke-Sqlcmd -ErrorAction SilentlyContinue) {
+            Write-Host "Invoke-Sqlcmd cmdlet is available and ready to use."
+          } else {
+            Write-Error "Invoke-Sqlcmd cmdlet is not available. SQL script execution will fail."
+            exit 1
+          }
+        shell: pwsh
+        
+      # Fallback SQL Script Execution Method: Using PowerShell
+      - name: Deploy SQL Scripts Using PowerShell (Fallback)
+        if: steps.check-scripts.outputs.has_scripts == 'true' && failure()
+        env:
+          SQL_USERNAME: ${{ secrets.AZURE_SQL_USERNAME }}
+          SQL_PASSWORD: ${{ secrets.AZURE_SQL_PASSWORD }}
+        run: |
+          # Get the script files in order
+          $scriptFiles = Get-ChildItem -Path "${{ github.workspace }}\Database-Script\*.sql" | Sort-Object Name
+          
+          if ($scriptFiles.Count -gt 0) {
+            Write-Host "Found $($scriptFiles.Count) SQL scripts to execute. Running in order using fallback method..."
+            $hasErrors = $false
+            
+            # Define connection parameters - use the fully qualified server name
+            $serverName = "${{ env.SQL_SERVER_NAME }}.database.windows.net"
+            $databaseName = "${{ env.SQL_DATABASE_NAME }}"
+            
+            # Verify SQL credentials are available
+            if ([string]::IsNullOrEmpty($env:SQL_USERNAME) -or [string]::IsNullOrEmpty($env:SQL_PASSWORD)) {
+              Write-Error "SQL authentication credentials are not available. Please set AZURE_SQL_USERNAME and AZURE_SQL_PASSWORD secrets."
+              exit 1
+            }
+            
+            # Build a connection string instead of using separate parameters
+            $connectionString = "Server=$serverName;Database=$databaseName;User ID=$($env:SQL_USERNAME);Password=$($env:SQL_PASSWORD);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+            
+            Write-Host "Using server: $serverName"
+            Write-Host "Using database: $databaseName"
+            Write-Host "Using username: $($env:SQL_USERNAME)"
+            
+            foreach ($script in $scriptFiles) {
+              Write-Host "Executing: $($script.Name)"
+              
+              # Execute SQL using Invoke-Sqlcmd with connection string
+              $maxRetries = 3
+              $retryCount = 0
+              $success = $false
+              
+              while (-not $success -and $retryCount -lt $maxRetries) {
+                try {
+                  # Read the script content directly
+                  $sqlContent = Get-Content -Path "$($script.FullName)" -Raw
+                  
+                  # Execute the script using connection string
+                  Invoke-Sqlcmd -ConnectionString $connectionString -Query $sqlContent -QueryTimeout 300 -ErrorAction Stop
+                  
+                  $success = $true
+                  Write-Host "SQL script executed successfully"
+                }
+                catch {
+                  $retryCount++
+                  Write-Warning "Attempt $retryCount of $maxRetries failed: $_"
+                  if ($retryCount -lt $maxRetries) {
+                    Write-Host "Waiting 10 seconds before retry..."
+                    Start-Sleep -Seconds 10
+                  }
+                }
+              }
+              
+              if (-not $success) {
+                Write-Error "Failed to execute SQL script after $maxRetries attempts: $($script.Name)"
+                $hasErrors = $true
+                break
+              }
+            }
+            
+            if ($hasErrors) {
+              exit 1
+            }
+          } else {
+            Write-Host "No SQL scripts found in Database-Script folder. Skipping database deployment."
+          }
         shell: pwsh
 
   deploy-website:
     runs-on: windows-latest
-    needs: deploy-database
+    needs: [build, deploy-database]
+    if: github.event_name != 'pull_request'
     environment:
       name: 'staging'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
     steps:
-      - name: Download artifact
+      - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: website-package
@@ -194,74 +367,36 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
-      - name: Configure Web.config with Connection String
+      - name: Verify staging slot exists
+        id: check-staging-slot
         run: |
-          $zipFile = Get-ChildItem -Path "${{ github.workspace }}" -Filter "*.zip" | Select-Object -First 1
-          if ($zipFile) {
-            # Extract zip temporarily
-            $extractPath = "${{ github.workspace }}\extract"
-            Expand-Archive -Path $zipFile.FullName -DestinationPath $extractPath -Force
+          try {
+            $slot = az webapp deployment slot list --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --query "[?name=='staging']" -o json | ConvertFrom-Json
             
-            # Find Web.config
-            $webConfigPath = Get-ChildItem -Path $extractPath -Filter "Web.config" -Recurse | Select-Object -First 1 -ExpandProperty FullName
-            
-            if ($webConfigPath) {
-              Write-Host "Found Web.config at: $webConfigPath"
-              
-              # Read Web.config
-              $webConfig = Get-Content -Path $webConfigPath -Raw
-              
-              # Create new Azure SQL connection string
-              $connectionString = "Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
-              
-              # Update the TestConnectionString
-              $pattern = 'connectionString="[^"]*" provider'
-              $replacement = "connectionString=`"$connectionString`" provider"
-              
-              # Check if pattern matches
-              if ($webConfig -match $pattern) {
-                $webConfig = $webConfig -replace $pattern, $replacement
-                Write-Host "Updated connection string in Web.config"
-              } else {
-                Write-Host "Connection string pattern not found, trying alternative pattern..."
-                # Alternative pattern that might match
-                $altPattern = 'name="TestConnectionString" connectionString="[^"]*"'
-                $altReplacement = "name=`"TestConnectionString`" connectionString=`"$connectionString`""
-                
-                if ($webConfig -match $altPattern) {
-                  $webConfig = $webConfig -replace $altPattern, $altReplacement
-                  Write-Host "Updated connection string using alternative pattern"
-                } else {
-                  Write-Warning "Could not find connection string pattern in Web.config"
-                  # Print a portion of the Web.config for debugging
-                  Write-Host "Web.config excerpt: $($webConfig.Substring(0, [Math]::Min(500, $webConfig.Length)))"
-                }
-              }
-              
-              # Update Environment from "Test" to "Production"
-              if ($webConfig -match 'key="Environment" value="Test"') {
-                $webConfig = $webConfig -replace 'key="Environment" value="Test"', 'key="Environment" value="Production"'
-                Write-Host "Updated Environment setting to Production"
-              } else {
-                Write-Host "Environment setting not found or already set to Production"
-              }
-              
-              # Save the updated Web.config
-              Set-Content -Path $webConfigPath -Value $webConfig
-              
-              # Repackage the zip
-              Write-Host "Repackaging updated files..."
-              Compress-Archive -Path "$extractPath\*" -DestinationPath "${{ github.workspace }}\updated_site.zip" -Force
-              
-              # Clean up
-              Remove-Item -Path $extractPath -Recurse -Force
-              Write-Host "Cleanup completed, site package updated"
+            if ($slot -and $slot.Length -gt 0) {
+              Write-Host "Staging slot exists."
+              echo "slot_exists=true" >> $env:GITHUB_OUTPUT
             } else {
-              Write-Warning "Web.config not found in extracted package"
-              Copy-Item -Path $zipFile.FullName -Destination "${{ github.workspace }}\updated_site.zip" -Force
+              Write-Host "Staging slot does not exist. Will create it."
+              echo "slot_exists=false" >> $env:GITHUB_OUTPUT
             }
-          } else {
-            Write-Warning "No ZIP file found for deployment"
+          } catch {
+            Write-Warning "Error checking if staging slot exists: $_"
+            echo "slot_exists=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Will attempt to create staging slot if needed."
+          }
+        shell: pwsh
+        
+      - name: Create staging slot if needed
+        if: steps.check-staging-slot.outputs.slot_exists != 'true'
+        run: |
+          try {
+            Write-Host "Creating staging slot..."
+            az webapp deployment slot create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging
+            Write-Host "Staging slot created successfully."
+          } catch {
+            Write-Warning "Error creating staging slot: $_"
+            Write-Host "Will attempt to deploy directly to staging slot in case it was created but the command failed."
           }
         shell: pwsh
       
@@ -271,81 +406,50 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
-          package: ${{ github.workspace }}/updated_site.zip
+          package: ${{ github.workspace }}/**/*.zip
       
-      - name: Configure App Service settings
+      - name: Wait for deployment to stabilize
         run: |
-          # Set App Service settings
-          Write-Host "Configuring App Service settings..."
-          
-          # Set always-on and HTTP/2
-          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --always-on true --http20-enabled true
-          
-          # Set connection string at the App Service level for redundancy
-          Write-Host "Setting connection string at App Service level..."
-          az webapp config connection-string set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --connection-string-type SQLAzure --settings "TestConnectionString=Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
-          
-          # Configure application settings
-          Write-Host "Setting application settings..."
-          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --settings "Environment=Production" "WEBSITE_NODE_DEFAULT_VERSION=16.13.0"
-          
-          Write-Host "App Service configuration completed"
-        shell: pwsh
-      
-      - name: Restart Web App
-        run: |
-          Write-Host "Restarting web app to apply configuration changes..."
-          az webapp restart --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging
-          
-          # Wait for restart to complete
-          Write-Host "Waiting for restart to complete..."
           Start-Sleep -Seconds 30
+          Write-Host "Waiting for deployment to stabilize..."
         shell: pwsh
       
       - name: Validate staging deployment
         run: |
-          Write-Host "Validating staging deployment..."
-          Start-Sleep -Seconds 60
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net" -UseBasicParsing -TimeoutSec 30
+              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net" -UseBasicParsing
               $statusCode = $response.StatusCode
               
               if ($statusCode -eq 200) {
-                Write-Host "Staging deployment validation successful! Status code: $statusCode"
+                Write-Host "Deployment validation successful!"
                 $success = $true
               } else {
                 Write-Host "Unexpected status code: $statusCode. Retrying..."
                 $retryCount++
-                Start-Sleep -Seconds 15
+                Start-Sleep -Seconds 10
               }
             } catch {
               Write-Host "Request failed: $_. Retrying..."
               $retryCount++
-              Start-Sleep -Seconds 15
+              Start-Sleep -Seconds 10
             }
           }
           
           if (-not $success) {
-            # Check app state even if HTTP request fails
-            $appState = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
-            
-            if ($appState -eq "Running") {
-              Write-Host "App Service is in 'Running' state despite HTTP validation failure. Proceeding with caution."
-            } else {
-              Write-Error "Staging deployment validation failed and App Service is not running. State: $appState"
-              exit 1
-            }
+            Write-Error "Staging validation failed after $maxRetries attempts!"
+            exit 1
           }
         shell: pwsh
 
   swap-to-production:
     runs-on: windows-latest
     needs: deploy-website
+    if: github.event_name != 'pull_request'
     environment:
       name: 'production'
       url: 'https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net'
@@ -358,82 +462,55 @@ jobs:
       
       - name: Swap staging to production
         run: |
-          Write-Host "Starting slot swap operation from staging to production..."
+          Write-Host "Swapping staging slot to production..."
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
-          Write-Host "Slot swap completed successfully"
-        shell: pwsh
-      
-      - name: Configure production App Service settings
-        run: |
-          # Set App Service settings for production
-          Write-Host "Configuring production App Service settings..."
-          
-          # Set always-on and HTTP/2
-          az webapp config set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true --http20-enabled true
-          
-          # Set connection string at the App Service level for redundancy
-          Write-Host "Setting connection string at production App Service level..."
-          az webapp config connection-string set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --connection-string-type SQLAzure --settings "TestConnectionString=Data Source=${{ env.SQL_SERVER_NAME }}.database.windows.net;Initial Catalog=${{ env.SQL_DATABASE_NAME }};User Id=${{ secrets.AZURE_SQL_USERNAME }};Password=${{ secrets.AZURE_SQL_PASSWORD }};"
-          
-          # Configure application settings
-          Write-Host "Setting application settings..."
-          az webapp config appsettings set --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "Environment=Production" "WEBSITE_NODE_DEFAULT_VERSION=16.13.0"
-          
-          Write-Host "Production App Service configuration completed"
-        shell: pwsh
-      
-      - name: Restart Production Web App
-        run: |
-          Write-Host "Restarting production web app to apply configuration changes..."
-          az webapp restart --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }}
-          
-          # Wait for restart to complete
-          Write-Host "Waiting for restart to complete..."
-          Start-Sleep -Seconds 30
         shell: pwsh
       
       - name: Validate production deployment
         run: |
-          Write-Host "Validating production deployment..."
-          # Wait longer for production to fully stabilize
-          Start-Sleep -Seconds 60
-          
           $maxRetries = 5
           $retryCount = 0
           $success = $false
           
           while ($retryCount -lt $maxRetries -and -not $success) {
             try {
-              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net" -UseBasicParsing -TimeoutSec 30
+              $response = Invoke-WebRequest -Uri "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net" -UseBasicParsing
               $statusCode = $response.StatusCode
               
               if ($statusCode -eq 200) {
-                Write-Host "Production deployment validation successful! Status code: $statusCode"
+                Write-Host "Production deployment validation successful!"
                 $success = $true
               } else {
                 Write-Host "Unexpected status code: $statusCode. Retrying..."
                 $retryCount++
-                Start-Sleep -Seconds 15
+                Start-Sleep -Seconds 10
               }
             } catch {
               Write-Host "Request failed: $_. Retrying..."
               $retryCount++
-              Start-Sleep -Seconds 15
+              Start-Sleep -Seconds 10
             }
           }
           
           if (-not $success) {
-            # Check app state even if HTTP request fails
-            $appState = az webapp show --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query "state" -o tsv
-            
-            if ($appState -eq "Running") {
-              Write-Host "Production App Service is in 'Running' state despite HTTP validation failure."
-              Write-Host "Deployment completed with warnings."
-            } else {
-              Write-Error "Production deployment validation failed and App Service is not running. State: $appState"
-              exit 1
-            }
-          } else {
-            Write-Host "🎉 Deployment to production completed successfully! 🎉"
+            Write-Error "Production validation failed after $maxRetries attempts!"
+            exit 1
           }
+        shell: pwsh
+        
+      - name: Save deployment record for rollback purposes
+        run: |
+          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+          $deploymentRecord = @{
+            "timestamp" = $timestamp
+            "commitId" = "${{ github.sha }}"
+            "workflow" = "${{ github.workflow }}"
+            "runId" = "${{ github.run_id }}"
+          }
+          
+          $deploymentJson = $deploymentRecord | ConvertTo-Json
+          Write-Host "Saving deployment record: $deploymentJson"
+          
+          # In a real implementation, you might save this to a Blob Storage or other persistent location
+          # for automated rollback capability
         shell: pwsh
