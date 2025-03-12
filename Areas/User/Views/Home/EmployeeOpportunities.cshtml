@@ -16,13 +16,13 @@
 }
 <script src='https://www.google.com/recaptcha/api.js' type="text/javascript"></script>
 
-<script>
+@*<script>
     grecaptcha.ready(function () {
         grecaptcha.execute('@secreatkey', { action: 'contactus' }).then(function (token) {
             document.getElementById("recaptchaToken").value = token;
         });
     });
-</script>
+</script>*@
 
 <!-- Start inner banner Section -->
 <section class="">
@@ -204,7 +204,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="frm-group">
-                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event); return Common.isNumberKey(event);">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event); return Common.isNumberKey(event);" onpaste="formatPhoneNumber(event)" autocomplete="off" oninput="formatPhoneNumberOnInput(event)">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -284,6 +284,43 @@
             if (ph.length == 3) { $('#PhoneNo').val(ph + '-'); }
             if (ph.length == 7) { $('#PhoneNo').val(ph + '-'); }
         }
+    }
+    function formatPhoneNumber(event) {
+        event.preventDefault(); // Prevent default paste behavior
+
+        // Get the pasted data
+        const pastedData = event.clipboardData.getData('Text');
+
+        // Clean the pasted data to remove non-numeric characters
+        const cleanedData = pastedData.replace(/\D/g, '');
+
+        // Format the phone number as 123-456-7890
+        let formattedNumber = cleanedData.substring(0, 3) + '-';
+        formattedNumber += cleanedData.substring(3, 6) + '-';
+        formattedNumber += cleanedData.substring(6, 10);
+
+        // Insert the formatted number into the input field
+        event.target.value = formattedNumber;
+    }
+
+    function formatPhoneNumberOnInput(event) {
+        const inputField = event.target;
+        const rawValue = inputField.value.replace(/\D/g, ''); // Remove non-numeric characters
+        let formattedValue = '';
+
+        // Format the phone number as 123-456-7890
+        if (rawValue.length > 0) {
+            formattedValue = rawValue.substring(0, 3);
+        }
+        if (rawValue.length > 3) {
+            formattedValue += '-' + rawValue.substring(3, 6);
+        }
+        if (rawValue.length > 6) {
+            formattedValue += '-' + rawValue.substring(6, 10);
+        }
+
+        // Set the formatted value back to the input field
+        inputField.value = formattedValue;
     }
     $(document).ready(function () {
         $.validator.addMethod("validate_email", function (value, element) {
