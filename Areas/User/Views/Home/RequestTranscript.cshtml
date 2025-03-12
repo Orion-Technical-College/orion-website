@@ -14,13 +14,17 @@
 }
 <script src='https://www.google.com/recaptcha/api.js' type="text/javascript"></script>
 
-<script>
-    grecaptcha.ready(function () {
-        grecaptcha.execute('@secreatkey', { action: 'contactus' }).then(function (token) {
-            document.getElementById("recaptchaToken").value = token;
+<!-- Include Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
+@*<script>
+        grecaptcha.ready(function () {
+            grecaptcha.execute('@secreatkey', { action: 'contactus' }).then(function (token) {
+                document.getElementById("recaptchaToken").value = token;
+            });
         });
-    });
-</script>
+    </script>*@
 <!-- Start inner banner Section -->
 <section class="">
     <div class="innban-sec position-relative ">
@@ -73,7 +77,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="frm-group">
-                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event); return Common.isNumberKey(event);">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Phone Number *" name="PhoneNo" id="PhoneNo" maxlength="12" onkeypress="phonenochange(event); return Common.isNumberKey(event);" onpaste="formatPhoneNumber(event)" autocomplete="off" oninput="formatPhoneNumberOnInput(event)">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -90,7 +94,7 @@
 
                                     <div class="col-md-6">
                                         <div class="frm-group">
-                                            <input type="date" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Date of Birth *" name="DOB" id="DOB">
+                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="Date of Birth *" name="DOB" id="DOB">
 
                                         </div>
                                     </div>
@@ -108,7 +112,7 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="frm-group">
-                                            <input type="text" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="When did you attend Orion Tech (formerly known as Hamilton Tech)? * " name="PreviousAttended" id="PreviousAttended">
+                                            <input type="date" class="td_form_field td_mb_20 td_medium td_white_bg" placeholder="When did you attend Orion Tech (formerly known as Hamilton Tech)? * " name="PreviousAttended" id="PreviousAttended">
                                         </div>
                                     </div>
                                     <div class="col-md-12">
@@ -284,7 +288,7 @@
 
                                             <input type="hidden" id="Honeypot" name="Honeypot" />
 
-                                            <button type="submit" id="submit-button"  class="td_btn td_style_1 td_radius_10 td_medium sec__btn">
+                                            <button type="submit" id="submit-button" class="td_btn td_style_1 td_radius_10 td_medium sec__btn">
                                                 <span class="td_btn_in td_white_color  sec__btn2">Submit</span>
                                             </button>
                                         </div>
@@ -312,6 +316,43 @@
             if (ph.length == 3) { $('#PhoneNo').val(ph + '-'); }
             if (ph.length == 7) { $('#PhoneNo').val(ph + '-'); }
         }
+    }
+    function formatPhoneNumber(event) {
+        event.preventDefault(); // Prevent default paste behavior
+
+        // Get the pasted data
+        const pastedData = event.clipboardData.getData('Text');
+
+        // Clean the pasted data to remove non-numeric characters
+        const cleanedData = pastedData.replace(/\D/g, '');
+
+        // Format the phone number as 123-456-7890
+        let formattedNumber = cleanedData.substring(0, 3) + '-';
+        formattedNumber += cleanedData.substring(3, 6) + '-';
+        formattedNumber += cleanedData.substring(6, 10);
+
+        // Insert the formatted number into the input field
+        event.target.value = formattedNumber;
+    }
+
+    function formatPhoneNumberOnInput(event) {
+        const inputField = event.target;
+        const rawValue = inputField.value.replace(/\D/g, ''); // Remove non-numeric characters
+        let formattedValue = '';
+
+        // Format the phone number as 123-456-7890
+        if (rawValue.length > 0) {
+            formattedValue = rawValue.substring(0, 3);
+        }
+        if (rawValue.length > 3) {
+            formattedValue += '-' + rawValue.substring(3, 6);
+        }
+        if (rawValue.length > 6) {
+            formattedValue += '-' + rawValue.substring(6, 10);
+        }
+
+        // Set the formatted value back to the input field
+        inputField.value = formattedValue;
     }
     $(document).ready(function () {
         $.validator.addMethod("validate_email", function (value, element) {
@@ -433,5 +474,18 @@
         } else {
             console.log("Please complete the form correctly.");
         }
+    });
+</script>
+
+<!-- Include Flatpickr JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    // Initialize Flatpickr on the input field with the id 'DOB'
+    flatpickr("#DOB", {
+        dateFormat: "d-m-Y", // Customize the format here
+    });
+    flatpickr("#PreviousAttended", {
+        dateFormat: "d-m-Y", // Customize the format here
     });
 </script>
