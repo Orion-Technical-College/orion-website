@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  name             String
+  phone            String?
+  pushSubscription String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  campaigns        Campaign[]
+  candidates       Candidate[]
+}
+
+model Candidate {
+  id                 String              @id @default(cuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  email              String
+  phone              String
+  source             String?
+  client             String?
+  jobTitle           String?
+  location           String?
+  date               String?
+  status             String              @default("PENDING") // PENDING, INTERVIEWED, HIRED, DENIED, CONSENT_FORM_SENT
+  notes              String?             @db.Text
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  campaignRecipients CampaignRecipient[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([client])
+}
+
+model Campaign {
+  id                String              @id @default(cuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  calendlyUrl       String?
+  zoomUrl           String?
+  messageTemplate   String              @db.Text
+  reminderTimings   String?             // JSON array of hours, e.g., "[24, 2]"
+  status            String              @default("DRAFT") // DRAFT, ACTIVE, COMPLETED
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  recipients        CampaignRecipient[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CampaignRecipient {
+  id                 String    @id @default(cuid())
+  campaignId         String
+  campaign           Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  candidateId        String
+  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  personalizedMessage String   @db.Text
+  sentAt             DateTime?
+  status             String    @default("PENDING") // PENDING, SENT, SKIPPED
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([campaignId, candidateId])
+  @@index([campaignId])
+  @@index([candidateId])
+  @@index([status])
+}
