@@ -74,17 +74,12 @@ jobs:
           # Copy standalone output
           cp -r .next/standalone/* deploy/
           
-          # Copy static files
+          # Create .next directory in deploy and copy static files
+          mkdir -p deploy/.next
           cp -r .next/static deploy/.next/static
           
           # Copy public folder
           cp -r public deploy/public
-          
-          # Create startup script for Azure
-          echo '#!/bin/bash' > deploy/startup.sh
-          echo 'cd /home/site/wwwroot' >> deploy/startup.sh
-          echo 'node server.js' >> deploy/startup.sh
-          chmod +x deploy/startup.sh
 
       - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
