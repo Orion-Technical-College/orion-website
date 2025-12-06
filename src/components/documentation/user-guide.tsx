@@ -2,25 +2,17 @@
 
 import React from "react";
 import {
-  FileSpreadsheet,
   Filter,
   MessageSquare,
-  Search,
   Upload,
-  Users,
   Sparkles,
   Settings,
   Phone,
-  Mail,
-  Calendar,
   CheckCircle,
-  XCircle,
-  Clock,
   AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 export function UserGuide() {
   return (
@@ -405,10 +397,10 @@ export function UserGuide() {
             <div className="bg-background-tertiary rounded-md p-3 border border-border mt-2">
               <p className="text-xs font-semibold text-foreground mb-2">Example Questions:</p>
               <ul className="list-disc list-inside text-xs text-foreground-muted space-y-1 ml-4">
-                <li>"Show me all candidates in Oakland"</li>
-                <li>"How many candidates are pending?"</li>
-                <li>"List all hired candidates for Client A"</li>
-                <li>"Add a new candidate named John Doe"</li>
+                <li>&quot;Show me all candidates in Oakland&quot;</li>
+                <li>&quot;How many candidates are pending?&quot;</li>
+                <li>&quot;List all hired candidates for Client A&quot;</li>
+                <li>&quot;Add a new candidate named John Doe&quot;</li>
                 <li>&quot;Update Sarah Johnson&apos;s status to Interviewed&quot;</li>
               </ul>
             </div>
@@ -502,7 +494,7 @@ export function UserGuide() {
           <div className="space-y-2">
             <h3 className="font-semibold text-foreground">Unresolved Candidates</h3>
             <p className="text-sm text-foreground-muted">
-              The "Show Unresolved Only" filter shows candidates that need attention:
+              The &quot;Show Unresolved Only&quot; filter shows candidates that need attention:
             </p>
             <ul className="list-disc list-inside text-sm text-foreground-muted space-y-1 ml-4">
               <li>Excludes Hired and Denied candidates</li>
@@ -558,7 +550,7 @@ export function UserGuide() {
             </p>
             <ol className="list-decimal list-inside text-sm text-foreground-muted space-y-1 ml-4">
               <li>Open a campaign on your phone</li>
-              <li>Tap "Send" on a candidate</li>
+              <li>Tap &quot;Send&quot; on a candidate</li>
               <li>Messages app opens with pre-filled content</li>
               <li>Send the message</li>
               <li>Return to app - automatically moves to next candidate</li>
@@ -607,7 +599,7 @@ export function UserGuide() {
               <h4 className="font-medium text-sm mb-1">🔍 Filtering</h4>
               <ul className="list-disc list-inside text-xs text-foreground-muted space-y-1 ml-4">
                 <li>Combine multiple filters for precise searches (e.g., Status + Client + Location)</li>
-                <li>Use "Show Unresolved Only" for daily workflow management</li>
+                <li>Use &quot;Show Unresolved Only&quot; for daily workflow management</li>
                 <li>Save time by using quick filter buttons for common searches</li>
                 <li>Clear filters when switching between different searches</li>
               </ul>
