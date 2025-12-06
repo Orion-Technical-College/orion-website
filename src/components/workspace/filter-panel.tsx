@@ -29,7 +29,7 @@ export interface FilterState {
 interface FilterPanelProps {
   data: Candidate[];
   filters: FilterState;
-  onFiltersChange: (newFilters: FilterState) => void;
+  onFiltersChange: (filters: FilterState) => void;
   onClearAll: () => void;
   showUnresolvedOnly: boolean;
   onToggleUnresolved: () => void;

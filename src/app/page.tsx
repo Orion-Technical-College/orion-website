@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AIAssistant } from "@/components/layout/ai-assistant";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -80,6 +81,15 @@ const SAMPLE_CANDIDATES: Candidate[] = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("workspace");
+  const router = useRouter();
+
+  const handleTabChange = useCallback((tab: string) => {
+    if (tab === "docs") {
+      router.push("/docs");
+    } else {
+      setActiveTab(tab);
+    }
+  }, [router]);
   const [workspaceTab, setWorkspaceTab] = useState("data");
   const [aiOpen, setAiOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -187,7 +197,7 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -199,11 +209,12 @@ export default function Home() {
             </div>
             <span className="font-semibold text-foreground">EMC</span>
           </div>
-          <h1 className="text-sm font-medium text-accent">
+            <h1 className="text-sm font-medium text-accent">
             {activeTab === "workspace" && "Workspace"}
             {activeTab === "campaigns" && "Campaigns"}
             {activeTab === "import" && "Import"}
             {activeTab === "settings" && "Settings"}
+            {activeTab === "docs" && "Help & Documentation"}
           </h1>
         </header>
 
@@ -215,12 +226,14 @@ export default function Home() {
               {activeTab === "campaigns" && "SMS Campaigns"}
               {activeTab === "import" && "Import Candidates"}
               {activeTab === "settings" && "Settings"}
+              {activeTab === "docs" && "Help & Documentation"}
             </h1>
             <p className="text-[10px] text-foreground-muted leading-tight">
               {activeTab === "workspace" && "Data workspace with AI-powered assistance"}
               {activeTab === "campaigns" && "Create and send personalized SMS campaigns"}
               {activeTab === "import" && "Import candidates from CSV or Excel files"}
               {activeTab === "settings" && "Configure your workspace settings"}
+              {activeTab === "docs" && "Complete user guide and documentation"}
             </p>
           </div>
         </header>
@@ -288,6 +301,14 @@ export default function Home() {
             )}
 
             {activeTab === "import" && <CSVImport onImport={handleImport} />}
+
+            {activeTab === "docs" && (
+              <div className="max-w-4xl">
+                <p className="text-foreground-muted mb-4">
+                  Redirecting to documentation...
+                </p>
+              </div>
+            )}
 
             {activeTab === "settings" && (
               <div className="max-w-2xl space-y-4 md:space-y-6">

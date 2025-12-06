@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   Settings,
   MessageSquare,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +23,7 @@ const navItems = [
   { id: "campaigns", icon: MessageSquare, label: "Campaigns" },
   { id: "import", icon: FileSpreadsheet, label: "Import" },
   { id: "settings", icon: Settings, label: "Settings" },
+  { id: "docs", icon: HelpCircle, label: "Help" },
 ];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {

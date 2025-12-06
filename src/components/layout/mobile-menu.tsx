@@ -2,7 +2,8 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { X, Settings, User, Bell, Shield, LogOut } from "lucide-react";
+import { X, Settings, User, Bell, Shield, LogOut, HelpCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 interface MobileMenuProps {
@@ -12,11 +13,18 @@ interface MobileMenuProps {
 }
 
 export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
+  const router = useRouter();
+  
   if (!isOpen) return null;
 
   const handleNavigate = (tab: string) => {
-    onNavigate(tab);
-    onClose();
+    if (tab === "docs") {
+      router.push("/docs");
+      onClose();
+    } else {
+      onNavigate(tab);
+      onClose();
+    }
   };
 
   return (
@@ -90,6 +98,13 @@ export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
           >
             <Shield className="h-5 w-5 text-foreground-muted" />
             <span>Security</span>
+          </button>
+          <button
+            onClick={() => handleNavigate("docs")}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-foreground hover:bg-background-tertiary transition-colors"
+          >
+            <HelpCircle className="h-5 w-5 text-foreground-muted" />
+            <span>Help & Documentation</span>
           </button>
         </div>
 
