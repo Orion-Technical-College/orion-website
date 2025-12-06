@@ -80,13 +80,34 @@ jobs:
             --application-logging filesystem \
             --level information
 
-      # Deploy using azure/webapps-deploy action (more reliable)
+      # Create deployment package excluding large files
+      - name: Create deployment package
+        run: |
+          # Create zip excluding unnecessary files
+          zip -r deploy.zip . \
+            -x "node_modules/*" \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "_legacy/*" \
+            -x ".next/*" \
+            -x "*.log" \
+            -x ".DS_Store" \
+            -x "*.code-workspace" \
+            -x ".vscode/*" \
+            -x ".idea/*" \
+            -x "coverage/*" \
+            -x "*.tsbuildinfo"
+          
+          echo "Deployment package size:"
+          ls -lh deploy.zip
+
+      # Deploy using azure/webapps-deploy action
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
-          package: . # Deploy entire repo, Oryx will build
+          package: deploy.zip
           type: zip
           restart: false
 
