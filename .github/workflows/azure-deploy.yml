@@ -60,12 +60,25 @@ jobs:
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               WEBSITE_RUN_FROM_PACKAGE=0 \
               DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              SCM_COMMAND_IDLE_TIMEOUT=1800
+              SCM_COMMAND_IDLE_TIMEOUT=1800 \
+              PORT=8080 \
+              WEBSITE_PORT=8080 \
+              WEBSITES_PORT=8080 \
+              HOSTNAME=0.0.0.0 \
+              NODE_ENV=production
           
           az webapp config set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --startup-file "npm run start"
+            --startup-file "npm run start" \
+            --always-on true
+          
+          # Enable application logging
+          az webapp log config \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --application-logging filesystem \
+            --level information
 
       # Deploy using azure/webapps-deploy action (more reliable)
       - name: Deploy to Azure Web App
