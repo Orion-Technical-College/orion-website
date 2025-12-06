@@ -1,0 +1,22 @@
+Name,Email,Phone,Source,Client,Job Title,Location,Date,Status,Notes
+Carlos Mela,carlos.mela@email.com,(555) 123-4567,Indeed,Client A,Warehouse Worker,San Francisco CA,1/14/2025,Denied,No show for interview
+Carlos Mela,carlos.mela@email.com,(555) 123-4567,Indeed,Client B,Forklift Operator,Oakland CA,1/21/2025,Hired,Starts 02/01
+Sarah Johnson,sarah.johnson@email.com,(555) 234-5678,Referral,Client C,Office Assistant,Palo Alto CA,1/19/2025,Interviewed,Second round scheduled
+Michael Chen,michael.chen@email.com,(555) 345-6789,Indeed,Client A,Delivery Driver,San Francisco CA,1/17/2025,Consent Form Sent,Waiting for response
+Jennifer Martinez,jennifer.martinez@email.com,(555) 456-7890,LinkedIn,Client B,Data Entry Clerk,San Jose CA,1/22/2025,Pending,Initial screening completed
+David Kim,david.kim@email.com,(555) 567-8901,Indeed,Client C,Receptionist,Mountain View CA,1/20/2025,Interviewed,First interview passed
+Emily Rodriguez,emily.rodriguez@email.com,(555) 678-9012,Referral,Client A,Customer Service Rep,San Francisco CA,1/18/2025,Pending,Resume review in progress
+James Wilson,james.wilson@email.com,(555) 789-0123,Indeed,Client B,Shipping Clerk,Oakland CA,1/23/2025,Pending,Application received
+Maria Garcia,maria.garcia@email.com,(555) 890-1234,LinkedIn,Client C,Administrative Assistant,Palo Alto CA,1/16/2025,Consent Form Sent,Background check pending
+Robert Brown,robert.brown@email.com,(555) 901-2345,Indeed,Client A,Inventory Specialist,San Francisco CA,1/24/2025,Pending,Phone interview scheduled
+Lisa Anderson,lisa.anderson@email.com,(555) 012-3456,Referral,Client B,Office Manager,San Jose CA,1/15/2025,Hired,Offer accepted - starts next week
+Thomas Lee,thomas.lee@email.com,(555) 123-4568,LinkedIn,Client C,IT Support Specialist,Mountain View CA,1/25/2025,Interviewed,Technical assessment completed
+Patricia White,patricia.white@email.com,(555) 234-5679,Indeed,Client A,HR Coordinator,San Francisco CA,1/26/2025,Pending,References checked
+Christopher Harris,christopher.harris@email.com,(555) 345-6780,Referral,Client B,Quality Control Inspector,Oakland CA,1/27/2025,Pending,Skills test scheduled
+Amanda Taylor,amanda.taylor@email.com,(555) 456-7891,LinkedIn,Client C,Executive Assistant,Palo Alto CA,1/28/2025,Interviewed,Final interview next week
+Daniel Moore,daniel.moore@email.com,(555) 567-8902,Indeed,Client A,Logistics Coordinator,San Francisco CA,1/29/2025,Pending,Application under review
+Jessica Thompson,jessica.thompson@email.com,(555) 678-9013,Referral,Client B,Accounts Payable Clerk,San Jose CA,1/30/2025,Consent Form Sent,Waiting for onboarding documents
+Matthew Jackson,matthew.jackson@email.com,(555) 789-0124,LinkedIn,Client C,Project Coordinator,Mountain View CA,2/1/2025,Pending,Initial contact made
+Nicole Lewis,nicole.lewis@email.com,(555) 890-1235,Indeed,Client A,Facilities Coordinator,San Francisco CA,2/2/2025,Interviewed,Second interview completed
+Ryan Walker,ryan.walker@email.com,(555) 901-2346,Referral,Client B,Maintenance Technician,Oakland CA,2/3/2025,Pending,Skills assessment pending
+

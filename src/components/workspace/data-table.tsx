@@ -1,30 +1,26 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   flexRender,
   type ColumnDef,
   type SortingState,
-  type ColumnFiltersState,
 } from "@tanstack/react-table";
 import { cn, formatPhoneNumber, getStatusColor } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CandidateCard } from "./candidate-card";
+import { FilterPanel, type FilterState } from "./filter-panel";
 import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Filter,
-  Search,
 } from "lucide-react";
 import type { Candidate } from "@/types";
 
@@ -35,6 +31,23 @@ interface DataTableProps {
   onToggleUnresolved?: () => void;
 }
 
+// Debounce hook for search performance
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function DataTable({
   data,
   onRowClick,
@@ -42,9 +55,18 @@ export function DataTable({
   onToggleUnresolved,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<FilterState>({
+    status: [],
+    clients: [],
+    sources: [],
+    locations: [],
+    dateRange: { start: "", end: "" },
+    search: "",
+  });
+
+  // Debounce search for performance with large datasets
+  const debouncedSearch = useDebounce(filters.search, 300);
 
   const columns: ColumnDef<Candidate>[] = useMemo(
     () => [
@@ -60,7 +82,9 @@ export function DataTable({
           </button>
         ),
         cell: ({ row }) => (
-          <span className="font-medium text-foreground whitespace-nowrap">{row.getValue("name")}</span>
+          <span className="font-medium text-foreground whitespace-nowrap">
+            {row.getValue("name")}
+          </span>
         ),
       },
       {
@@ -87,7 +111,9 @@ export function DataTable({
         accessorKey: "phone",
         header: "Phone",
         cell: ({ row }) => (
-          <span className="whitespace-nowrap">{formatPhoneNumber(row.getValue("phone"))}</span>
+          <span className="whitespace-nowrap">
+            {formatPhoneNumber(row.getValue("phone"))}
+          </span>
         ),
       },
       {
@@ -165,7 +191,12 @@ export function DataTable({
         cell: ({ row }) => {
           const status = row.getValue("status") as string;
           return (
-            <Badge className={cn("capitalize text-[11px] px-1.5 py-0.5", getStatusColor(status))}>
+            <Badge
+              className={cn(
+                "capitalize text-[11px] px-1.5 py-0.5",
+                getStatusColor(status)
+              )}
+            >
               {status.replace("-", " ")}
             </Badge>
           );
@@ -175,7 +206,7 @@ export function DataTable({
         accessorKey: "notes",
         header: "Notes",
         cell: ({ row }) => (
-          <span className="text-foreground-muted max-w-[150px] truncate block">
+          <span className="text-foreground-muted max-w-[150px] truncate block text-xs">
             {row.getValue("notes")}
           </span>
         ),
@@ -184,47 +215,87 @@ export function DataTable({
     []
   );
 
+  // Comprehensive filtering logic
   const filteredData = useMemo(() => {
-    let result = data;
-    
+    let result = [...data];
+
+    // Unresolved filter
     if (showUnresolvedOnly) {
       result = result.filter(
         (c) => c.status !== "hired" && c.status !== "denied"
       );
     }
-    
-    if (globalFilter) {
-      const search = globalFilter.toLowerCase();
+
+    // Status filter
+    if (filters.status.length > 0) {
+      result = result.filter((c) => filters.status.includes(c.status));
+    }
+
+    // Client filter
+    if (filters.clients.length > 0) {
+      result = result.filter((c) => filters.clients.includes(c.client));
+    }
+
+    // Source filter
+    if (filters.sources.length > 0) {
+      result = result.filter((c) => filters.sources.includes(c.source));
+    }
+
+    // Location filter
+    if (filters.locations.length > 0) {
+      result = result.filter((c) => filters.locations.includes(c.location));
+    }
+
+    // Date range filter
+    if (filters.dateRange.start || filters.dateRange.end) {
+      result = result.filter((c) => {
+        if (!c.date) return false;
+        const candidateDate = new Date(c.date);
+        if (filters.dateRange.start) {
+          const startDate = new Date(filters.dateRange.start);
+          if (candidateDate < startDate) return false;
+        }
+        if (filters.dateRange.end) {
+          const endDate = new Date(filters.dateRange.end);
+          endDate.setHours(23, 59, 59, 999); // Include entire end date
+          if (candidateDate > endDate) return false;
+        }
+        return true;
+      });
+    }
+
+    // Global search (debounced)
+    if (debouncedSearch) {
+      const search = debouncedSearch.toLowerCase();
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(search) ||
           c.email.toLowerCase().includes(search) ||
-          c.phone.includes(search) ||
-          c.client.toLowerCase().includes(search) ||
-          c.jobTitle.toLowerCase().includes(search) ||
-          c.location.toLowerCase().includes(search)
+          c.phone.replace(/\D/g, "").includes(search.replace(/\D/g, "")) ||
+          (c.client && c.client.toLowerCase().includes(search)) ||
+          (c.jobTitle && c.jobTitle.toLowerCase().includes(search)) ||
+          (c.location && c.location.toLowerCase().includes(search)) ||
+          (c.source && c.source.toLowerCase().includes(search)) ||
+          (c.notes && c.notes.toLowerCase().includes(search))
       );
     }
-    
+
     return result;
-  }, [data, showUnresolvedOnly, globalFilter]);
+  }, [data, showUnresolvedOnly, filters, debouncedSearch]);
 
   const table = useReactTable({
     data: filteredData,
     columns,
     state: {
       sorting,
-      columnFilters,
     },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 25, // Increased for better performance with filtering
       },
     },
   });
@@ -239,65 +310,54 @@ export function DataTable({
       }
       return next;
     });
-    const candidate = data.find((c) => c.id === id);
-    if (candidate) {
-      onRowClick?.(candidate);
+    const foundCandidate = data.find((c) => c.id === id);
+    if (foundCandidate) {
+      onRowClick?.(foundCandidate);
     }
   };
 
+  const clearAllFilters = useCallback(() => {
+    setFilters({
+      status: [],
+      clients: [],
+      sources: [],
+      locations: [],
+      dateRange: { start: "", end: "" },
+      search: "",
+    });
+    if (showUnresolvedOnly && onToggleUnresolved) {
+      onToggleUnresolved();
+    }
+  }, [showUnresolvedOnly, onToggleUnresolved]);
+
   return (
     <div className="space-y-2">
-      {/* Mobile Toolbar */}
-      <div className="flex flex-col gap-2 md:hidden">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground-muted" />
-          <Input
-            placeholder="Search candidates..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="pl-9 h-10"
-          />
-        </div>
-        <Button
-          variant={showUnresolvedOnly ? "default" : "outline"}
-          onClick={onToggleUnresolved}
-          className="h-10"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          {showUnresolvedOnly ? "Showing Unresolved" : "Show Unresolved Only"}
-        </Button>
-      </div>
-
-      {/* Desktop Toolbar */}
-      <div className="hidden md:flex items-center justify-between gap-2">
-        <Button
-          variant={showUnresolvedOnly ? "default" : "outline"}
-          size="sm"
-          onClick={onToggleUnresolved}
-          className="h-6 text-[11px] px-2"
-        >
-          <Filter className="h-3 w-3 mr-1" />
-          Show Unresolved Only
-        </Button>
-        <Input
-          placeholder="Search all columns..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="max-w-[180px] h-6 text-[11px]"
-        />
-      </div>
+      {/* Filter Panel */}
+      <FilterPanel
+        data={data}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onClearAll={clearAllFilters}
+        showUnresolvedOnly={showUnresolvedOnly}
+        onToggleUnresolved={onToggleUnresolved || (() => {})}
+      />
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3 pb-20">
         {filteredData.length === 0 ? (
           <div className="text-center py-12 text-foreground-muted">
             <p>No candidates found.</p>
-            <p className="text-sm mt-1">Import a CSV to get started.</p>
+            <p className="text-sm mt-1">
+              {data.length === 0
+                ? "Import a CSV to get started."
+                : "Try adjusting your filters."}
+            </p>
           </div>
         ) : (
           <>
             <p className="text-sm text-foreground-muted">
               {filteredData.length} candidate{filteredData.length !== 1 ? "s" : ""}
+              {filteredData.length !== data.length && ` of ${data.length}`}
             </p>
             {filteredData.map((candidate) => (
               <CandidateCard
@@ -315,7 +375,7 @@ export function DataTable({
       <div className="hidden md:block">
         <div className="rounded-md border border-border overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
+            <table className="w-full text-xs">
               <thead className="bg-background-tertiary">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -342,7 +402,9 @@ export function DataTable({
                       colSpan={columns.length}
                       className="px-2.5 py-6 text-center text-foreground-muted"
                     >
-                      No candidates found. Import a CSV to get started.
+                      {data.length === 0
+                        ? "No candidates found. Import a CSV to get started."
+                        : "No candidates match your filters. Try adjusting your search criteria."}
                     </td>
                   </tr>
                 ) : (
@@ -372,9 +434,10 @@ export function DataTable({
         </div>
 
         {/* Desktop Pagination */}
-        <div className="flex items-center justify-between text-[12px] mt-2">
+        <div className="flex items-center justify-between text-xs mt-2">
           <p className="text-foreground-muted">
-            {table.getFilteredRowModel().rows.length} of {data.length} rows
+            Showing {table.getRowModel().rows.length} of {filteredData.length} filtered
+            {filteredData.length !== data.length && ` (${data.length} total)`}
           </p>
           <div className="flex items-center gap-2">
             <p className="text-foreground-muted">
@@ -387,36 +450,36 @@ export function DataTable({
                 size="icon"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
-                className="h-6 w-6"
+                className="h-7 w-7"
               >
-                <ChevronsLeft className="h-3 w-3" />
+                <ChevronsLeft className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
-                className="h-6 w-6"
+                className="h-7 w-7"
               >
-                <ChevronLeft className="h-3 w-3" />
+                <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
-                className="h-6 w-6"
+                className="h-7 w-7"
               >
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
-                className="h-6 w-6"
+                className="h-7 w-7"
               >
-                <ChevronsRight className="h-3 w-3" />
+                <ChevronsRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
