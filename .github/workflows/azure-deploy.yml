@@ -1,6 +1,5 @@
 # EMC Workspace - Azure Deployment Pipeline
-# Deploys Next.js PWA to Azure App Service
-# Note: Using Basic tier (B1) - no staging slots available
+# Deploys Next.js PWA to Azure App Service (Standalone Mode)
 
 name: Deploy to Azure
 
@@ -38,10 +37,6 @@ jobs:
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      - name: Check for known vulnerabilities
-        run: npx audit-ci --high
-        continue-on-error: true
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -68,20 +63,34 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          # Use a dummy URL for build (actual DB not needed at build time)
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Upload build artifact
+      # Prepare standalone deployment package
+      - name: Prepare deployment package
+        run: |
+          # Create deployment directory
+          mkdir -p deploy
+          
+          # Copy standalone output
+          cp -r .next/standalone/* deploy/
+          
+          # Copy static files
+          cp -r .next/static deploy/.next/static
+          
+          # Copy public folder
+          cp -r public deploy/public
+          
+          # Create startup script for Azure
+          echo '#!/bin/bash' > deploy/startup.sh
+          echo 'cd /home/site/wwwroot' >> deploy/startup.sh
+          echo 'node server.js' >> deploy/startup.sh
+          chmod +x deploy/startup.sh
+
+      - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nextjs-build
-          path: |
-            .next/
-            public/
-            package.json
-            package-lock.json
-            next.config.mjs
-            prisma/
+          name: nextjs-standalone
+          path: deploy/
           retention-days: 1
 
   deploy:
@@ -93,34 +102,28 @@ jobs:
       name: production
       url: https://emc-workspace.azurewebsites.net
     steps:
-      - name: Download build artifact
+      - name: Download deployment artifact
         uses: actions/download-artifact@v4
         with:
-          name: nextjs-build
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install production dependencies
-        run: npm ci --omit=dev
+          name: nextjs-standalone
+          path: deploy
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          package: deploy
+
+      - name: Wait for deployment
+        run: sleep 60
 
       - name: Verify deployment
         run: |
-          sleep 30
           response=$(curl -s -o /dev/null -w "%{http_code}" https://emc-workspace.azurewebsites.net)
           echo "Health check returned: $response"
-          # Accept 200, 307, or 308 as success (redirects are normal for Next.js)
           if [ $response -ge 200 ] && [ $response -lt 400 ]; then
             echo "Deployment verified successfully"
           else
-            echo "Warning: Unexpected status code, but deployment may still be successful"
+            echo "Warning: Unexpected status code, deployment may still be starting"
           fi

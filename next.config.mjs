@@ -2,6 +2,7 @@ import withPWA from "next-pwa";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone", // Required for Azure App Service
   reactStrictMode: true,
   // Security headers
   async headers() {
