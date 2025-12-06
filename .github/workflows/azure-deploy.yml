@@ -51,33 +51,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Deploy using Azure CLI with Oryx build
-      - name: Deploy to Azure Web App
-        timeout-minutes: 15
-        run: |
-          # Create zip of the application, excluding unnecessary files
-          zip -r deploy.zip . \
-            -x "node_modules/*" \
-            -x ".git/*" \
-            -x ".github/*" \
-            -x "_legacy/*" \
-            -x ".next/*" \
-            -x "*.log" \
-            -x ".DS_Store" \
-            -x "*.code-workspace" \
-            -x ".vscode/*" \
-            -x ".idea/*" \
-            -x "coverage/*" \
-            -x "*.tsbuildinfo"
-          
-          # Deploy with SCM_DO_BUILD_DURING_DEPLOYMENT enabled
-          az webapp deploy \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --src-path deploy.zip \
-            --type zip \
-            --timeout 900
-
       - name: Configure app settings
         run: |
           az webapp config appsettings set \
@@ -87,12 +60,33 @@ jobs:
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               WEBSITE_RUN_FROM_PACKAGE=0 \
               DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              SCM_COMMAND_IDLE_TIMEOUT=900
+              SCM_COMMAND_IDLE_TIMEOUT=1800
           
           az webapp config set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --startup-file "npm run start"
+
+      # Deploy using azure/webapps-deploy action (more reliable)
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          resource-group: ${{ env.AZURE_RESOURCE_GROUP }}
+          package: . # Deploy entire repo, Oryx will build
+          exclude-paths: |
+            _legacy
+            .git
+            .github
+            node_modules
+            .next
+            *.log
+            .DS_Store
+            *.code-workspace
+            .vscode
+            .idea
+            coverage
+            *.tsbuildinfo
 
       - name: Restart app
         run: |
