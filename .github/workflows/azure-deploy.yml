@@ -57,10 +57,9 @@ jobs:
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --settings \
-              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               WEBSITE_RUN_FROM_PACKAGE=0 \
               DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              SCM_COMMAND_IDLE_TIMEOUT=1800 \
               PORT=8080 \
               WEBSITE_PORT=8080 \
               WEBSITES_PORT=8080 \
@@ -80,16 +79,15 @@ jobs:
             --application-logging filesystem \
             --level information
 
-      # Create deployment package excluding large files
+      # Create deployment package excluding large files but keeping node_modules
       - name: Create deployment package
         run: |
-          # Create zip excluding unnecessary files
+          # Create zip excluding unnecessary files but including node_modules and .next
+          # Oryx will handle the build, but we need dependencies available
           zip -r deploy.zip . \
-            -x "node_modules/*" \
             -x ".git/*" \
             -x ".github/*" \
             -x "_legacy/*" \
-            -x ".next/*" \
             -x "*.log" \
             -x ".DS_Store" \
             -x "*.code-workspace" \
