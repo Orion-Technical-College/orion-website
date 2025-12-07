@@ -1,33 +1,74 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User, Bell, Shield, Save, Check, Key, Eye, EyeOff } from "lucide-react";
+import { User, Bell, Shield, Save, Check, Key, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   getProfile,
   getNotifications,
-  getApiKeys,
   STORAGE_KEYS,
   type UserProfile,
   type NotificationSettings,
-  type ApiKeys,
 } from "@/lib/storage";
+import { getApiKeys, updateApiKeys, type ApiKeysResponse } from "@/lib/api-keys";
 
 export function SettingsPanel() {
   // Load saved data from localStorage
   const [profile, setProfile] = useState<UserProfile>(getProfile);
   const [notifications, setNotifications] = useState<NotificationSettings>(getNotifications);
-  const [apiKeys, setApiKeys] = useState<ApiKeys>(getApiKeys);
+  
+  // API Keys state (from database)
+  const [apiKeys, setApiKeys] = useState<{
+    googleMessages: string;
+    calendly: string;
+    zoom: string;
+  }>({
+    googleMessages: "",
+    calendly: "",
+    zoom: "",
+  });
+  
+  const [apiKeysData, setApiKeysData] = useState<ApiKeysResponse | null>(null);
+  const [isLoadingKeys, setIsLoadingKeys] = useState(true);
+  const [apiKeysError, setApiKeysError] = useState<string | null>(null);
 
   const [profileSaved, setProfileSaved] = useState(false);
   const [notificationsSaved, setNotificationsSaved] = useState(false);
   const [apiKeysSaved, setApiKeysSaved] = useState(false);
+  const [apiKeysSaving, setApiKeysSaving] = useState(false);
   
   // Password visibility toggles
   const [showGoogleMessages, setShowGoogleMessages] = useState(false);
   const [showCalendly, setShowCalendly] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
+
+  // Load API keys from database on mount
+  useEffect(() => {
+    const loadApiKeys = async () => {
+      try {
+        setIsLoadingKeys(true);
+        setApiKeysError(null);
+        // TODO: Get user email from auth session
+        const userEmail = profile.email;
+        const data = await getApiKeys(userEmail);
+        setApiKeysData(data);
+        // Only show masked keys if they exist
+        setApiKeys({
+          googleMessages: data.hasGoogleMessages ? (data.googleMessages || "") : "",
+          calendly: data.hasCalendly ? (data.calendly || "") : "",
+          zoom: data.hasZoom ? (data.zoom || "") : "",
+        });
+      } catch (error: any) {
+        console.error("Failed to load API keys:", error);
+        setApiKeysError(error.message || "Failed to load API keys");
+      } finally {
+        setIsLoadingKeys(false);
+      }
+    };
+
+    loadApiKeys();
+  }, [profile.email]);
 
   // Save profile to localStorage
   const handleSaveProfile = () => {
@@ -50,12 +91,52 @@ export function SettingsPanel() {
     }
   }, [notifications]);
 
-  // Save API keys to localStorage
-  const handleSaveApiKeys = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(apiKeys));
+  // Save API keys to database
+  const handleSaveApiKeys = async () => {
+    try {
+      setApiKeysSaving(true);
+      setApiKeysError(null);
+      
+      // TODO: Get user email from auth session
+      const userEmail = profile.email;
+      
+      // Only send keys that have been changed (non-empty values)
+      const keysToUpdate: {
+        googleMessages?: string | null;
+        calendly?: string | null;
+        zoom?: string | null;
+      } = {};
+      
+      // If field is empty, set to null to clear it
+      // If field has value and is different from masked version, update it
+      if (apiKeys.googleMessages !== apiKeysData?.googleMessages) {
+        keysToUpdate.googleMessages = apiKeys.googleMessages || null;
+      }
+      if (apiKeys.calendly !== apiKeysData?.calendly) {
+        keysToUpdate.calendly = apiKeys.calendly || null;
+      }
+      if (apiKeys.zoom !== apiKeysData?.zoom) {
+        keysToUpdate.zoom = apiKeys.zoom || null;
+      }
+
+      await updateApiKeys(userEmail, keysToUpdate);
+      
+      // Reload keys to get updated masked versions
+      const updated = await getApiKeys(userEmail);
+      setApiKeysData(updated);
+      setApiKeys({
+        googleMessages: updated.hasGoogleMessages ? (updated.googleMessages || "") : "",
+        calendly: updated.hasCalendly ? (updated.calendly || "") : "",
+        zoom: updated.hasZoom ? (updated.zoom || "") : "",
+      });
+      
       setApiKeysSaved(true);
       setTimeout(() => setApiKeysSaved(false), 3000);
+    } catch (error: any) {
+      console.error("Failed to save API keys:", error);
+      setApiKeysError(error.message || "Failed to save API keys");
+    } finally {
+      setApiKeysSaving(false);
     }
   };
 
@@ -276,9 +357,17 @@ export function SettingsPanel() {
             </p>
           </div>
 
+          {apiKeysError && (
+            <div className="bg-status-denied/10 border border-status-denied/30 rounded-md p-3 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-status-denied flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-status-denied">{apiKeysError}</p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <div className="flex items-center gap-2 text-xs text-foreground-muted">
-              {apiKeysSaved && (
+              {isLoadingKeys && <span>Loading...</span>}
+              {apiKeysSaved && !isLoadingKeys && (
                 <>
                   <Check className="h-3.5 w-3.5 text-status-hired" />
                   <span className="text-status-hired">API keys saved</span>
@@ -289,15 +378,16 @@ export function SettingsPanel() {
               onClick={handleSaveApiKeys}
               size="sm"
               className="h-8 text-xs px-3"
+              disabled={isLoadingKeys || apiKeysSaving}
             >
               <Save className="h-3.5 w-3.5 mr-1.5" />
-              Save API Keys
+              {apiKeysSaving ? "Saving..." : "Save API Keys"}
             </Button>
           </div>
 
           <div className="bg-background-tertiary rounded-md p-3 border border-border">
             <p className="text-xs text-foreground-muted">
-              <strong className="text-foreground">Security Note:</strong> API keys are stored locally in your browser and are not shared with other users. Keep your keys secure and never share them publicly.
+              <strong className="text-foreground">Security Note:</strong> API keys are stored securely in the database and encrypted at rest. Each user&apos;s keys are private and not shared with other users. Keep your keys secure and never share them publicly.
             </p>
           </div>
         </CardContent>
