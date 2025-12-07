@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { getProfile } from "@/lib/storage";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +29,19 @@ const navItems = [
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [userName, setUserName] = useState(() => getProfile().name);
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = (event: CustomEvent) => {
+      setUserName(event.detail.name);
+    };
+
+    window.addEventListener("profileUpdated" as any, handleProfileUpdate);
+    return () => {
+      window.removeEventListener("profileUpdated" as any, handleProfileUpdate);
+    };
+  }, []);
 
   return (
     <aside
@@ -90,11 +104,11 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       <div className="px-2 py-2 border-t border-border">
         <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-1.5")}>
           <div className="w-5 h-5 rounded-full bg-accent-muted flex items-center justify-center">
-            <span className="text-accent text-[10px] font-medium">N</span>
+            <span className="text-accent text-[10px] font-medium">{userName.charAt(0).toUpperCase()}</span>
           </div>
           {!collapsed && (
             <p className="text-[11px] font-medium text-foreground truncate">
-              Nicole
+              {userName}
             </p>
           )}
         </div>

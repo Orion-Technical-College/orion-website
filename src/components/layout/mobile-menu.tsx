@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { X, Settings, User, Bell, Shield, LogOut, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { getProfile } from "@/lib/storage";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -14,6 +15,19 @@ interface MobileMenuProps {
 
 export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
   const router = useRouter();
+  const [userName, setUserName] = useState(() => getProfile().name);
+
+  // Listen for profile updates
+  useEffect(() => {
+    const handleProfileUpdate = (event: CustomEvent) => {
+      setUserName(event.detail.name);
+    };
+
+    window.addEventListener("profileUpdated" as any, handleProfileUpdate);
+    return () => {
+      window.removeEventListener("profileUpdated" as any, handleProfileUpdate);
+    };
+  }, []);
   
   if (!isOpen) return null;
 
@@ -60,10 +74,10 @@ export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-accent-muted flex items-center justify-center">
-              <span className="text-accent font-medium">N</span>
+              <span className="text-accent font-medium">{userName.charAt(0).toUpperCase()}</span>
             </div>
             <div>
-              <p className="font-medium text-foreground">Nicole</p>
+              <p className="font-medium text-foreground">{userName}</p>
               <p className="text-sm text-foreground-muted">EMC Recruiter</p>
             </div>
           </div>

@@ -11,8 +11,7 @@ import { DataTable } from "@/components/workspace/data-table";
 import { CampaignBuilder } from "@/components/campaigns/campaign-builder";
 import { CSVImport } from "@/components/import/csv-import";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Bell, Shield, User } from "lucide-react";
+import { SettingsPanel } from "@/components/settings/settings-panel";
 import type { Candidate, Message } from "@/types";
 
 // Sample data for demo
@@ -310,78 +309,7 @@ export default function Home() {
               </div>
             )}
 
-            {activeTab === "settings" && (
-              <div className="max-w-2xl space-y-4 md:space-y-6">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <User className="h-5 w-5 text-accent" />
-                      Profile
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Manage your account settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Name</label>
-                      <input
-                        type="text"
-                        defaultValue="Nicole"
-                        className="mt-1 w-full bg-background-tertiary border border-border rounded-md px-3 py-2.5"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Email</label>
-                      <input
-                        type="email"
-                        defaultValue="nicole@emcsupport.com"
-                        className="mt-1 w-full bg-background-tertiary border border-border rounded-md px-3 py-2.5"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Bell className="h-5 w-5 text-accent" />
-                      Notifications
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Configure push notification preferences
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <label className="flex items-center justify-between cursor-pointer py-1">
-                      <span className="text-sm">Reminder notifications</span>
-                      <input type="checkbox" defaultChecked className="w-5 h-5" />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer py-1">
-                      <span className="text-sm">Campaign completion alerts</span>
-                      <input type="checkbox" defaultChecked className="w-5 h-5" />
-                    </label>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Shield className="h-5 w-5 text-accent" />
-                      Security
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      Security and privacy settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-foreground-muted">
-                      Your data is encrypted and securely stored on Microsoft Azure.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            {activeTab === "settings" && <SettingsPanel />}
           </div>
 
           {/* Desktop AI Assistant */}
