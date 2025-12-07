@@ -5,6 +5,7 @@
 const STORAGE_KEYS = {
   PROFILE: "emc-workspace-profile",
   NOTIFICATIONS: "emc-workspace-notifications",
+  API_KEYS: "emc-workspace-api-keys",
 } as const;
 
 export interface UserProfile {
@@ -15,6 +16,12 @@ export interface UserProfile {
 export interface NotificationSettings {
   reminderNotifications: boolean;
   campaignCompletionAlerts: boolean;
+}
+
+export interface ApiKeys {
+  googleMessages?: string;
+  calendly?: string;
+  zoom?: string;
 }
 
 export function getProfile(): UserProfile {
@@ -53,6 +60,22 @@ export function getNotifications(): NotificationSettings {
     reminderNotifications: true,
     campaignCompletionAlerts: true,
   };
+}
+
+export function getApiKeys(): ApiKeys {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const saved = localStorage.getItem(STORAGE_KEYS.API_KEYS);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      // Invalid JSON, use defaults
+    }
+  }
+  return {};
 }
 
 export { STORAGE_KEYS };

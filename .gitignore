@@ -78,3 +78,4 @@ prisma/migrations/
 
 # Windows
 Thumbs.db
+.database-credentials.txt
