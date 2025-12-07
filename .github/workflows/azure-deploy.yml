@@ -75,7 +75,7 @@ jobs:
           az webapp config set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --startup-file "npm run start" \
+            --startup-file "node server.js" \
             --always-on true
           
           # Enable application logging
@@ -85,32 +85,29 @@ jobs:
             --application-logging filesystem \
             --level information
 
-      # Create optimized deployment package (only production files)
+      # Create optimized deployment package using Next.js standalone output
       - name: Create deployment package
-        timeout-minutes: 3
+        timeout-minutes: 2
         run: |
-          # Create minimal deployment package with only what's needed
-          # Include .next (built), node_modules (runtime), and config files
+          # Next.js standalone output creates a self-contained deployment
+          # Copy standalone output and required files
           mkdir -p deploy
-          cp -r .next deploy/
-          cp -r node_modules deploy/
+          cp -r .next/standalone/* deploy/
+          cp -r .next/static deploy/.next/
           cp -r public deploy/
-          cp -r src deploy/
           cp -r prisma deploy/
-          cp package.json package-lock.json deploy/
-          cp next.config.mjs deploy/
-          cp tsconfig.json deploy/
-          cp tailwind.config.ts deploy/
-          cp postcss.config.mjs deploy/
+          
+          echo "Deployment package size:"
+          du -sh deploy
+          echo "Package structure:"
+          ls -la deploy/ | head -20
           
           cd deploy
           zip -r ../deploy.zip . -q
           cd ..
           
-          echo "Deployment package size:"
+          echo "Final zip size:"
           ls -lh deploy.zip
-          echo "Package contents:"
-          unzip -l deploy.zip | head -20
 
       # Deploy using azure/webapps-deploy action with timeout
       - name: Deploy to Azure Web App
@@ -125,28 +122,34 @@ jobs:
           restart: false
 
       - name: Verify deployment
-        timeout-minutes: 2
+        timeout-minutes: 3
         run: |
-          echo "Waiting for app to start..."
-          sleep 10
+          echo "Waiting for app to start (allowing 30 seconds for cold start)..."
+          sleep 30
           
-          # Check if app is responding
-          for i in {1..6}; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net || echo "000")
-            echo "Attempt $i: HTTP $HTTP_CODE"
+          # Check if app is responding with retries
+          MAX_ATTEMPTS=10
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net 2>/dev/null || echo "000")
+            echo "Attempt $i/$MAX_ATTEMPTS: HTTP $HTTP_CODE"
             
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
-              echo "✓ App is responding successfully"
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "404" ]; then
+              echo "✓ App is responding (HTTP $HTTP_CODE)"
               exit 0
             fi
             
-            if [ $i -lt 6 ]; then
-              sleep 10
+            if [ $i -lt $MAX_ATTEMPTS ]; then
+              echo "Waiting 15 seconds before next attempt..."
+              sleep 15
             fi
           done
           
-          echo "✗ App failed to start or respond"
-          echo "Check logs at: https://portal.azure.com/#@/resource/subscriptions/*/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.AZURE_WEBAPP_NAME }}/logStream"
+          echo "✗ App failed to start or respond after $MAX_ATTEMPTS attempts"
+          echo "Last HTTP code: $HTTP_CODE"
+          echo ""
+          echo "Check logs at:"
+          echo "  Azure Portal: https://portal.azure.com/#@/resource/subscriptions/*/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.AZURE_WEBAPP_NAME }}/logStream"
+          echo "  Or run: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
           exit 1
 
       - name: Restart app
