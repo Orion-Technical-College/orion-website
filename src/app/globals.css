@@ -109,6 +109,33 @@ select:focus {
   outline: none;
 }
 
+/* Date input calendar icon styling for accessibility */
+input[type="date"] {
+  color-scheme: dark; /* Use dark color scheme for date picker */
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1) brightness(2) sepia(1) hue-rotate(160deg) saturate(2);
+  opacity: 0.9;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(1) brightness(2.5) sepia(1) hue-rotate(160deg) saturate(2.5);
+}
+
+/* Firefox date input styling */
+input[type="date"]::-moz-calendar-picker-indicator {
+  filter: invert(1) brightness(2) sepia(1) hue-rotate(160deg) saturate(2);
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--foreground-muted);
