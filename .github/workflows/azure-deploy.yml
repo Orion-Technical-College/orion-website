@@ -20,6 +20,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Fail fast - 15 minute total timeout
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -36,22 +37,27 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
+        timeout-minutes: 5
         run: npm ci
 
       - name: Generate Prisma client
+        timeout-minutes: 2
         run: npx prisma generate
 
       - name: Build application
+        timeout-minutes: 5
         run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Login to Azure
+        timeout-minutes: 2
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Configure app settings
+        timeout-minutes: 2
         run: |
           az webapp config appsettings set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
@@ -79,29 +85,38 @@ jobs:
             --application-logging filesystem \
             --level information
 
-      # Create deployment package excluding large files but keeping node_modules
+      # Create optimized deployment package (only production files)
       - name: Create deployment package
+        timeout-minutes: 3
         run: |
-          # Create zip excluding unnecessary files but including node_modules and .next
-          # Oryx will handle the build, but we need dependencies available
-          zip -r deploy.zip . \
-            -x ".git/*" \
-            -x ".github/*" \
-            -x "_legacy/*" \
-            -x "*.log" \
-            -x ".DS_Store" \
-            -x "*.code-workspace" \
-            -x ".vscode/*" \
-            -x ".idea/*" \
-            -x "coverage/*" \
-            -x "*.tsbuildinfo"
+          # Create minimal deployment package with only what's needed
+          # Include .next (built), node_modules (runtime), and config files
+          mkdir -p deploy
+          cp -r .next deploy/
+          cp -r node_modules deploy/
+          cp -r public deploy/
+          cp -r src deploy/
+          cp -r prisma deploy/
+          cp package.json package-lock.json deploy/
+          cp next.config.mjs deploy/
+          cp tsconfig.json deploy/
+          cp tailwind.config.ts deploy/
+          cp postcss.config.mjs deploy/
+          
+          cd deploy
+          zip -r ../deploy.zip . -q
+          cd ..
           
           echo "Deployment package size:"
           ls -lh deploy.zip
+          echo "Package contents:"
+          unzip -l deploy.zip | head -20
 
-      # Deploy using azure/webapps-deploy action
+      # Deploy using azure/webapps-deploy action with timeout
       - name: Deploy to Azure Web App
+        timeout-minutes: 5
         uses: azure/webapps-deploy@v3
+        id: deploy
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
@@ -109,8 +124,36 @@ jobs:
           type: zip
           restart: false
 
+      - name: Verify deployment
+        timeout-minutes: 2
+        run: |
+          echo "Waiting for app to start..."
+          sleep 10
+          
+          # Check if app is responding
+          for i in {1..6}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net || echo "000")
+            echo "Attempt $i: HTTP $HTTP_CODE"
+            
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+              echo "✓ App is responding successfully"
+              exit 0
+            fi
+            
+            if [ $i -lt 6 ]; then
+              sleep 10
+            fi
+          done
+          
+          echo "✗ App failed to start or respond"
+          echo "Check logs at: https://portal.azure.com/#@/resource/subscriptions/*/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.AZURE_WEBAPP_NAME }}/logStream"
+          exit 1
+
       - name: Restart app
+        timeout-minutes: 1
+        if: steps.deploy.outcome == 'success'
         run: |
           az webapp restart \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }}
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --output none
