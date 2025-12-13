@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: CreateSessionRequest = await request.json();
-    const { campaignId, candidateIds, template, variablesConfig = {}, aiDraftMeta, messagePolicy = "LOCKED" } = body;
+    let { campaignId, candidateIds, template, variablesConfig = {}, aiDraftMeta, messagePolicy = "LOCKED" } = body;
 
     if (!campaignId || !candidateIds || candidateIds.length === 0 || !template) {
       return NextResponse.json(
