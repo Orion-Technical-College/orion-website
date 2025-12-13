@@ -15,6 +15,7 @@ interface MobileNavProps {
   onTabChange: (tab: string) => void;
   onMenuOpen: () => void;
   onAIOpen: () => void;
+  showAI?: boolean; // Only show AI button if user has access
 }
 
 const navItems = [
@@ -23,7 +24,13 @@ const navItems = [
   { id: "import", icon: FileSpreadsheet, label: "Import" },
 ];
 
-export function MobileNav({ activeTab, onTabChange, onMenuOpen, onAIOpen }: MobileNavProps) {
+function MobileNavComponent({
+  activeTab,
+  onTabChange,
+  onMenuOpen,
+  onAIOpen,
+  showAI = true,
+}: MobileNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background-secondary border-t border-border z-50 md:hidden">
       <div className="flex items-center justify-around h-14 px-2">
@@ -58,16 +65,21 @@ export function MobileNav({ activeTab, onTabChange, onMenuOpen, onAIOpen }: Mobi
           );
         })}
 
-        {/* AI Button */}
-        <button
-          onClick={onAIOpen}
-          className="flex flex-col items-center justify-center w-14 h-12 rounded-lg text-foreground-muted hover:text-accent hover:bg-accent-muted transition-colors"
-        >
-          <Sparkles className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">AI</span>
-        </button>
+        {/* AI Button - Only show if user has access */}
+        {showAI && (
+          <button
+            onClick={onAIOpen}
+            className="flex flex-col items-center justify-center w-14 h-12 rounded-lg text-foreground-muted hover:text-accent hover:bg-accent-muted transition-colors"
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="text-[10px] mt-0.5">AI</span>
+          </button>
+        )}
       </div>
     </nav>
   );
 }
 
+// Memoize to prevent unnecessary re-renders
+export const MobileNav = React.memo(MobileNavComponent);
+MobileNav.displayName = "MobileNav";

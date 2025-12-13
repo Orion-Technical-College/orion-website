@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { SessionProvider } from "@/components/providers/session-provider";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
 import "./globals.css";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
-        <NotificationProvider>{children}</NotificationProvider>
+        <SessionProvider>
+          <NotificationProvider>{children}</NotificationProvider>
+        </SessionProvider>
       </body>
     </html>
   );

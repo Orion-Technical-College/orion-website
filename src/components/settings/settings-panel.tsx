@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User, Bell, Shield, Save, Check, Key, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { User, Bell, Shield, Save, Check, Key, Eye, EyeOff, AlertCircle, Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +42,17 @@ export function SettingsPanel() {
   const [showGoogleMessages, setShowGoogleMessages] = useState(false);
   const [showCalendly, setShowCalendly] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Load API keys from database on mount
   useEffect(() => {
@@ -49,9 +60,8 @@ export function SettingsPanel() {
       try {
         setIsLoadingKeys(true);
         setApiKeysError(null);
-        // TODO: Get user email from auth session
-        const userEmail = profile.email;
-        const data = await getApiKeys(userEmail);
+        // Uses session-based auth
+        const data = await getApiKeys();
         setApiKeysData(data);
         // Only show masked keys if they exist
         setApiKeys({
@@ -68,7 +78,7 @@ export function SettingsPanel() {
     };
 
     loadApiKeys();
-  }, [profile.email]);
+  }, []);
 
   // Save profile to localStorage
   const handleSaveProfile = () => {
@@ -91,14 +101,65 @@ export function SettingsPanel() {
     }
   }, [notifications]);
 
+  // Handle password change
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All fields are required");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+
+    setPasswordSaving(true);
+
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setPasswordError(data.error || "Failed to change password");
+        setPasswordSaving(false);
+        return;
+      }
+
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        // Refresh the page to update session
+        window.location.reload();
+      }, 2000);
+    } catch (error: any) {
+      console.error("Failed to change password:", error);
+      setPasswordError(error.message || "Failed to change password");
+      setPasswordSaving(false);
+    }
+  };
+
   // Save API keys to database
   const handleSaveApiKeys = async () => {
     try {
       setApiKeysSaving(true);
       setApiKeysError(null);
-      
-      // TODO: Get user email from auth session
-      const userEmail = profile.email;
       
       // Only send keys that have been changed (non-empty values)
       const keysToUpdate: {
@@ -119,10 +180,10 @@ export function SettingsPanel() {
         keysToUpdate.zoom = apiKeys.zoom || null;
       }
 
-      await updateApiKeys(userEmail, keysToUpdate);
+      await updateApiKeys(keysToUpdate);
       
       // Reload keys to get updated masked versions
-      const updated = await getApiKeys(userEmail);
+      const updated = await getApiKeys();
       setApiKeysData(updated);
       setApiKeys({
         googleMessages: updated.hasGoogleMessages ? (updated.googleMessages || "") : "",
@@ -401,13 +462,144 @@ export function SettingsPanel() {
             Security
           </CardTitle>
           <CardDescription className="text-sm">
-            Security and privacy settings
+            Change your password and manage security settings
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-foreground-muted">
-            Your data is encrypted and securely stored on Microsoft Azure.
-          </p>
+        <CardContent className="space-y-4">
+          {/* Change Password Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-border">
+              <Lock className="h-4 w-4 text-foreground-muted" />
+              <h3 className="text-sm font-medium">Change Password</h3>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">
+                Current Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  className="w-full bg-background-tertiary border border-border rounded-md px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                  disabled={passwordSaving || passwordSuccess}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+                  disabled={passwordSaving || passwordSuccess}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter your new password"
+                  className="w-full bg-background-tertiary border border-border rounded-md px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                  disabled={passwordSaving || passwordSuccess}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+                  disabled={passwordSaving || passwordSuccess}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-foreground-muted mt-1">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your new password"
+                  className="w-full bg-background-tertiary border border-border rounded-md px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                  disabled={passwordSaving || passwordSuccess}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+                  disabled={passwordSaving || passwordSuccess}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="bg-status-denied/10 border border-status-denied/30 rounded-md p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-status-denied flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-status-denied">{passwordError}</p>
+              </div>
+            )}
+
+            {passwordSuccess && (
+              <div className="bg-status-hired/10 border border-status-hired/30 rounded-md p-3 flex items-start gap-2">
+                <Check className="h-4 w-4 text-status-hired flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-status-hired">Password changed successfully! Refreshing...</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-xs text-foreground-muted">
+                {passwordSuccess && (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-status-hired" />
+                    <span className="text-status-hired">Password changed</span>
+                  </>
+                )}
+              </div>
+              <Button
+                onClick={handleChangePassword}
+                size="sm"
+                className="h-8 text-xs px-3"
+                disabled={passwordSaving || passwordSuccess || !currentPassword || !newPassword || !confirmPassword}
+              >
+                <Lock className="h-3.5 w-3.5 mr-1.5" />
+                {passwordSaving ? "Changing..." : passwordSuccess ? "Changed!" : "Change Password"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-background-tertiary rounded-md p-3 border border-border">
+            <p className="text-xs text-foreground-muted">
+              <strong className="text-foreground">Security Note:</strong> Your data is encrypted and securely stored on Microsoft Azure. Passwords are hashed using bcrypt and never stored in plain text.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

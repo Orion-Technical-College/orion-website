@@ -130,6 +130,10 @@ az webapp config appsettings set \
     DATABASE_URL="sqlserver://orionweb-sqlserver.database.windows.net:1433;database=EMCWorkspaceDB;user=YOUR_USERNAME;password=YOUR_PASSWORD;encrypt=true" \
     NEXTAUTH_URL="https://emc-workspace.azurewebsites.net" \
     NEXTAUTH_SECRET="$(openssl rand -base64 32)" \
+    AZURE_OPENAI_API_KEY="your-azure-openai-api-key" \
+    AZURE_OPENAI_ENDPOINT="https://ai-canvas-openai.openai.azure.com" \
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o" \
+    FEATURE_AI_ASSISTANT="true" \
     NODE_ENV="production"
 
 # Staging
@@ -141,8 +145,29 @@ az webapp config appsettings set \
     DATABASE_URL="sqlserver://orionweb-sqlserver.database.windows.net:1433;database=EMCWorkspaceDB;user=YOUR_USERNAME;password=YOUR_PASSWORD;encrypt=true" \
     NEXTAUTH_URL="https://emc-workspace-staging.azurewebsites.net" \
     NEXTAUTH_SECRET="$(openssl rand -base64 32)" \
+    AZURE_OPENAI_API_KEY="your-azure-openai-api-key" \
+    AZURE_OPENAI_ENDPOINT="https://ai-canvas-openai.openai.azure.com" \
+    AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o" \
+    FEATURE_AI_ASSISTANT="true" \
     NODE_ENV="production"
 ```
+
+#### Azure OpenAI Configuration
+
+To get your Azure OpenAI API key and endpoint:
+
+1. **Navigate to Azure Portal** → **Azure OpenAI** → `ai-canvas-openai` (or your resource name)
+2. **Get API Key**:
+   - Go to **Keys and Endpoint** in the left sidebar
+   - Copy **KEY 1** or **KEY 2**
+3. **Get Endpoint**:
+   - The endpoint is shown in the **Keys and Endpoint** page
+   - Format: `https://ai-canvas-openai.openai.azure.com`
+4. **Deployment Name**:
+   - Go to **Deployments** in the left sidebar
+   - Note the deployment name (default: `gpt-4o`)
+
+**Note**: The AI Assistant feature can be disabled by setting `FEATURE_AI_ASSISTANT="false"` for gradual rollout or troubleshooting.
 
 ### Startup Command
 

@@ -11,6 +11,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { cn, formatPhoneNumber, getStatusColor } from "@/lib/utils";
+import { applyCandidateFilters, type FilterState as FilteringFilterState } from "@/lib/filtering";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CandidateCard } from "./candidate-card";
@@ -29,6 +30,10 @@ interface DataTableProps {
   onRowClick?: (candidate: Candidate) => void;
   showUnresolvedOnly?: boolean;
   onToggleUnresolved?: () => void;
+  selectedCandidates: Set<string>;
+  onToggleCandidate: (id: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
 }
 
 // Debounce hook for search performance
@@ -48,14 +53,17 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export function DataTable({
+function DataTableComponent({
   data,
   onRowClick,
   showUnresolvedOnly = false,
   onToggleUnresolved,
+  selectedCandidates,
+  onToggleCandidate,
+  onSelectAll,
+  onDeselectAll,
 }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<FilterState>({
     status: [],
     clients: [],
@@ -215,73 +223,19 @@ export function DataTable({
     []
   );
 
-  // Comprehensive filtering logic
+  // Comprehensive filtering logic using extracted utility
+  const filterState: FilteringFilterState = useMemo(() => ({
+    status: filters.status,
+    clients: filters.clients,
+    sources: filters.sources,
+    locations: filters.locations,
+    dateRange: filters.dateRange,
+    search: debouncedSearch || "",
+  }), [filters, debouncedSearch]);
+
   const filteredData = useMemo(() => {
-    let result = [...data];
-
-    // Unresolved filter
-    if (showUnresolvedOnly) {
-      result = result.filter(
-        (c) => c.status !== "hired" && c.status !== "denied"
-      );
-    }
-
-    // Status filter
-    if (filters.status.length > 0) {
-      result = result.filter((c) => filters.status.includes(c.status));
-    }
-
-    // Client filter
-    if (filters.clients.length > 0) {
-      result = result.filter((c) => filters.clients.includes(c.client));
-    }
-
-    // Source filter
-    if (filters.sources.length > 0) {
-      result = result.filter((c) => filters.sources.includes(c.source));
-    }
-
-    // Location filter
-    if (filters.locations.length > 0) {
-      result = result.filter((c) => filters.locations.includes(c.location));
-    }
-
-    // Date range filter
-    if (filters.dateRange.start || filters.dateRange.end) {
-      result = result.filter((c) => {
-        if (!c.date) return false;
-        const candidateDate = new Date(c.date);
-        if (filters.dateRange.start) {
-          const startDate = new Date(filters.dateRange.start);
-          if (candidateDate < startDate) return false;
-        }
-        if (filters.dateRange.end) {
-          const endDate = new Date(filters.dateRange.end);
-          endDate.setHours(23, 59, 59, 999); // Include entire end date
-          if (candidateDate > endDate) return false;
-        }
-        return true;
-      });
-    }
-
-    // Global search (debounced)
-    if (debouncedSearch) {
-      const search = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(search) ||
-          c.email.toLowerCase().includes(search) ||
-          c.phone.replace(/\D/g, "").includes(search.replace(/\D/g, "")) ||
-          (c.client && c.client.toLowerCase().includes(search)) ||
-          (c.jobTitle && c.jobTitle.toLowerCase().includes(search)) ||
-          (c.location && c.location.toLowerCase().includes(search)) ||
-          (c.source && c.source.toLowerCase().includes(search)) ||
-          (c.notes && c.notes.toLowerCase().includes(search))
-      );
-    }
-
-    return result;
-  }, [data, showUnresolvedOnly, filters, debouncedSearch]);
+    return applyCandidateFilters(data, filterState, showUnresolvedOnly);
+  }, [data, filterState, showUnresolvedOnly]);
 
   const table = useReactTable({
     data: filteredData,
@@ -301,15 +255,7 @@ export function DataTable({
   });
 
   const handleCardSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    onToggleCandidate(id);
     const foundCandidate = data.find((c) => c.id === id);
     if (foundCandidate) {
       onRowClick?.(foundCandidate);
@@ -363,7 +309,7 @@ export function DataTable({
               <CandidateCard
                 key={candidate.id}
                 candidate={candidate}
-                isSelected={selectedIds.has(candidate.id)}
+                isSelected={selectedCandidates.has(candidate.id)}
                 onSelect={() => handleCardSelect(candidate.id)}
               />
             ))}
@@ -488,3 +434,7 @@ export function DataTable({
     </div>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export const DataTable = React.memo(DataTableComponent);
+DataTable.displayName = "DataTable";

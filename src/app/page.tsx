@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AIAssistant } from "@/components/layout/ai-assistant";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { MobileMenu } from "@/components/layout/mobile-menu";
-import { MobileAISheet } from "@/components/layout/mobile-ai-sheet";
 import { DataTable } from "@/components/workspace/data-table";
 import { CampaignBuilder } from "@/components/campaigns/campaign-builder";
+import { GuidedSend } from "@/components/campaigns/guided-send";
 import { CSVImport } from "@/components/import/csv-import";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SettingsPanel } from "@/components/settings/settings-panel";
+import { ROLES } from "@/lib/permissions";
 import type { Candidate, Message } from "@/types";
+import type { FilterState } from "@/components/workspace/filter-panel";
 
 // Sample data for demo
 const SAMPLE_CANDIDATES: Candidate[] = [
@@ -81,6 +84,7 @@ const SAMPLE_CANDIDATES: Candidate[] = [
 export default function Home() {
   const [activeTab, setActiveTab] = useState("workspace");
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
 
   const handleTabChange = useCallback((tab: string) => {
     if (tab === "docs") {
@@ -89,15 +93,120 @@ export default function Home() {
       setActiveTab(tab);
     }
   }, [router]);
+  
   const [workspaceTab, setWorkspaceTab] = useState("data");
-  const [aiOpen, setAiOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileAIOpen, setMobileAIOpen] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>(SAMPLE_CANDIDATES);
-  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
-  const [showUnresolved, setShowUnresolved] = useState(false);
+  const [guidedSendSessionId, setGuidedSendSessionId] = useState<string | null>(null);
+  const [campaignName, setCampaignName] = useState("");
+  
+  // AI Assistant state - minimal version
+  const [aiOpen, setAiOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  
+  // Ref to access latest messages without causing callback recreation
+  const messagesRef = useRef<Message[]>(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  // Check if user has AI access
+  const userRole = session?.user?.role;
+  const hasAIAccess = sessionStatus === "authenticated" && 
+    (userRole === ROLES.PLATFORM_ADMIN || userRole === ROLES.RECRUITER);
+  
+  const handleAIToggle = useCallback(() => {
+    setAiOpen(prev => !prev);
+  }, []);
+  
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return;
+    
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setIsAiLoading(true);
+    setAiError(null);
+    
+    try {
+      // Use ref to get latest messages without dependency
+      const conversationHistory = messagesRef.current.map(m => ({ 
+        role: m.role, 
+        content: m.content 
+      }));
+      
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: content,
+          conversationHistory,
+          includeDataContext: true,
+        }),
+      });
+
+      let data;
+      let rawText;
+      
+      if (!response.ok) {
+        // Try to get error details from response body
+        try {
+          rawText = await response.text();
+          console.error(`[AI_CLIENT] API error ${response.status}:`, rawText);
+          try {
+            data = JSON.parse(rawText);
+          } catch {
+            // If not JSON, use status text
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+          }
+          throw new Error(data.error || data.detail || `API Error: ${response.status}`);
+        } catch (e: any) {
+          throw new Error(e.message || `API Error: ${response.status}`);
+        }
+      }
+
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error("[AI_CLIENT] Failed to parse success response:", parseError);
+        throw new Error("Received invalid response from server");
+      }
+
+      const aiMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.response || "I'm sorry, I couldn't generate a response.",
+        timestamp: new Date(),
+        correlationId: data.correlationId,
+        traceId: data.traceId, // Langfuse trace ID for feedback
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error: any) {
+      console.error("Error calling AI API:", error);
+      setAiError(error.message || "An error occurred. Please try again.");
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "I'm sorry, I encountered an error. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, []); // Empty dependency array - callback never recreates
+  
+  const handleUploadCSV = useCallback((file: File) => {
+    console.log("CSV upload:", file.name);
+  }, []);
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
+  const [showUnresolved, setShowUnresolved] = useState(false);
 
   const handleToggleCandidate = useCallback((id: string) => {
     setSelectedCandidates((prev) => {
@@ -109,6 +218,10 @@ export default function Home() {
       }
       return next;
     });
+  }, []);
+
+  const handleToggleUnresolved = useCallback(() => {
+    setShowUnresolved((prev) => !prev);
   }, []);
 
   const handleSelectAll = useCallback(() => {
@@ -136,53 +249,18 @@ export default function Home() {
       createdAt: c.createdAt || new Date(),
       updatedAt: new Date(),
     })) as Candidate[];
-
     setCandidates((prev) => [...prev, ...newCandidates]);
-    setActiveTab("workspace");
   }, []);
 
-  const handleUploadCSV = useCallback(() => {
-    setActiveTab("import");
-    setMobileAIOpen(false);
+  const handleMobileMenuOpen = useCallback(() => {
+    setMobileMenuOpen(true);
   }, []);
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setIsAiLoading(true);
+  const handleMobileMenuClose = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
 
-    setTimeout(() => {
-      let response = "I understand you want to ";
-      
-      if (content.toLowerCase().includes("filter") || content.toLowerCase().includes("show")) {
-        response = `I can help you filter the data. Currently showing ${candidates.length} candidates. Try using the "Show Unresolved Only" button to filter pending candidates.`;
-      } else if (content.toLowerCase().includes("add") || content.toLowerCase().includes("create")) {
-        response = "To add new candidates, you can use the Import tab to upload a CSV file, or I can help you add them manually. What candidate information would you like to add?";
-      } else if (content.toLowerCase().includes("send") || content.toLowerCase().includes("sms") || content.toLowerCase().includes("message")) {
-        response = `You have ${selectedCandidates.size} candidates selected for messaging. Go to the Campaigns tab to create and send personalized SMS messages.`;
-      } else {
-        response = `I can help you manage your candidate data. You currently have ${candidates.length} candidates in the workspace. Try asking me to filter data, add candidates, or help with SMS campaigns.`;
-      }
-
-      const aiMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: response,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsAiLoading(false);
-    }, 1000);
-  }, [candidates.length, selectedCandidates.size]);
-
-  const handleRowClick = useCallback((candidate: Candidate) => {
-    handleToggleCandidate(candidate.id);
-  }, [handleToggleCandidate]);
+  const handleMobileAIOpen = useCallback(() => {}, []);
 
   const handleMobileNavigate = useCallback((tab: string) => {
     if (tab === "settings" || tab === "profile" || tab === "notifications" || tab === "security") {
@@ -192,11 +270,20 @@ export default function Home() {
     }
   }, []);
 
+  const handleRowClick = useCallback((candidate: Candidate) => {
+    handleToggleCandidate(candidate.id);
+  }, [handleToggleCandidate]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
+        <Sidebar 
+          activeTab={activeTab} 
+          onTabChange={handleTabChange}
+          userName={session?.user?.name}
+          showAdmin={userRole === ROLES.PLATFORM_ADMIN}
+        />
       </div>
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -208,7 +295,7 @@ export default function Home() {
             </div>
             <span className="font-semibold text-foreground">EMC</span>
           </div>
-            <h1 className="text-sm font-medium text-accent">
+          <h1 className="text-sm font-medium text-accent">
             {activeTab === "workspace" && "Workspace"}
             {activeTab === "campaigns" && "Campaigns"}
             {activeTab === "import" && "Import"}
@@ -257,7 +344,11 @@ export default function Home() {
                         data={candidates}
                         onRowClick={handleRowClick}
                         showUnresolvedOnly={showUnresolved}
-                        onToggleUnresolved={() => setShowUnresolved(!showUnresolved)}
+                        onToggleUnresolved={handleToggleUnresolved}
+                        selectedCandidates={selectedCandidates}
+                        onToggleCandidate={handleToggleCandidate}
+                        onSelectAll={handleSelectAll}
+                        onDeselectAll={handleDeselectAll}
                       />
                     </TabsContent>
 
@@ -266,37 +357,71 @@ export default function Home() {
                     </TabsContent>
 
                     <TabsContent value="send" className="mt-2">
-                      <CampaignBuilder
-                        candidates={candidates}
-                        selectedCandidates={selectedCandidates}
-                        onToggleCandidate={handleToggleCandidate}
-                        onSelectAll={handleSelectAll}
-                        onDeselectAll={handleDeselectAll}
-                      />
+                      {guidedSendSessionId ? (
+                        <GuidedSend
+                          sessionId={guidedSendSessionId}
+                          campaignName={campaignName || "Campaign"}
+                          onBack={() => setGuidedSendSessionId(null)}
+                          onComplete={() => {
+                            setGuidedSendSessionId(null);
+                            setWorkspaceTab("data");
+                          }}
+                        />
+                      ) : (
+                        <CampaignBuilder
+                          candidates={candidates}
+                          selectedCandidates={selectedCandidates}
+                          onToggleCandidate={handleToggleCandidate}
+                          onSelectAll={handleSelectAll}
+                          onDeselectAll={handleDeselectAll}
+                          onStartGuidedSend={(sessionId) => {
+                            setGuidedSendSessionId(sessionId);
+                          }}
+                        />
+                      )}
                     </TabsContent>
                   </Tabs>
                 </div>
-                
-                {/* Mobile - direct data table */}
+
+                {/* Mobile - show data table directly */}
                 <div className="md:hidden">
                   <DataTable
                     data={candidates}
                     onRowClick={handleRowClick}
                     showUnresolvedOnly={showUnresolved}
-                    onToggleUnresolved={() => setShowUnresolved(!showUnresolved)}
+                    onToggleUnresolved={handleToggleUnresolved}
+                    selectedCandidates={selectedCandidates}
+                    onToggleCandidate={handleToggleCandidate}
+                    onSelectAll={handleSelectAll}
+                    onDeselectAll={handleDeselectAll}
                   />
                 </div>
               </>
             )}
 
             {activeTab === "campaigns" && (
-              <CampaignBuilder
-                candidates={candidates}
-                selectedCandidates={selectedCandidates}
-                onToggleCandidate={handleToggleCandidate}
-                onSelectAll={handleSelectAll}
-                onDeselectAll={handleDeselectAll}
-              />
+              guidedSendSessionId ? (
+                <GuidedSend
+                  sessionId={guidedSendSessionId}
+                  campaignName={campaignName || "Campaign"}
+                  onBack={() => setGuidedSendSessionId(null)}
+                  onComplete={() => {
+                    setGuidedSendSessionId(null);
+                    setActiveTab("workspace");
+                  }}
+                />
+              ) : (
+                <CampaignBuilder
+                  candidates={candidates}
+                  selectedCandidates={selectedCandidates}
+                  onToggleCandidate={handleToggleCandidate}
+                  onSelectAll={handleSelectAll}
+                  onDeselectAll={handleDeselectAll}
+                  onStartGuidedSend={(sessionId) => {
+                    setGuidedSendSessionId(sessionId);
+                  }}
+                />
+              )
             )}
 
             {activeTab === "import" && <CSVImport onImport={handleImport} />}
@@ -313,16 +438,19 @@ export default function Home() {
           </div>
 
           {/* Desktop AI Assistant */}
-          <div className="hidden md:block">
-            <AIAssistant
-              isOpen={aiOpen}
-              onToggle={() => setAiOpen(!aiOpen)}
-              onUploadCSV={handleUploadCSV}
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              isLoading={isAiLoading}
-            />
-          </div>
+          {hasAIAccess && (
+            <div className="hidden md:block">
+              <AIAssistant
+                isOpen={aiOpen}
+                onToggle={handleAIToggle}
+                onUploadCSV={handleUploadCSV}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                isLoading={isAiLoading}
+                error={aiError}
+              />
+            </div>
+          )}
         </div>
       </main>
 
@@ -330,25 +458,16 @@ export default function Home() {
       <MobileNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onMenuOpen={() => setMobileMenuOpen(true)}
-        onAIOpen={() => setMobileAIOpen(true)}
+        onMenuOpen={handleMobileMenuOpen}
+        onAIOpen={handleMobileAIOpen}
+        showAI={false}
       />
 
       {/* Mobile Menu */}
       <MobileMenu
         isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
+        onClose={handleMobileMenuClose}
         onNavigate={handleMobileNavigate}
-      />
-
-      {/* Mobile AI Sheet */}
-      <MobileAISheet
-        isOpen={mobileAIOpen}
-        onClose={() => setMobileAIOpen(false)}
-        onUploadCSV={handleUploadCSV}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isLoading={isAiLoading}
       />
     </div>
   );

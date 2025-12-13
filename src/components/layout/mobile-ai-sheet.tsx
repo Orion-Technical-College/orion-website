@@ -13,6 +13,7 @@ interface MobileAISheetProps {
   messages: Message[];
   onSendMessage: (content: string) => void;
   isLoading?: boolean;
+  error?: string | null;
 }
 
 export function MobileAISheet({
@@ -22,14 +23,19 @@ export function MobileAISheet({
   messages,
   onSendMessage,
   isLoading = false,
+  error = null,
 }: MobileAISheetProps) {
   const [input, setInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!isOpen) return;
+    const id = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [messages.length, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +90,12 @@ export function MobileAISheet({
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 min-h-[200px] max-h-[50vh]">
           <div className="space-y-3">
-            {messages.length === 0 ? (
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+            {messages.length === 0 && !error ? (
               <div className="bg-background-tertiary rounded-lg p-4">
                 <p className="text-sm text-foreground">
                   Hello! I can help you manage data in your workspace. Upload a CSV

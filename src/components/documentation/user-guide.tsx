@@ -199,6 +199,7 @@ export function UserGuide() {
               <li>Set a start date to see candidates from that date forward</li>
               <li>Set an end date to see candidates up to that date</li>
               <li>Use both to see candidates within a specific time period</li>
+              <li>Click the yellow calendar icon in the date fields to open the date picker</li>
             </ul>
           </div>
 

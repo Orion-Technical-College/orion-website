@@ -1,33 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, requirePermission } from "@/lib/auth";
+import { PERMISSIONS } from "@/lib/permissions";
 
-// Force dynamic rendering since we use request headers
+// Force dynamic rendering since we use session
 export const dynamic = "force-dynamic";
-
-const prisma = new PrismaClient();
 
 /**
  * GET /api/user/api-keys
  * Retrieve API keys for the current user
- * 
- * TODO: Add authentication middleware to get current user ID
- * For now, using a temporary user lookup by email
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get user ID from session/auth token
-    // For now, we'll use a query parameter or header
-    const email = request.headers.get("x-user-email") || request.nextUrl.searchParams.get("email");
-    
-    if (!email) {
-      return NextResponse.json(
-        { error: "User email is required" },
-        { status: 400 }
-      );
-    }
+    const user = await requireAuth();
+    requirePermission(user, PERMISSIONS.CONFIGURE_API_KEYS);
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         id: true,
         email: true,
@@ -37,7 +26,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
@@ -46,15 +35,27 @@ export async function GET(request: NextRequest) {
 
     // Return API keys (masked for security)
     return NextResponse.json({
-      googleMessages: user.googleMessagesApiKey ? maskApiKey(user.googleMessagesApiKey) : null,
-      calendly: user.calendlyApiKey ? maskApiKey(user.calendlyApiKey) : null,
-      zoom: user.zoomApiKey ? maskApiKey(user.zoomApiKey) : null,
-      hasGoogleMessages: !!user.googleMessagesApiKey,
-      hasCalendly: !!user.calendlyApiKey,
-      hasZoom: !!user.zoomApiKey,
+      googleMessages: dbUser.googleMessagesApiKey ? maskApiKey(dbUser.googleMessagesApiKey) : null,
+      calendly: dbUser.calendlyApiKey ? maskApiKey(dbUser.calendlyApiKey) : null,
+      zoom: dbUser.zoomApiKey ? maskApiKey(dbUser.zoomApiKey) : null,
+      hasGoogleMessages: !!dbUser.googleMessagesApiKey,
+      hasCalendly: !!dbUser.calendlyApiKey,
+      hasZoom: !!dbUser.zoomApiKey,
     });
   } catch (error: any) {
     console.error("Error fetching API keys:", error);
+    if (error.message === "Authentication required") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    if (error.message.includes("Permission")) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: "Failed to fetch API keys" },
       { status: 500 }
@@ -68,14 +69,8 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const email = request.headers.get("x-user-email") || request.nextUrl.searchParams.get("email");
-    
-    if (!email) {
-      return NextResponse.json(
-        { error: "User email is required" },
-        { status: 400 }
-      );
-    }
+    const user = await requireAuth();
+    requirePermission(user, PERMISSIONS.CONFIGURE_API_KEYS);
 
     const body = await request.json();
     const { googleMessages, calendly, zoom } = body;
@@ -105,8 +100,8 @@ export async function PUT(request: NextRequest) {
       updateData.zoomApiKey = zoom || null;
     }
 
-    const user = await prisma.user.update({
-      where: { email },
+    const dbUser = await prisma.user.update({
+      where: { id: user.id },
       data: updateData,
       select: {
         id: true,
@@ -120,13 +115,25 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "API keys updated successfully",
-      hasGoogleMessages: !!user.googleMessagesApiKey,
-      hasCalendly: !!user.calendlyApiKey,
-      hasZoom: !!user.zoomApiKey,
+      hasGoogleMessages: !!dbUser.googleMessagesApiKey,
+      hasCalendly: !!dbUser.calendlyApiKey,
+      hasZoom: !!dbUser.zoomApiKey,
     });
   } catch (error: any) {
     console.error("Error updating API keys:", error);
     
+    if (error.message === "Authentication required") {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    if (error.message.includes("Permission")) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
     if (error.code === "P2025") {
       return NextResponse.json(
         { error: "User not found" },

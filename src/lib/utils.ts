@@ -15,9 +15,14 @@ export function formatPhoneNumber(phone: string): string {
 }
 
 export function generateSmsUri(phone: string, message: string): string {
-  const cleanPhone = phone.replace(/\D/g, "");
+  // phone should already be in E.164 format (includes +) from normalization
+  // If not normalized, clean it but preserve + if present
+  let cleanPhone = phone.replace(/\D/g, "");
+  if (phone.startsWith("+")) {
+    cleanPhone = "+" + cleanPhone;
+  }
   const encodedMessage = encodeURIComponent(message);
-  // Use &body= for iOS, ?body= for Android - most cross-platform compatible format
+  // Use ?body= for Android (most cross-platform compatible)
   return `sms:${cleanPhone}?body=${encodedMessage}`;
 }
 
@@ -25,8 +30,9 @@ export function interpolateTemplate(
   template: string,
   data: Record<string, string>
 ): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return data[key] || match;
+  // Match {{tag}} or {{tag_name}} - supports alphanumeric and underscores
+  return template.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (match, key) => {
+    return key in data ? data[key] : match;
   });
 }
 

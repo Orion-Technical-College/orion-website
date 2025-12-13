@@ -111,28 +111,35 @@ select:focus {
 
 /* Date input calendar icon styling for accessibility */
 input[type="date"] {
-  color-scheme: dark; /* Use dark color scheme for date picker */
+  color-scheme: dark;
+  /* Use dark color scheme for date picker */
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(1) brightness(2) sepia(1) hue-rotate(160deg) saturate(2);
-  opacity: 0.9;
+  filter: brightness(0) saturate(100%) invert(85%) sepia(100%) saturate(10000%) hue-rotate(0deg);
+  opacity: 1;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(100%) saturate(10000%) hue-rotate(0deg);
   opacity: 1;
-  filter: invert(1) brightness(2.5) sepia(1) hue-rotate(160deg) saturate(2.5);
 }
 
 /* Firefox date input styling */
 input[type="date"]::-moz-calendar-picker-indicator {
-  filter: invert(1) brightness(2) sepia(1) hue-rotate(160deg) saturate(2);
-  opacity: 0.9;
+  filter: brightness(0) saturate(100%) invert(85%) sepia(100%) saturate(10000%) hue-rotate(0deg);
+  opacity: 1;
   cursor: pointer;
+  width: 18px;
+  height: 18px;
 }
 
 input[type="date"]::-moz-calendar-picker-indicator:hover {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(100%) saturate(10000%) hue-rotate(0deg);
   opacity: 1;
 }
 
@@ -156,30 +163,30 @@ button:disabled {
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .glass {
     background: rgba(18, 18, 26, 0.8);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
-  
+
   .glow {
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
   }
-  
+
   .glow-subtle {
     box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
   }
-  
+
   /* Safe area for mobile devices */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  
+
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
-  
+
   /* Line clamp */
   .line-clamp-2 {
     display: -webkit-box;
@@ -188,4 +195,3 @@ button:disabled {
     overflow: hidden;
   }
 }
-

@@ -24,6 +24,7 @@ interface CampaignBuilderProps {
   onToggleCandidate: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
+  onStartGuidedSend?: (sessionId: string) => void; // Callback when session is created
 }
 
 const MERGE_TAGS = [
@@ -34,12 +35,13 @@ const MERGE_TAGS = [
   { tag: "{{zoom_link}}", label: "Zoom", color: "bg-cyan-500" },
 ];
 
-export function CampaignBuilder({
+function CampaignBuilderComponent({
   candidates,
   selectedCandidates,
   onToggleCandidate,
   onSelectAll,
   onDeselectAll,
+  onStartGuidedSend,
 }: CampaignBuilderProps) {
   const [campaignName, setCampaignName] = useState("");
   const [calendlyUrl, setCalendlyUrl] = useState("https://calendly.com/your-link");
@@ -51,6 +53,8 @@ export function CampaignBuilder({
   const [reminder2h, setReminder2h] = useState(true);
   const [sendingState, setSendingState] = useState<Record<string, "pending" | "sent" | "skipped">>({});
   const [currentSendIndex, setCurrentSendIndex] = useState<number | null>(null);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const selectedCandidatesList = useMemo(() => {
     return candidates.filter((c) => selectedCandidates.has(c.id));
@@ -81,24 +85,66 @@ export function CampaignBuilder({
     setSendingState((prev) => ({ ...prev, [candidate.id]: "sent" }));
   };
 
-  const handleBatchSend = async () => {
-    const candidatesToSend = selectedCandidatesList.filter(
-      (c) => sendingState[c.id] !== "sent"
-    );
-
-    for (let i = 0; i < candidatesToSend.length; i++) {
-      setCurrentSendIndex(i);
-      const candidate = candidatesToSend[i];
-      const message = getPreviewMessage(candidate);
-      const smsUri = generateSmsUri(candidate.phone, message);
-      window.open(smsUri, "_blank");
-      setSendingState((prev) => ({ ...prev, [candidate.id]: "sent" }));
-      
-      // Small delay between opens to prevent browser blocking
-      await new Promise((resolve) => setTimeout(resolve, 500));
+  const handleStartGuidedSend = async () => {
+    if (selectedCandidates.size === 0) {
+      return;
     }
 
-    setCurrentSendIndex(null);
+    try {
+      setIsCreatingSession(true);
+
+      // First, create or get campaign
+      // For now, we'll create a campaign if campaignName is provided
+      // In a full implementation, you'd have a campaign management system
+      let campaignId = "";
+      
+      if (campaignName) {
+        // Create campaign via API (if endpoint exists)
+        // For now, we'll use a placeholder - in production, create campaign first
+        // This is a simplified version - you may want to create campaigns separately
+        campaignId = `temp-${Date.now()}`;
+      }
+
+      const candidateIds = Array.from(selectedCandidates);
+
+      // Build variables config from campaign settings
+      const variablesConfig: Record<string, string> = {};
+      if (calendlyUrl) variablesConfig.calendly_link = calendlyUrl;
+      if (zoomUrl) variablesConfig.zoom_link = zoomUrl;
+
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": `campaign-${Date.now()}-${candidateIds.join("-")}`,
+        },
+        body: JSON.stringify({
+          campaignId: campaignId || "default", // Use default if no campaign name
+          candidateIds,
+          template: messageTemplate,
+          variablesConfig,
+          messagePolicy: "LOCKED",
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create session");
+      }
+
+      const data = await response.json();
+      setSessionId(data.sessionId);
+
+      // Trigger navigation to guided send (handled by parent)
+      if (onStartGuidedSend) {
+        onStartGuidedSend(data.sessionId);
+      }
+    } catch (error: any) {
+      console.error("[CAMPAIGN_BUILDER] Failed to start guided send:", error);
+      alert(error.message || "Failed to start guided send session");
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   const sentCount = Object.values(sendingState).filter((s) => s === "sent").length;
@@ -208,11 +254,13 @@ export function CampaignBuilder({
           <Button
             className="w-full"
             size="lg"
-            onClick={handleBatchSend}
-            disabled={selectedCandidates.size === 0}
+            onClick={handleStartGuidedSend}
+            disabled={selectedCandidates.size === 0 || isCreatingSession}
           >
             <Send className="h-4 w-4 mr-2" />
-            Send to {selectedCandidates.size} candidate{selectedCandidates.size !== 1 ? "s" : ""}
+            {isCreatingSession
+              ? "Starting..."
+              : `Start Guided Send (${selectedCandidates.size} candidate${selectedCandidates.size !== 1 ? "s" : ""})`}
           </Button>
         </CardContent>
       </Card>
@@ -306,3 +354,6 @@ export function CampaignBuilder({
   );
 }
 
+// Memoize to prevent unnecessary re-renders
+export const CampaignBuilder = React.memo(CampaignBuilderComponent);
+CampaignBuilder.displayName = "CampaignBuilder";

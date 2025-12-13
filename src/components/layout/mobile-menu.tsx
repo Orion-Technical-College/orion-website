@@ -13,7 +13,7 @@ interface MobileMenuProps {
   onNavigate: (tab: string) => void;
 }
 
-export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
+function MobileMenuComponent({ isOpen, onClose, onNavigate }: MobileMenuProps) {
   const router = useRouter();
   const [userName, setUserName] = useState(() => getProfile().name);
 
@@ -134,3 +134,6 @@ export function MobileMenu({ isOpen, onClose, onNavigate }: MobileMenuProps) {
   );
 }
 
+// Memoize to prevent unnecessary re-renders
+export const MobileMenu = React.memo(MobileMenuComponent);
+MobileMenu.displayName = "MobileMenu";

@@ -10,48 +10,125 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Note: SQL Server doesn't support enums, using String with constraint
+// Role values: PLATFORM_ADMIN, RECRUITER, CLIENT_ADMIN, CLIENT_USER, CANDIDATE
+
 model User {
-  id               String     @id @default(cuid())
-  email            String     @unique
-  name             String
-  phone            String?
-  pushSubscription String?    @db.Text
-  googleMessagesApiKey String? @db.Text
-  calendlyApiKey   String?    @db.Text
-  zoomApiKey       String?    @db.Text
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  campaigns        Campaign[]
-  candidates       Candidate[]
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  name               String
+  phone              String?
+  role               String     @default("RECRUITER") // PLATFORM_ADMIN, RECRUITER, CLIENT_ADMIN, CLIENT_USER, CANDIDATE
+  passwordHash       String?
+  emailVerified      DateTime?
+  mustChangePassword Boolean    @default(false) // Force password change on next login
+  isActive           Boolean    @default(false) // Require activation
+  isInternal         Boolean    @default(false) // true for PLATFORM_ADMIN, RECRUITER
+  
+  // Auth provider mapping (critical for Azure AD B2C)
+  authProvider       String?    // "credentials", "azureadb2c"
+  authProviderId     String?    // subject/oid from provider (stable identity)
+  
+  // Tenant scoping
+  clientId           String?    // Required for CLIENT_ADMIN, CLIENT_USER, CANDIDATE
+  client             Client?    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // User management tracking
+  createdBy          String?    // User ID who created this user (for audit)
+  creator            User?      @relation("UserCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUsers       User[]     @relation("UserCreator")
+  
+  // Soft delete
+  deletedAt          DateTime?  // Soft delete timestamp
+  
+  // Candidate relationship (one-directional: Candidate -> User)
+  candidate          Candidate? // One-to-one: if role is CANDIDATE
+  
+  // User data
+  pushSubscription   String?    @db.Text
+  googleMessagesApiKey String?  @db.Text
+  calendlyApiKey     String?    @db.Text
+  zoomApiKey         String?    @db.Text
+  
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  
+  campaigns          Campaign[]
+  candidatesManaged  Candidate[] @relation("CandidateRecruiter")
+  guidedSendSessions GuidedSendSession[]
+  
+  @@index([role])
+  @@index([clientId])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@index([authProvider, authProviderId]) // For provider identity lookups
+  @@index([isInternal])
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  // For email domain matching (optional)
+  isActive    Boolean  @default(true)
+  deletedAt   DateTime? // Soft delete timestamp
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+  candidates  Candidate[]
+  
+  @@index([isActive])
+  @@index([deletedAt])
 }
 
 model Candidate {
   id                 String              @id @default(cuid())
-  userId             String
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Tenant boundary: Every candidate belongs to a client (REQUIRED)
+  clientId           String              // REQUIRED - no orphan candidates
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // User relationship (one-directional: Candidate -> User)
+  userId             String?             @unique // If candidate has login account
+  user               User?               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Recruiter who manages this candidate
+  recruiterId        String?             // User ID of recruiter (for audit)
+  recruiter          User?               @relation("CandidateRecruiter", fields: [recruiterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Candidate data
   name               String
   email              String
   phone              String
   source             String?
-  client             String?
   jobTitle           String?
   location           String?
   date               String?
-  status             String              @default("PENDING") // PENDING, INTERVIEWED, HIRED, DENIED, CONSENT_FORM_SENT
+  status             String              @default("PENDING")
   notes              String?             @db.Text
+  
+  // SMS consent tracking (compliance)
+  smsConsentStatus   String              @default("UNKNOWN") // UNKNOWN, OPTED_IN, OPTED_OUT
+  smsOptInAt         DateTime?
+  smsOptInSource     String?             // Source of consent (e.g., "IMPORT", "MANUAL", "API")
+  smsOptOutAt        DateTime?
+  smsOptOutReason    String?
+  
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   campaignRecipients CampaignRecipient[]
-
+  guidedSendRecipients GuidedSendRecipient[]
+  
   @@index([userId])
   @@index([status])
-  @@index([client])
+  @@index([clientId]) // Critical for tenant isolation
+  @@index([recruiterId])
+  @@index([smsConsentStatus])
 }
 
 model Campaign {
   id                String              @id @default(cuid())
   userId            String
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   name              String
   calendlyUrl       String?
   zoomUrl           String?
@@ -61,6 +138,7 @@ model Campaign {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   recipients        CampaignRecipient[]
+  guidedSendSessions GuidedSendSession[]
 
   @@index([userId])
   @@index([status])
@@ -82,4 +160,101 @@ model CampaignRecipient {
   @@index([campaignId])
   @@index([candidateId])
   @@index([status])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String   // User ID who performed action
+  actorRole String   // Role at time of action (PLATFORM_ADMIN, RECRUITER, etc.)
+  action    String   // e.g., "USER_CREATED", "CANDIDATE_UPDATED", "IMPERSONATION_STARTED"
+  targetId  String?  // ID of affected resource
+  targetType String? // "User", "Candidate", "Client", etc.
+  metadata  String?  @db.Text // Additional context as JSON string (IP, user agent, impersonated user, etc.)
+  createdAt DateTime @default(now())
+  
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@index([targetType])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g., 'FEATURE_AI_ASSISTANT'
+  value       String   @db.Text // JSON or string value
+  description String?
+  isEnabled   Boolean  @default(true)
+  updatedBy   String   // User ID
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  
+  @@index([key])
+  @@index([isEnabled])
+}
+
+// Guided Send Session Models
+// Note: SQL Server doesn't support native enums, using String with constraint comments
+
+model GuidedSendSession {
+  id                 String              @id @default(cuid())
+  campaignId         String
+  campaign           Campaign            @relation(fields: [campaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUserId    String
+  createdBy          User                @relation(fields: [createdByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  idempotencyKey     String?             // For idempotent session creation (scoped unique)
+  clientId           String              // Required - Tenant scope (for multi-tenant isolation)
+  status             String              @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  templateSnapshot   String              @db.Text // Exact template used when session started
+  templateVersion    Int                 @default(1) // Version if template is edited
+  variablesSnapshot  String?             @db.Text // JSON of variables used (not just template)
+  messagePolicy      String              @default("LOCKED") // LOCKED, EDITABLE_PER_RECIPIENT
+  aiDraftMeta        String?             @db.Text // JSON metadata about AI-generated template
+  currentIndex        Int                 @default(0) // Convenience field (not source of truth)
+  lastActiveRecipientId String?          // Deterministic resume (not just index)
+  device              String?             // e.g., "PWA_ANDROID"
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  recipients          GuidedSendRecipient[]
+
+  @@unique([clientId, createdByUserId, idempotencyKey]) // Scoped idempotency (includes tenant scope)
+  @@index([campaignId])
+  @@index([createdByUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([clientId])
+}
+
+model GuidedSendRecipient {
+  id                      String              @id @default(cuid())
+  sessionId               String
+  session                 GuidedSendSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidateId             String
+  candidate               Candidate           @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  order                   Int                 // Preserves sort order (not dependent on candidateIds array)
+  phoneRaw                String?             // Original phone number as entered (for auditability)
+  phoneE164               String?             // Normalized phone number in E.164 format (includes +) - nullable if invalid
+  renderedMessage         String              @db.Text // Exact text sent to this recipient (audit trail)
+  renderedFromTemplateVersion Int             @default(1) // Which template version was used (if edited mid-session)
+  status                  String              @default("PENDING") // PENDING, OPENED, SENT, SKIPPED, BLOCKED, CANCELLED, FAILED
+  openedAt                DateTime?
+  openCount               Int                 @default(0) // Number of times opened (for retry tracking)
+  lastOpenedAt            DateTime?           // Most recent open time
+  sentAt                  DateTime?
+  skippedReason           String?             // Why candidate was skipped (user action)
+  blockedReason           String?             // OPTED_OUT, CONSENT_UNKNOWN, INVALID_PHONE
+  audit                   String?             @db.Text // JSON metadata (message hash, edits, etc.)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@unique([sessionId, candidateId]) // Prevent duplicate candidates in session
+  @@unique([sessionId, order]) // Preserve order integrity
+  @@index([sessionId, status, order]) // Composite index for nextRecipientId queries
+  @@index([sessionId])
+  @@index([candidateId])
+  @@index([status])
+  @@index([phoneE164])
+  @@index([order])
+  @@index([phoneRaw])
 }

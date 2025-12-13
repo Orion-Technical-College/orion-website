@@ -17,6 +17,12 @@ export interface Candidate {
   date: string;
   status: CandidateStatus;
   notes: string;
+  // SMS consent tracking
+  smsConsentStatus?: "UNKNOWN" | "OPTED_IN" | "OPTED_OUT";
+  smsOptInAt?: Date;
+  smsOptInSource?: string;
+  smsOptOutAt?: Date;
+  smsOptOutReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +63,8 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  traceId?: string; // Langfuse trace ID for feedback
+  correlationId?: string; // Request correlation ID
 }
 
 export interface ColumnMapping {

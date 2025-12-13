@@ -18,15 +18,15 @@ export interface UpdateApiKeysRequest {
 }
 
 /**
- * Get API keys for the current user
- * TODO: Replace with actual authentication token
+ * Get API keys for the current user (uses session-based auth)
  */
-export async function getApiKeys(userEmail: string): Promise<ApiKeysResponse> {
-  const response = await fetch(`/api/user/api-keys?email=${encodeURIComponent(userEmail)}`, {
+export async function getApiKeys(): Promise<ApiKeysResponse> {
+  const response = await fetch(`/api/user/api-keys`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -38,18 +38,17 @@ export async function getApiKeys(userEmail: string): Promise<ApiKeysResponse> {
 }
 
 /**
- * Update API keys for the current user
- * TODO: Replace with actual authentication token
+ * Update API keys for the current user (uses session-based auth)
  */
 export async function updateApiKeys(
-  userEmail: string,
   keys: UpdateApiKeysRequest
 ): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`/api/user/api-keys?email=${encodeURIComponent(userEmail)}`, {
+  const response = await fetch(`/api/user/api-keys`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(keys),
   });
 

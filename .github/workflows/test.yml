@@ -1,0 +1,163 @@
+# EMC Workspace - Test Suite
+# Runs Jest unit/integration tests and Playwright E2E tests on PR/push
+
+name: Test Suite
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '20.x'
+  DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+
+jobs:
+  unit-and-integration:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Generate coverage report
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unit,integration
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Setup test database
+        run: |
+          # Run migrations on test database
+          npx prisma migrate deploy
+          # Seed test data
+          npm run db:seed
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Build application for E2E tests
+        run: npm run build
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          NODE_ENV: test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-and-integration, e2e]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit & Integration Tests: ${{ needs.unit-and-integration.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ E2E Tests: ${{ needs.e2e.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.unit-and-integration.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "❌ Some tests failed. Please check the logs above." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+          fi
+
