@@ -44,6 +44,12 @@ jobs:
         timeout-minutes: 2
         run: npx prisma generate
 
+      - name: Run database migrations
+        timeout-minutes: 5
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Build application
         timeout-minutes: 5
         run: npm run build
