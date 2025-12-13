@@ -44,6 +44,33 @@ jobs:
         timeout-minutes: 2
         run: npx prisma generate
 
+      - name: Validate DATABASE_URL format
+        timeout-minutes: 1
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "❌ ERROR: DATABASE_URL secret is not set in GitHub Secrets"
+            echo ""
+            echo "Please add DATABASE_URL to GitHub Secrets:"
+            echo "  1. Go to: Settings → Secrets and variables → Actions"
+            echo "  2. Add secret: DATABASE_URL"
+            echo "  3. Value format: sqlserver://server.database.windows.net:1433;database=DB_NAME;user=USERNAME;password=PASSWORD;encrypt=true"
+            exit 1
+          fi
+          
+          DB_URL="${{ secrets.DATABASE_URL }}"
+          if [[ ! "$DB_URL" =~ ^sqlserver:// ]]; then
+            echo "❌ ERROR: DATABASE_URL must start with 'sqlserver://'"
+            echo ""
+            echo "Current format appears incorrect. Expected format:"
+            echo "  sqlserver://server.database.windows.net:1433;database=DB_NAME;user=USERNAME;password=PASSWORD;encrypt=true"
+            echo ""
+            echo "Please update the DATABASE_URL secret in GitHub:"
+            echo "  Settings → Secrets and variables → Actions → DATABASE_URL"
+            exit 1
+          fi
+          
+          echo "✓ DATABASE_URL format validated"
+
       - name: Run database migrations
         timeout-minutes: 5
         run: npx prisma migrate deploy
