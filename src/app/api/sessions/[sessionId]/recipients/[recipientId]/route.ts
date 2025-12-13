@@ -108,12 +108,6 @@ export async function PATCH(
         break;
 
       case "MARK_SENT":
-        if (recipient.status !== "OPENED") {
-          return NextResponse.json(
-            { error: `Cannot MARK_SENT recipient with status ${recipient.status}` },
-            { status: 400 }
-          );
-        }
         // Idempotency: ignore if already SENT
         if (recipient.status === "SENT") {
           // Return existing state without error
@@ -130,6 +124,12 @@ export async function PATCH(
             nextRecipientId,
             counts,
           });
+        }
+        if (recipient.status !== "OPENED") {
+          return NextResponse.json(
+            { error: `Cannot MARK_SENT recipient with status ${recipient.status}` },
+            { status: 400 }
+          );
         }
         newStatus = "SENT";
         updateData = {

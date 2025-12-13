@@ -7,8 +7,8 @@ import { testPrisma } from "../setup/db";
 import type { User, Candidate, Campaign } from "@prisma/client";
 
 // Skip integration tests if DATABASE_URL is not configured or doesn't contain "_test"
-const shouldSkipIntegrationTests = 
-  !process.env.DATABASE_URL || 
+const shouldSkipIntegrationTests =
+  !process.env.DATABASE_URL ||
   !process.env.DATABASE_URL.includes("_test") ||
   process.env.NODE_ENV !== "test";
 

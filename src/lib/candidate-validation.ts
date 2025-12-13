@@ -1,5 +1,4 @@
 import { normalizePhoneToE164, isValidPhoneNumber } from "./phone-normalize";
-import type { Candidate } from "@/types";
 
 export type SmsConsentStatus = "UNKNOWN" | "OPTED_IN" | "OPTED_OUT";
 
@@ -10,13 +9,22 @@ export interface CanSendSmsResult {
 }
 
 /**
+ * Candidate type for SMS validation (minimal fields needed)
+ */
+interface CandidateForValidation {
+  phone: string;
+  smsConsentStatus?: string | null;
+  smsOptOutAt?: Date | null;
+}
+
+/**
  * Check if SMS can be sent to a candidate
- * @param candidate - Candidate object
+ * @param candidate - Candidate object (from Prisma or types)
  * @param defaultRegion - Default country code for phone validation (default: "US")
  * @returns Result with allowed status and reason
  */
 export function canSendSms(
-  candidate: Candidate,
+  candidate: CandidateForValidation,
   defaultRegion: string = "US"
 ): CanSendSmsResult {
   // Check consent status - UNKNOWN is treated as blocked per policy
@@ -65,12 +73,12 @@ export function canSendSms(
 
 /**
  * Determine blocked reason for a candidate
- * @param candidate - Candidate object
+ * @param candidate - Candidate object (from Prisma or types)
  * @param phoneE164 - Normalized phone number (null if invalid)
  * @returns Blocked reason enum value or null if not blocked
  */
 export function getBlockedReason(
-  candidate: Candidate,
+  candidate: CandidateForValidation,
   phoneE164: string | null
 ): "OPTED_OUT" | "CONSENT_UNKNOWN" | "INVALID_PHONE" | null {
   if (candidate.smsConsentStatus === "OPTED_OUT" || candidate.smsOptOutAt) {

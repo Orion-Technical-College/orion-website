@@ -431,14 +431,22 @@ export async function chatWithContext(
         // Langfuse trace objects have an id property that is the traceId
         traceId = (trace as any)?.id || metadata?.traceId;
 
+        // Build modelParameters, filtering out undefined values
+        const modelParameters: Record<string, any> = {};
+        if (chatOptions.temperature !== undefined) {
+          modelParameters.temperature = chatOptions.temperature;
+        }
+        if (chatOptions.max_tokens !== undefined) {
+          modelParameters.max_tokens = chatOptions.max_tokens;
+        }
+        if (chatOptions.max_completion_tokens !== undefined) {
+          modelParameters.max_completion_tokens = chatOptions.max_completion_tokens;
+        }
+
         generation = trace.generation({
           name: "azure-openai-chat",
           model: deploymentName,
-          modelParameters: {
-            temperature: chatOptions.temperature,
-            max_tokens: chatOptions.max_tokens,
-            max_completion_tokens: chatOptions.max_completion_tokens,
-          },
+          modelParameters,
           input: messages,
         });
       } catch (langfuseError) {
@@ -529,7 +537,6 @@ export async function chatWithContext(
         trace.update({
           output: messageText, // Use cleaned message text (what user actually sees)
           metadata: {
-            ...trace.metadata,
             hasFilters: !!suggestedFilters,
             filterKeys: suggestedFilters ? Object.keys(suggestedFilters) : [],
           },
@@ -705,14 +712,22 @@ export async function processCSVWithAI(
           ...(metadata?.traceId && { id: metadata.traceId }),
         });
 
+        // Build modelParameters, filtering out undefined values
+        const csvModelParameters: Record<string, any> = {};
+        if (chatOptions.temperature !== undefined) {
+          csvModelParameters.temperature = chatOptions.temperature;
+        }
+        if (chatOptions.max_tokens !== undefined) {
+          csvModelParameters.max_tokens = chatOptions.max_tokens;
+        }
+        if (chatOptions.max_completion_tokens !== undefined) {
+          csvModelParameters.max_completion_tokens = chatOptions.max_completion_tokens;
+        }
+
         generation = trace.generation({
           name: "azure-openai-csv-analysis",
           model: deploymentName,
-          modelParameters: {
-            temperature: chatOptions.temperature,
-            max_tokens: chatOptions.max_tokens,
-            max_completion_tokens: chatOptions.max_completion_tokens,
-          },
+          modelParameters: csvModelParameters,
           input: messages,
         });
       } catch (langfuseError) {
