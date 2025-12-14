@@ -41,7 +41,9 @@ public/workbox-*.js
 public/workbox-*.js.map
 
 # Prisma
-prisma/migrations/
+# Note: prisma/migrations/ should be committed to version control
+# Only ignore migration lock files if needed
+# prisma/migrations/
 
 # IDE
 .idea/
