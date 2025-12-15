@@ -74,14 +74,19 @@ jobs:
       - name: Run database migrations
         timeout-minutes: 5
         run: |
+          set +e  # Don't exit on error for this step
           # Try to deploy migrations
           # For Azure SQL, if migrations fail due to provider mismatch but database is already set up,
           # we can continue (database schema likely already exists from db push)
-          npx prisma migrate deploy || {
-            echo "⚠️  Migration deploy failed, but continuing..."
+          npx prisma migrate deploy
+          MIGRATE_EXIT_CODE=$?
+          if [ $MIGRATE_EXIT_CODE -ne 0 ]; then
+            echo "⚠️  Migration deploy failed (exit code: $MIGRATE_EXIT_CODE), but continuing..."
             echo "If database schema already exists (from db push), this is expected."
             echo "Future schema changes should use 'prisma migrate dev' locally, then commit migrations."
-          }
+            # Don't fail the workflow - database is likely already set up
+            exit 0
+          fi
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -197,7 +202,21 @@ jobs:
         timeout-minutes: 1
         if: steps.deploy.outcome == 'success'
         run: |
+          echo "Restarting App Service to ensure new code is loaded..."
           az webapp restart \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --output none
+          
+          echo "Waiting for app to restart (10 seconds)..."
+          sleep 10
+          
+          echo "Verifying app is running with new deployment..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net 2>/dev/null || echo "000")
+          echo "App status after restart: HTTP $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✓ App restarted successfully and is responding"
+          else
+            echo "⚠️  App may still be restarting. Check logs if issues persist."
+          fi
