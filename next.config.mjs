@@ -58,8 +58,8 @@ const pwaConfig = withPWA({
   sw: "sw.js",
   // Add build ID to service worker for cache busting
   publicExcludes: ["!sw.js", "!sw.js.map", "!workbox-*.js", "!workbox-*.js.map"],
-  // Add build timestamp to force service worker updates
-  buildId: process.env.NEXT_BUILD_ID || Date.now().toString(),
+  // Use cacheId for cache busting (buildId is not supported by next-pwa)
+  cacheId: process.env.NEXT_BUILD_ID || Date.now().toString(),
   // Disable aggressive caching for HTML pages
   runtimeCaching: [
     {
