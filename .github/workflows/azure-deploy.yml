@@ -20,7 +20,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Fail fast - 15 minute total timeout
+    timeout-minutes: 30  # Allow time for large deployments (20MB+ packages can take 15-20 minutes)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -166,8 +166,9 @@ jobs:
 
       # Deploy using azure/webapps-deploy action with increased timeout
       # Large deployments (20MB+) can take longer, especially on slower connections
+      # Azure OneDeploy can take 15-20 minutes for large packages
       - name: Deploy to Azure Web App
-        timeout-minutes: 10
+        timeout-minutes: 20
         uses: azure/webapps-deploy@v3
         id: deploy
         with:
