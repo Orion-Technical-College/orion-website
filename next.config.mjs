@@ -26,6 +26,21 @@ const nextConfig = {
             key: "X-XSS-Protection",
             value: "1; mode=block",
           },
+          // Cache control for static assets - short cache with revalidation
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, must-revalidate",
+          },
+        ],
+      },
+      // More aggressive cache busting for JS/CSS files
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
         ],
       },
     ];
@@ -38,6 +53,11 @@ const pwaConfig = withPWA({
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
   buildExcludes: [/middleware-manifest\.json$/],
+  // Force service worker update on each deployment
+  reloadOnOnline: true,
+  sw: "sw.js",
+  // Add build ID to service worker for cache busting
+  publicExcludes: ["!sw.js", "!sw.js.map", "!workbox-*.js", "!workbox-*.js.map"],
 });
 
 export default pwaConfig(nextConfig);

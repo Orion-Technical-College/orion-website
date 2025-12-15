@@ -92,9 +92,16 @@ jobs:
 
       - name: Build application
         timeout-minutes: 5
-        run: npm run build
+        run: |
+          # Clear Next.js cache to ensure fresh build
+          rm -rf .next
+          # Build with timestamp for cache busting
+          BUILD_TIMESTAMP=$(date +%s)
+          npm run build
+          echo "Build completed at timestamp: $BUILD_TIMESTAMP"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_BUILD_ID: ${{ github.run_number }}-${{ github.sha }}
 
       - name: Login to Azure
         timeout-minutes: 2
@@ -105,6 +112,7 @@ jobs:
       - name: Configure app settings
         timeout-minutes: 2
         run: |
+          BUILD_ID="${{ github.run_number }}-${{ github.sha }}"
           az webapp config appsettings set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
@@ -116,7 +124,8 @@ jobs:
               WEBSITE_PORT=8080 \
               WEBSITES_PORT=8080 \
               HOSTNAME=0.0.0.0 \
-              NODE_ENV=production
+              NODE_ENV=production \
+              NEXT_BUILD_ID="$BUILD_ID"
           
           az webapp config set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
