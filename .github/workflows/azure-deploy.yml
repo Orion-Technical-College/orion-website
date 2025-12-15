@@ -73,15 +73,7 @@ jobs:
 
       - name: Run database migrations
         timeout-minutes: 5
-        run: |
-          # Try to deploy migrations
-          # If migration already applied or database is in sync, this will handle it gracefully
-          npx prisma migrate deploy || {
-            echo "Migration deploy failed, checking if database is already in sync..."
-            # If the error is about provider mismatch or migration already applied,
-            # we can try to resolve it or continue (database might already be set up)
-            echo "Continuing with build - database may already be configured"
-          }
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
