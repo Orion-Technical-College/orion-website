@@ -164,9 +164,10 @@ jobs:
           echo "Final zip size:"
           ls -lh deploy.zip
 
-      # Deploy using azure/webapps-deploy action with timeout
+      # Deploy using azure/webapps-deploy action with increased timeout
+      # Large deployments (20MB+) can take longer, especially on slower connections
       - name: Deploy to Azure Web App
-        timeout-minutes: 5
+        timeout-minutes: 10
         uses: azure/webapps-deploy@v3
         id: deploy
         with:
