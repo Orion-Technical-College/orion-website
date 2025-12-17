@@ -210,7 +210,7 @@ jobs:
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_ATTEMPTS: HTTP $HTTP_CODE"
             
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "307" ]; then
               echo "✓ App is responding (HTTP $HTTP_CODE)"
               exit 0
             fi
