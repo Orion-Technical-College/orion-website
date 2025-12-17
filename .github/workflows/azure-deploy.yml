@@ -131,10 +131,11 @@ jobs:
           
           mkdir -p deploy
           
-          # Copy entire standalone output (includes .next/ folder with BUILD_ID, manifests, etc.)
-          cp -r .next/standalone/* deploy/
+          # Copy standalone output - use "." to include hidden folders like .next
+          # Using cp -r source/. dest/ copies ALL contents including hidden files
+          cp -r .next/standalone/. deploy/
           
-          # Copy static assets INTO the existing .next folder (don't overwrite!)
+          # Copy static assets INTO the existing .next folder
           cp -r .next/static deploy/.next/
           
           # Copy public folder
@@ -149,6 +150,8 @@ jobs:
             echo "✓ BUILD_ID found: $(cat deploy/.next/BUILD_ID)"
           else
             echo "✗ ERROR: BUILD_ID missing!"
+            ls -la deploy/
+            ls -la deploy/.next/ 2>/dev/null || echo "No .next folder"
             exit 1
           fi
           
