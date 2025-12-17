@@ -37,6 +37,7 @@ import {
 import { ROLES } from "@/lib/permissions";
 import { UserFormDialog } from "./user-form-dialog";
 import { ConfirmDialog } from "./confirm-dialog";
+import { SetPasswordDialog } from "./set-password-dialog";
 import { cn } from "@/lib/utils";
 import type { UserQueryFilters, UserFormData, Role } from "@/types/admin";
 import type { User, Client } from "@prisma/client";
@@ -69,9 +70,9 @@ export function UserManagement() {
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithClient | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [resetPasswordConfirmOpen, setResetPasswordConfirmOpen] = useState(false);
+  const [setPasswordDialogOpen, setSetPasswordDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithClient | null>(null);
-  const [userToReset, setUserToReset] = useState<UserWithClient | null>(null);
+  const [userToSetPassword, setUserToSetPassword] = useState<UserWithClient | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -348,10 +349,10 @@ export function UserManagement() {
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => {
-                    setUserToReset(user);
-                    setResetPasswordConfirmOpen(true);
+                    setUserToSetPassword(user);
+                    setSetPasswordDialogOpen(true);
                   }}
-                  title="Reset password"
+                  title="Set password"
                 >
                   <Key className="h-3.5 w-3.5" />
                 </Button>
@@ -469,30 +470,32 @@ export function UserManagement() {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!userToReset) return;
+  const handleSetPassword = async (password: string) => {
+    if (!userToSetPassword) return;
 
     try {
       setIsSubmitting(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/users/${userToReset.id}/reset-password`, {
+      const response = await fetch(`/api/admin/users/${userToSetPassword.id}/reset-password`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
       });
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error?.message || "Failed to reset password");
+        throw new Error(result.error?.message || "Failed to set password");
       }
 
-      setSuccessMessage("Password reset successfully. User will be required to change password on next login.");
+      setSuccessMessage("Password set successfully. User will be required to change password on next login.");
       setTimeout(() => setSuccessMessage(null), 5000);
       fetchUsers();
     } catch (err: any) {
-      setError(err.message || "Failed to reset password");
+      setError(err.message || "Failed to set password");
+      throw err; // Re-throw to let the dialog handle the error
     } finally {
       setIsSubmitting(false);
-      setUserToReset(null);
     }
   };
 
@@ -693,15 +696,15 @@ export function UserManagement() {
         isLoading={isSubmitting}
       />
 
-      {/* Reset Password Confirmation */}
-      <ConfirmDialog
-        open={resetPasswordConfirmOpen}
-        onOpenChange={setResetPasswordConfirmOpen}
-        onConfirm={handleResetPassword}
-        title="Reset Password"
-        description={`Reset password for ${userToReset?.name}? A temporary password will be generated and the user will be required to change it on next login.`}
-        severity="warning"
-        confirmLabel="Reset Password"
+      {/* Set Password Dialog */}
+      <SetPasswordDialog
+        open={setPasswordDialogOpen}
+        onOpenChange={(open) => {
+          setSetPasswordDialogOpen(open);
+          if (!open) setUserToSetPassword(null);
+        }}
+        onConfirm={handleSetPassword}
+        userName={userToSetPassword?.name || ""}
         isLoading={isSubmitting}
       />
     </>
