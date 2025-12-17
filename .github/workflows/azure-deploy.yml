@@ -124,19 +124,42 @@ jobs:
       - name: Create deployment package
         timeout-minutes: 2
         run: |
+          # Next.js standalone output creates a self-contained deployment
+          # Structure: .next/standalone/ contains server.js and minimal node_modules
+          # We need to copy static assets into the .next folder within standalone
+          
           mkdir -p deploy
+          
+          # Copy the standalone output (includes server.js, node_modules, and .next folder)
           cp -r .next/standalone/* deploy/
-          cp -r .next/static deploy/.next/
+          
+          # The standalone .next folder is missing static assets - copy them in
+          # This is required: https://nextjs.org/docs/advanced-features/output-file-tracing
+          cp -r .next/static deploy/.next/static
+          
+          # Copy public folder for static files (images, favicon, etc.)
           cp -r public deploy/
+          
+          # Copy prisma schema for runtime
           cp -r prisma deploy/
           
-          echo "Deployment package size:"
-          du -sh deploy
+          # Verify the deployment structure
+          echo "=== Deployment structure ==="
+          echo "Root files:"
+          ls -la deploy/
+          echo ""
+          echo ".next directory:"
+          ls -la deploy/.next/ || echo "ERROR: .next folder missing!"
+          echo ""
+          echo ".next/static directory:"
+          ls -la deploy/.next/static/ || echo "ERROR: .next/static folder missing!"
           
+          # Create zip
           cd deploy
           zip -r ../deploy.zip . -q
           cd ..
           
+          echo ""
           echo "Final zip size:"
           ls -lh deploy.zip
 
