@@ -164,19 +164,30 @@ jobs:
           echo "Final zip size:"
           ls -lh deploy.zip
 
-      # Deploy using azure/webapps-deploy action with increased timeout
+      # Deploy using Azure CLI zip deploy (more reliable than webapps-deploy@v3)
       # Large deployments (20MB+) can take longer, especially on slower connections
       # Azure OneDeploy can take 15-20 minutes for large packages
       - name: Deploy to Azure Web App
         timeout-minutes: 20
-        uses: azure/webapps-deploy@v3
         id: deploy
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
-          package: deploy.zip
-          type: zip
-          restart: false
+        run: |
+          echo "Deploying package to Azure App Service..."
+          echo "Package size: $(ls -lh deploy.zip | awk '{print $5}')"
+          
+          # Use Azure CLI zip deploy for better reliability and error messages
+          az webapp deployment source config-zip \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --src deploy.zip \
+            --timeout 1200 \
+            --output none
+          
+          if [ $? -eq 0 ]; then
+            echo "✓ Deployment completed successfully"
+          else
+            echo "✗ Deployment failed with exit code: $?"
+            exit 1
+          fi
 
       - name: Verify deployment
         timeout-minutes: 3
