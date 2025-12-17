@@ -4,6 +4,7 @@ import withPWA from "next-pwa";
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone", // Create self-contained deployment for Azure
+  compress: false, // DISABLES Next.js compression; lets Azure App Service handle Gzip/Brotli
   // Security headers
   async headers() {
     return [

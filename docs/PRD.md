@@ -400,10 +400,11 @@ The decision to use recruiters' personal phone numbers (via `sms:` URI) rather t
 - Azure App Service auto-scaling capability
 
 **Infrastructure:**
-- Azure SQL Database (Standard S0 tier, scalable)
-- Azure App Service (Basic B1, can scale up)
-- CDN-ready static assets
-- Database connection pooling
+- **Azure SQL Database**: Standard S0 tier, scalable to S4+.
+- **Azure App Service**: Standard S1 tier with auto-scaling enabled (1-3 instances).
+- **CDN**: Azure Front Door for global static asset delivery.
+- **Database**: Connection pooling via Prisma and Azure SQL.
+- **Deployment**: Deployment slots enabled for zero-downtime updates.
 
 ### NFR4: Accessibility
 
@@ -472,13 +473,16 @@ The decision to use recruiters' personal phone numbers (via `sms:` URI) rather t
 | UI Components | shadcn/ui, Radix UI | Latest | Accessible component library |
 | Data Table | TanStack Table | 8.x | Advanced table functionality |
 | Database ORM | Prisma | 5.22.0 | Type-safe database access |
-| Database | Azure SQL | - | Production database |
+| Database | Azure SQL | Standard S0 | Production database (scalable) |
 | AI | Azure OpenAI | GPT-4o | Natural language processing |
 | Auth | NextAuth.js | 4.x | Authentication (planned) |
 | PWA | next-pwa | 5.6.0 | Progressive Web App |
 | File Parsing | PapaParse | 5.4.1 | CSV/Excel parsing |
-| Hosting | Azure App Service | - | Cloud hosting |
+| Hosting | Azure App Service | Standard S1 | Auto-scaling hosting with deployment slots |
 | CI/CD | GitHub Actions | - | Automated deployment |
+| CDN | Azure Front Door | - | Static asset delivery & global performance |
+| Secrets | Azure Key Vault | - | Secure storage for API keys and secrets |
+| Identity | Managed Identity | System Assigned | Zero-trust access to SQL and Key Vault |
 
 ### Database Schema
 
@@ -563,12 +567,17 @@ model CampaignRecipient {
 ### Deployment Architecture
 
 **Infrastructure:**
-- **Resource Group**: `orion-website-rg` (reused from Orion project)
-- **App Service**: `emc-workspace` (Linux, Node.js 20)
-- **App Service Plan**: `emc-workspace-plan` (Basic B1)
-- **SQL Server**: `orionweb-sqlserver` (existing)
-- **Database**: `EMCWorkspaceDB` (new)
-- **Region**: Central US
+- **Resource Group**: `orion-website-rg` (reused from Orion project).
+- **App Service**: `emc-workspace` (Linux, Node.js 20).
+- **App Service Plan**: `emc-workspace-plan` (**Standard S1**).
+  - Auto-scaling enabled (1-3 instances).
+  - Deployment slots for zero-downtime updates.
+  - Pre-warming capabilities for reduced cold starts.
+- **SQL Server**: `orionweb-sqlserver` (existing).
+- **Database**: `EMCWorkspaceDB` (Standard S0 tier, scalable).
+- **CDN**: Azure Front Door (for static asset delivery).
+- **Key Vault**: Azure Key Vault (for system secrets).
+- **Region**: Central US.
 
 **CI/CD Pipeline:**
 - GitHub Actions workflow (`.github/workflows/azure-deploy.yml`)
@@ -588,28 +597,50 @@ model CampaignRecipient {
 8. Verify deployment health
 9. Restart application
 
+### Performance Optimizations
+
+**Next.js Configuration:**
+- `output: 'standalone'`: Creates a self-contained deployment package.
+- `compress: false`: Disables Next.js compression to allow Azure IIS/Nginx to handle Gzip/Brotli efficiently.
+
+**CDN Strategy:**
+- Azure Front Door serves `/_next/static/` assets globally.
+- Reduces App Service CPU load by offloading static content.
+- Improves load times for distributed users.
+
+**Build Optimization:**
+- GitHub Actions caching for `node_modules` to speed up builds.
+- Artifact reduction: Only deploy `.next/standalone` + static assets (reduces package size from >500MB to <50MB).
+
 ### Security Architecture
 
+**Zero-Trust Security Model:**
+
+**Identity & Access:**
+- **System-Assigned Managed Identity**: App Service uses a managed identity (no passwords) to authenticate with:
+  - Azure SQL Database.
+  - Azure OpenAI service.
+  - Azure Key Vault.
+- **Azure AD Integration**: User authentication via NextAuth.js (planned).
+
+**Secrets Management:**
+- **Azure Key Vault**: All system secrets are stored centrally in Key Vault, not the database.
+  - Third-party API keys (Calendly, Zoom, Google Messages).
+  - Database connection strings (via Key Vault references).
+  - Azure OpenAI keys.
+- **App Service Settings**: Application references secrets using `@Microsoft.KeyVault(...)` syntax.
+- **No Secrets in Database**: API keys are removed from the SQL database columns and migrated to Key Vault.
+
 **Application Security:**
-- Dependency version pinning (avoid CVE-2025-55182)
-- Input validation on all user inputs
-- SQL injection prevention (Prisma ORM)
-- XSS protection (React escaping)
-- CSRF protection (Next.js built-in)
-- Security headers (X-Frame-Options, etc.)
+- **Dependency Pinning**: Strict versioning to avoid vulnerabilities like CVE-2025-55182.
+- **Input Validation**: Strict validation on all user inputs.
+- **SQL Injection Prevention**: Prisma ORM handling all database queries.
+- **XSS/CSRF**: React escaping and Next.js built-in protection.
 
 **Data Security:**
-- API keys encrypted at rest in database
-- HTTPS enforced
-- Secure session management (planned with NextAuth)
-- Per-user data isolation
-- Database firewall rules configured
-
-**Infrastructure Security:**
-- Azure SQL firewall (Azure services allowed)
-- App Service authentication (planned)
-- GitHub Secrets for sensitive data
-- Environment variables for configuration
+- **Encryption**: HTTPS enforced (TLS 1.2+).
+- **Isolation**: Per-user data isolation logic.
+- **Network**: Database firewall rules configured to accept traffic only from Azure Services and Managed Identity.
 
 ---
 
@@ -790,11 +821,10 @@ model CampaignRecipient {
 - **Impact:** High - Data breach, system compromise
 - **Probability:** Medium
 - **Mitigation:**
-  - Pinned dependency versions (avoid CVE-2025-55182)
-  - Regular security audits in CI/CD
-  - Input validation on all endpoints
-  - API keys encrypted at rest
-  - Security headers configured
+  - Pinned dependency versions (avoid CVE-2025-55182).
+  - **Managed Identity** eliminates credential theft risks.
+  - **Azure Key Vault** secures all API keys; no secrets stored in the database.
+  - Regular security audits in CI/CD.
 
 **Risk 2: Performance Degradation with Large Datasets**
 - **Impact:** Medium - Poor user experience
@@ -824,6 +854,15 @@ model CampaignRecipient {
   - Health checks in deployment
   - Database firewall rules configured
   - Monitoring and alerting
+
+**Risk 5: Insufficient Scaling Capacity**
+- **Impact**: High - Service degradation under load.
+- **Probability**: Medium.
+- **Mitigation:**
+  - **Standard S1 Tier**: Auto-scaling enabled (1-3 instances) to handle spikes.
+  - **Deployment Slots**: Zero-downtime updates ensure availability during pushes.
+  - **CDN**: Offloads static asset serving to Azure Front Door.
+  - **Database Scaling**: Ability to scale from S0 to S4+ instantly.
 
 ### Business Risks
 
