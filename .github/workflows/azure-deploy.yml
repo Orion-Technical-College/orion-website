@@ -1,5 +1,6 @@
 # EMC Workspace - Azure Deployment Pipeline
-# Deploys Next.js PWA to Azure App Service using Oryx build
+# Deploys Next.js PWA to Azure App Service (Basic tier)
+# Uses synchronous deployment with health verification
 
 name: Deploy to Azure
 
@@ -20,7 +21,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Allow time for large deployments (20MB+ packages can take 15-20 minutes)
+    timeout-minutes: 30
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -49,23 +50,12 @@ jobs:
         run: |
           if [ -z "${{ secrets.DATABASE_URL }}" ]; then
             echo "❌ ERROR: DATABASE_URL secret is not set in GitHub Secrets"
-            echo ""
-            echo "Please add DATABASE_URL to GitHub Secrets:"
-            echo "  1. Go to: Settings → Secrets and variables → Actions"
-            echo "  2. Add secret: DATABASE_URL"
-            echo "  3. Value format: sqlserver://server.database.windows.net:1433;database=DB_NAME;user=USERNAME;password=PASSWORD;encrypt=true"
             exit 1
           fi
           
           DB_URL="${{ secrets.DATABASE_URL }}"
           if [[ ! "$DB_URL" =~ ^sqlserver:// ]]; then
             echo "❌ ERROR: DATABASE_URL must start with 'sqlserver://'"
-            echo ""
-            echo "Current format appears incorrect. Expected format:"
-            echo "  sqlserver://server.database.windows.net:1433;database=DB_NAME;user=USERNAME;password=PASSWORD;encrypt=true"
-            echo ""
-            echo "Please update the DATABASE_URL secret in GitHub:"
-            echo "  Settings → Secrets and variables → Actions → DATABASE_URL"
             exit 1
           fi
           
@@ -74,17 +64,12 @@ jobs:
       - name: Run database migrations
         timeout-minutes: 5
         run: |
-          set +e  # Don't exit on error for this step
-          # Try to deploy migrations
-          # For Azure SQL, if migrations fail due to provider mismatch but database is already set up,
-          # we can continue (database schema likely already exists from db push)
+          set +e
           npx prisma migrate deploy
           MIGRATE_EXIT_CODE=$?
           if [ $MIGRATE_EXIT_CODE -ne 0 ]; then
             echo "⚠️  Migration deploy failed (exit code: $MIGRATE_EXIT_CODE), but continuing..."
-            echo "If database schema already exists (from db push), this is expected."
-            echo "Future schema changes should use 'prisma migrate dev' locally, then commit migrations."
-            # Don't fail the workflow - database is likely already set up
+            echo "Database schema likely already exists from db push."
             exit 0
           fi
         env:
@@ -93,12 +78,8 @@ jobs:
       - name: Build application
         timeout-minutes: 5
         run: |
-          # Clear Next.js cache to ensure fresh build
           rm -rf .next
-          # Build with timestamp for cache busting
-          BUILD_TIMESTAMP=$(date +%s)
           npm run build
-          echo "Build completed at timestamp: $BUILD_TIMESTAMP"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_BUILD_ID: ${{ github.run_number }}-${{ github.sha }}
@@ -113,12 +94,13 @@ jobs:
         timeout-minutes: 2
         run: |
           BUILD_ID="${{ github.run_number }}-${{ github.sha }}"
+          
           az webapp config appsettings set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
-              WEBSITE_RUN_FROM_PACKAGE=0 \
+              WEBSITE_RUN_FROM_PACKAGE=1 \
               DATABASE_URL="${{ secrets.DATABASE_URL }}" \
               PORT=8080 \
               WEBSITE_PORT=8080 \
@@ -133,19 +115,15 @@ jobs:
             --startup-file "node server.js" \
             --always-on true
           
-          # Enable application logging
           az webapp log config \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --application-logging filesystem \
             --level information
 
-      # Create optimized deployment package using Next.js standalone output
       - name: Create deployment package
         timeout-minutes: 2
         run: |
-          # Next.js standalone output creates a self-contained deployment
-          # Copy standalone output and required files
           mkdir -p deploy
           cp -r .next/standalone/* deploy/
           cp -r .next/static deploy/.next/
@@ -154,8 +132,6 @@ jobs:
           
           echo "Deployment package size:"
           du -sh deploy
-          echo "Package structure:"
-          ls -la deploy/ | head -20
           
           cd deploy
           zip -r ../deploy.zip . -q
@@ -164,8 +140,6 @@ jobs:
           echo "Final zip size:"
           ls -lh deploy.zip
 
-      # Deploy using Azure CLI deploy (newer, more reliable method)
-      # Stop app before deployment to avoid file locks, then restart after
       - name: Deploy to Azure Web App
         timeout-minutes: 25
         id: deploy
@@ -173,127 +147,42 @@ jobs:
           echo "Deploying package to Azure App Service..."
           echo "Package size: $(ls -lh deploy.zip | awk '{print $5}')"
           
-          # Stop the app to avoid file locks during deployment
-          echo "Stopping app to prevent file locks..."
-          az webapp stop \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --output none || echo "App may already be stopped"
-          
-          # Wait a moment for app to fully stop
-          sleep 5
-          
-          # Use newer az webapp deploy command (replaces deprecated config-zip)
-          # --type zip: Deploy as zip package (no build automation)
-          # --async: Don't wait for deployment to complete (prevents timeout)
-          echo "Starting async deployment..."
-          DEPLOYMENT_ID=$(az webapp deploy \
+          # Deploy using az webapp deploy with --clean for fresh deployment
+          az webapp deploy \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --src-path deploy.zip \
             --type zip \
-            --async \
-            --query "id" \
-            --output tsv)
+            --clean true
           
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            echo "✗ Failed to start deployment"
+          if [ $? -eq 0 ]; then
+            echo "✓ Deployment completed successfully"
+          else
+            echo "✗ Deployment failed"
             exit 1
           fi
-          
-          echo "Deployment started with ID: $DEPLOYMENT_ID"
-          echo "Waiting for deployment to complete (max 20 minutes)..."
-          
-          # Poll deployment status (max 20 minutes = 1200 seconds)
-          MAX_WAIT=1200
-          ELAPSED=0
-          INTERVAL=10
-          
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            STATUS=$(az webapp deployment show \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --deployment-id "$DEPLOYMENT_ID" \
-              --query "status" \
-              --output tsv 2>/dev/null || echo "unknown")
-            
-            if [ "$STATUS" = "4" ] || [ "$STATUS" = "Succeeded" ]; then
-              echo "✓ Deployment completed successfully"
-              break
-            elif [ "$STATUS" = "3" ] || [ "$STATUS" = "Failed" ]; then
-              echo "✗ Deployment failed with status: $STATUS"
-              exit 1
-            fi
-            
-            echo "Deployment in progress... (${ELAPSED}s elapsed, status: $STATUS)"
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-          
-          if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "⚠️  Deployment timeout reached, but deployment may still be processing"
-            echo "Check Azure Portal for deployment status"
-          fi
-          
-          # Start the app after deployment
-          echo "Starting app..."
-          az webapp start \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --output none
-          
-          echo "✓ App restarted"
 
       - name: Verify deployment
         timeout-minutes: 3
         run: |
-          echo "Waiting for app to start (allowing 30 seconds for cold start)..."
+          echo "Waiting for app to initialize..."
           sleep 30
           
-          # Check if app is responding with retries
           MAX_ATTEMPTS=10
           for i in $(seq 1 $MAX_ATTEMPTS); do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net 2>/dev/null || echo "000")
             echo "Attempt $i/$MAX_ATTEMPTS: HTTP $HTTP_CODE"
             
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "404" ]; then
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
               echo "✓ App is responding (HTTP $HTTP_CODE)"
               exit 0
             fi
             
             if [ $i -lt $MAX_ATTEMPTS ]; then
-              echo "Waiting 15 seconds before next attempt..."
               sleep 15
             fi
           done
           
-          echo "✗ App failed to start or respond after $MAX_ATTEMPTS attempts"
-          echo "Last HTTP code: $HTTP_CODE"
-          echo ""
-          echo "Check logs at:"
-          echo "  Azure Portal: https://portal.azure.com/#@/resource/subscriptions/*/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.AZURE_WEBAPP_NAME }}/logStream"
-          echo "  Or run: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
+          echo "✗ App failed to respond after $MAX_ATTEMPTS attempts"
+          echo "Check logs: az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}"
           exit 1
-
-      - name: Restart app
-        timeout-minutes: 1
-        if: steps.deploy.outcome == 'success'
-        run: |
-          echo "Restarting App Service to ensure new code is loaded..."
-          az webapp restart \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --output none
-          
-          echo "Waiting for app to restart (10 seconds)..."
-          sleep 10
-          
-          echo "Verifying app is running with new deployment..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net 2>/dev/null || echo "000")
-          echo "App status after restart: HTTP $HTTP_CODE"
-          
-          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
-            echo "✓ App restarted successfully and is responding"
-          else
-            echo "⚠️  App may still be restarting. Check logs if issues persist."
-          fi
