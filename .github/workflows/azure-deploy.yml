@@ -125,31 +125,46 @@ jobs:
         timeout-minutes: 2
         run: |
           # Next.js standalone output structure:
-          # .next/standalone/ - contains server.js and node_modules
-          # .next/static/ - contains static assets (must be copied manually)
+          # .next/standalone/ contains server.js, node_modules, and .next/ with build manifests
+          # .next/static/ contains client-side static assets (must be copied manually)
           # See: https://nextjs.org/docs/advanced-features/output-file-tracing
           
           mkdir -p deploy
           
-          # Copy standalone output (server.js, node_modules, etc.)
+          # Copy entire standalone output (includes .next/ folder with BUILD_ID, manifests, etc.)
           cp -r .next/standalone/* deploy/
           
-          # Create .next directory in deploy and copy static assets
-          mkdir -p deploy/.next
+          # Copy static assets INTO the existing .next folder (don't overwrite!)
           cp -r .next/static deploy/.next/
           
-          # Copy public folder for static files
+          # Copy public folder
           cp -r public deploy/
           
-          # Copy prisma schema for runtime
+          # Copy prisma schema
           cp -r prisma deploy/
           
-          # Verify structure
-          echo "=== Deployment structure ==="
-          ls -la deploy/
-          echo ""
-          echo ".next contents:"
-          ls -la deploy/.next/
+          # Verify critical files exist
+          echo "=== Verifying deployment structure ==="
+          if [ -f deploy/.next/BUILD_ID ]; then
+            echo "✓ BUILD_ID found: $(cat deploy/.next/BUILD_ID)"
+          else
+            echo "✗ ERROR: BUILD_ID missing!"
+            exit 1
+          fi
+          
+          if [ -d deploy/.next/static ]; then
+            echo "✓ static folder found"
+          else
+            echo "✗ ERROR: static folder missing!"
+            exit 1
+          fi
+          
+          if [ -f deploy/server.js ]; then
+            echo "✓ server.js found"
+          else
+            echo "✗ ERROR: server.js missing!"
+            exit 1
+          fi
           
           # Create zip
           cd deploy
