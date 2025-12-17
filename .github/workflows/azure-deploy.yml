@@ -124,35 +124,32 @@ jobs:
       - name: Create deployment package
         timeout-minutes: 2
         run: |
-          # Next.js standalone output creates a self-contained deployment
-          # Structure: .next/standalone/ contains server.js and minimal node_modules
-          # We need to copy static assets into the .next folder within standalone
+          # Next.js standalone output structure:
+          # .next/standalone/ - contains server.js and node_modules
+          # .next/static/ - contains static assets (must be copied manually)
+          # See: https://nextjs.org/docs/advanced-features/output-file-tracing
           
           mkdir -p deploy
           
-          # Copy the standalone output (includes server.js, node_modules, and .next folder)
+          # Copy standalone output (server.js, node_modules, etc.)
           cp -r .next/standalone/* deploy/
           
-          # The standalone .next folder is missing static assets - copy them in
-          # This is required: https://nextjs.org/docs/advanced-features/output-file-tracing
-          cp -r .next/static deploy/.next/static
+          # Create .next directory in deploy and copy static assets
+          mkdir -p deploy/.next
+          cp -r .next/static deploy/.next/
           
-          # Copy public folder for static files (images, favicon, etc.)
+          # Copy public folder for static files
           cp -r public deploy/
           
           # Copy prisma schema for runtime
           cp -r prisma deploy/
           
-          # Verify the deployment structure
+          # Verify structure
           echo "=== Deployment structure ==="
-          echo "Root files:"
           ls -la deploy/
           echo ""
-          echo ".next directory:"
-          ls -la deploy/.next/ || echo "ERROR: .next folder missing!"
-          echo ""
-          echo ".next/static directory:"
-          ls -la deploy/.next/static/ || echo "ERROR: .next/static folder missing!"
+          echo ".next contents:"
+          ls -la deploy/.next/
           
           # Create zip
           cd deploy
@@ -170,7 +167,6 @@ jobs:
           echo "Deploying package to Azure App Service..."
           echo "Package size: $(ls -lh deploy.zip | awk '{print $5}')"
           
-          # Deploy using az webapp deploy with --clean for fresh deployment
           az webapp deploy \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
