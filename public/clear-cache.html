@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,11 +14,13 @@
             background: #0a0a0f;
             color: #fff;
         }
+
         .container {
             background: #1a1a2e;
             padding: 30px;
             border-radius: 8px;
         }
+
         button {
             background: #00d4ff;
             color: #000;
@@ -29,9 +32,11 @@
             font-weight: 600;
             margin: 10px 5px;
         }
+
         button:hover {
             background: #00b8d4;
         }
+
         .status {
             margin-top: 20px;
             padding: 15px;
@@ -39,20 +44,30 @@
             border-radius: 6px;
             min-height: 50px;
         }
-        .success { color: #4caf50; }
-        .error { color: #f44336; }
-        .info { color: #00d4ff; }
+
+        .success {
+            color: #4caf50;
+        }
+
+        .error {
+            color: #f44336;
+        }
+
+        .info {
+            color: #00d4ff;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Clear Cache & Service Worker</h1>
         <p>Use this page to force clear all cached data and service workers.</p>
-        
+
         <button onclick="clearServiceWorker()">Clear Service Worker</button>
         <button onclick="clearAllCache()">Clear All Cache</button>
         <button onclick="reloadApp()">Reload App</button>
-        
+
         <div id="status" class="status"></div>
     </div>
 
@@ -66,16 +81,16 @@
         async function clearServiceWorker() {
             try {
                 log('Unregistering service workers...', 'info');
-                
+
                 if ('serviceWorker' in navigator) {
                     const registrations = await navigator.serviceWorker.getRegistrations();
                     log(`Found ${registrations.length} service worker(s)`, 'info');
-                    
+
                     for (let registration of registrations) {
                         const unregistered = await registration.unregister();
                         log(`Service worker unregistered: ${unregistered}`, unregistered ? 'success' : 'error');
                     }
-                    
+
                     if (registrations.length === 0) {
                         log('No service workers found', 'info');
                     }
@@ -90,16 +105,16 @@
         async function clearAllCache() {
             try {
                 log('Clearing all caches...', 'info');
-                
+
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
                     log(`Found ${cacheNames.length} cache(s)`, 'info');
-                    
+
                     for (let cacheName of cacheNames) {
                         await caches.delete(cacheName);
                         log(`Deleted cache: ${cacheName}`, 'success');
                     }
-                    
+
                     if (cacheNames.length === 0) {
                         log('No caches found', 'info');
                     }
@@ -115,13 +130,13 @@
             try {
                 await clearServiceWorker();
                 await clearAllCache();
-                
+
                 log('Clearing localStorage and sessionStorage...', 'info');
                 localStorage.clear();
                 sessionStorage.clear();
-                
+
                 log('All cache cleared! Redirecting to app...', 'success');
-                
+
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 2000);
@@ -136,4 +151,5 @@
         });
     </script>
 </body>
+
 </html>

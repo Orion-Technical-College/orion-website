@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { Role, ROLES } from "@/lib/permissions";
 import { checkRateLimit, clearRateLimit } from "@/lib/rate-limit";
 import { logAction } from "@/lib/audit";
