@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { getProfile } from "@/lib/storage";
 import {
@@ -12,6 +13,7 @@ import {
   MessageSquare,
   HelpCircle,
   Shield,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -123,7 +125,7 @@ function SidebarComponent({ activeTab, onTabChange, userName: userNameProp, show
       </nav>
 
       {/* User Section */}
-      <div className="px-2 py-2 border-t border-border">
+      <div className="px-2 py-2 border-t border-border space-y-1">
         <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-1.5")}>
           <div className="w-5 h-5 rounded-full bg-accent-muted flex items-center justify-center">
             <span className="text-accent text-[10px] font-medium">
@@ -136,6 +138,17 @@ function SidebarComponent({ activeTab, onTabChange, userName: userNameProp, show
             </p>
           )}
         </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className={cn(
+            "flex items-center gap-2 w-full px-2 py-1 rounded transition-all text-[11px]",
+            "text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          )}
+          title="Sign out"
+        >
+          <LogOut className="h-3.5 w-3.5 flex-shrink-0" />
+          {!collapsed && <span className="font-medium">Sign Out</span>}
+        </button>
       </div>
     </aside>
   );

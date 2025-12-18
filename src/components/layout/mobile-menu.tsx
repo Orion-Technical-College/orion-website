@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { X, Settings, User, Bell, Shield, LogOut, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -124,7 +125,10 @@ function MobileMenuComponent({ isOpen, onClose, onNavigate }: MobileMenuProps) {
 
         {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-status-denied hover:bg-status-denied/10 transition-colors">
+          <button 
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-status-denied hover:bg-status-denied/10 transition-colors"
+          >
             <LogOut className="h-5 w-5" />
             <span>Sign Out</span>
           </button>

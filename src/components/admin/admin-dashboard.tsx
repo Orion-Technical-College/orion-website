@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "./user-management";
 import { ClientManagement } from "./client-management";
@@ -9,7 +10,8 @@ import { SystemSettings } from "./system-settings";
 import { StatsCards } from "./stats-cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Users, Building2, FileText, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, Users, Building2, FileText, Settings, ArrowLeft, LogOut } from "lucide-react";
 import type { AdminStats, SystemFeatureFlag } from "@/types/admin";
 
 interface RecentActivity {
@@ -88,22 +90,72 @@ export function AdminDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
+  };
+
   if (loading && !stats) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12 text-foreground-muted">Loading admin dashboard...</div>
+      <div className="min-h-screen bg-background">
+        {/* Navigation Header */}
+        <header className="sticky top-0 z-10 bg-background-secondary border-b border-border">
+          <div className="container mx-auto px-6 h-14 flex items-center justify-between">
+            <a
+              href="/"
+              className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Back to Workspace</span>
+            </a>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-foreground-muted hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </header>
+        <div className="container mx-auto p-6">
+          <div className="text-center py-12 text-foreground-muted">Loading admin dashboard...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Platform Administration</h1>
-        <p className="text-foreground-muted">
-          Manage users, clients, and system settings
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Navigation Header */}
+      <header className="sticky top-0 z-10 bg-background-secondary border-b border-border">
+        <div className="container mx-auto px-6 h-14 flex items-center justify-between">
+          <a
+            href="/"
+            className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm font-medium">Back to Workspace</span>
+          </a>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-foreground-muted hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </header>
+
+      <div className="container mx-auto p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Platform Administration</h1>
+          <p className="text-foreground-muted">
+            Manage users, clients, and system settings
+          </p>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
@@ -188,6 +240,7 @@ export function AdminDashboard() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
