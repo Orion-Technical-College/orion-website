@@ -48,6 +48,7 @@ export default withAuth(
           path === "/sw.js" ||
           path === "/manifest.json" ||
           path === "/offline.html" ||
+          path === "/clear-cache.html" ||
           path.startsWith("/icons/")
         ) {
           return true;
@@ -63,7 +64,7 @@ export default withAuth(
 export const config = {
   matcher: [
     // Exclude auth routes, static files, and PWA assets from middleware
-    "/((?!api/auth|login|signup|change-password|_next/static|_next/image|favicon.ico|sw.js|manifest.json|offline.html|icons/).*)",
+    "/((?!api/auth|login|signup|change-password|_next/static|_next/image|favicon.ico|sw.js|manifest.json|offline.html|clear-cache.html|icons/).*)",
   ],
 };
 
