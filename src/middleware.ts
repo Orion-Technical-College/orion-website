@@ -7,16 +7,6 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Allow access to change-password page
-    if (path.startsWith("/change-password")) {
-      return NextResponse.next();
-    }
-
-    // If user must change password, redirect to change-password page
-    if (token?.mustChangePassword && path !== "/change-password") {
-      return NextResponse.redirect(new URL("/change-password", req.url));
-    }
-
     // Admin routes require PLATFORM_ADMIN
     if (path.startsWith("/admin")) {
       if (token?.role !== ROLES.PLATFORM_ADMIN) {
