@@ -3,6 +3,8 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
+import { PWAProvider } from "@/components/pwa/pwa-provider";
+import { InstallBanner } from "@/components/pwa/install-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,7 +39,12 @@ export default function RootLayout({
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
         <SessionProvider>
-          <NotificationProvider>{children}</NotificationProvider>
+          <PWAProvider>
+            <NotificationProvider>
+              {children}
+              <InstallBanner />
+            </NotificationProvider>
+          </PWAProvider>
         </SessionProvider>
       </body>
     </html>
