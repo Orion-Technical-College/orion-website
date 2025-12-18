@@ -35,6 +35,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Modern PWA meta tag (in addition to apple-mobile-web-app-capable for iOS) */}
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >

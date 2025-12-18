@@ -53,7 +53,12 @@ export default withAuth(
           path.startsWith("/change-password") ||
           path.startsWith("/api/auth") ||
           path.startsWith("/_next") ||
-          path.startsWith("/favicon.ico")
+          path.startsWith("/favicon.ico") ||
+          // PWA static files
+          path === "/sw.js" ||
+          path === "/manifest.json" ||
+          path === "/offline.html" ||
+          path.startsWith("/icons/")
         ) {
           return true;
         }
@@ -67,7 +72,8 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/((?!api/auth|login|signup|change-password|_next/static|_next/image|favicon.ico).*)",
+    // Exclude auth routes, static files, and PWA assets from middleware
+    "/((?!api/auth|login|signup|change-password|_next/static|_next/image|favicon.ico|sw.js|manifest.json|offline.html|icons/).*)",
   ],
 };
 
