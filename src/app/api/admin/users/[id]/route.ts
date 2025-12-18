@@ -129,7 +129,7 @@ export async function PATCH(
         role: true,
         isActive: true,
         emailVerified: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         authProvider: true,
         clientId: true,
         client: {

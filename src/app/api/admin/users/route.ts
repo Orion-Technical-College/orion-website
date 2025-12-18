@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         role: true,
         isActive: true,
         emailVerified: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         authProvider: true,
         clientId: true,
         client: {
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
         clientId: role === ROLES.CLIENT_ADMIN || role === ROLES.CLIENT_USER ? clientId : null,
         isActive,
         passwordHash,
-        mustChangePassword: sendInvite ? true : false,
+        mustChangePassword: false,
         authProvider: "credentials",
         isInternal: role === ROLES.PLATFORM_ADMIN || role === ROLES.RECRUITER,
         createdBy: user.id,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         role: true,
         isActive: true,
         emailVerified: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
         authProvider: true,
         clientId: true,
         client: {

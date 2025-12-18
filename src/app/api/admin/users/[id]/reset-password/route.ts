@@ -122,7 +122,7 @@ export async function POST(
       where: { id: userId },
       data: {
         passwordHash,
-        mustChangePassword: true,
+        mustChangePassword: false, // Not enforcing password change
       },
     });
 
@@ -146,7 +146,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Password set successfully. User will be required to change password on next login.",
+      message: "Password set successfully.",
       correlationId,
     });
   } catch (error: any) {
