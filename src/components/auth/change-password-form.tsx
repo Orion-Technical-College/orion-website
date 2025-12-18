@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,6 @@ export function ChangePasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +49,10 @@ export function ChangePasswordForm() {
       }
 
       setSuccess(true);
+      // Sign out and redirect to login - this clears the old JWT token
+      // User will need to log in again with fresh session
       setTimeout(() => {
-        router.push("/");
-        router.refresh();
+        signOut({ callbackUrl: "/login" });
       }, 2000);
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -79,7 +79,7 @@ export function ChangePasswordForm() {
           {success && (
             <div className="p-3 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800 flex items-center gap-2">
               <Check className="h-4 w-4" />
-              Password changed successfully! Redirecting...
+              Password changed successfully! Please log in with your new password...
             </div>
           )}
           <div className="space-y-2">
