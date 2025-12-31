@@ -10,8 +10,21 @@ export default withAuth(
     // Admin routes require PLATFORM_ADMIN
     if (path.startsWith("/admin")) {
       if (token?.role !== ROLES.PLATFORM_ADMIN) {
-        return NextResponse.redirect(new URL("/", req.url));
+        return NextResponse.redirect(new URL("/workspaces", req.url));
       }
+    }
+
+    // ELITE workspace routes require a tenant (clientId)
+    // Full ELITE context resolution happens in page/API routes
+    if (path.startsWith("/elite") || path.startsWith("/api/elite")) {
+      // User must have a tenant to access ELITE workspace
+      if (!token?.clientId) {
+        // Internal users (PLATFORM_ADMIN, RECRUITER) don't have clientId
+        // They cannot access ELITE workspace
+        return NextResponse.redirect(new URL("/workspaces", req.url));
+      }
+      // Note: Full permission check via EliteContext happens in the route handlers
+      // This middleware only does the basic tenant gate
     }
 
     // Client routes require CLIENT_ADMIN or CLIENT_USER
@@ -20,14 +33,14 @@ export default withAuth(
         token?.role !== ROLES.CLIENT_ADMIN &&
         token?.role !== ROLES.CLIENT_USER
       ) {
-        return NextResponse.redirect(new URL("/", req.url));
+        return NextResponse.redirect(new URL("/workspaces", req.url));
       }
     }
 
     // Candidate routes require CANDIDATE
     if (path.startsWith("/candidate")) {
       if (token?.role !== ROLES.CANDIDATE) {
-        return NextResponse.redirect(new URL("/", req.url));
+        return NextResponse.redirect(new URL("/workspaces", req.url));
       }
     }
 

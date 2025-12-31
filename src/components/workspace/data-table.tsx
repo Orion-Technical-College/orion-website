@@ -54,7 +54,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 function DataTableComponent({
-  data,
+  data: rawData,
   onRowClick,
   showUnresolvedOnly = false,
   onToggleUnresolved,
@@ -63,6 +63,8 @@ function DataTableComponent({
   onSelectAll,
   onDeselectAll,
 }: DataTableProps) {
+  // Defensive check: ensure data is always an array
+  const data = rawData || [];
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filters, setFilters] = useState<FilterState>({
     status: [],

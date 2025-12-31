@@ -18,6 +18,10 @@ export function applyCandidateFilters(
   filters: FilterState,
   showUnresolvedOnly: boolean = false
 ): Candidate[] {
+  // Defensive check for undefined/null candidates
+  if (!candidates || !Array.isArray(candidates)) {
+    return [];
+  }
   let result = [...candidates];
 
   // Unresolved filter

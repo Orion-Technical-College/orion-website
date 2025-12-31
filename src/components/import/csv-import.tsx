@@ -107,12 +107,48 @@ export function CSVImport({ onImport }: CSVImportProps) {
     }
   }, []);
 
+  const handleFileInputClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    // Clear value to ensure onChange fires even if same file is selected (iOS fix)
+    e.currentTarget.value = '';
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      parseFile(selectedFile);
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      // iOS may not trigger properly - add fallback
+      return;
     }
+    const selectedFile = files[0];
+    
+    // Validate file exists and has content
+    if (selectedFile.size === 0) {
+      setErrors(["File is empty"]);
+      return;
+    }
+    
+    // iOS MIME type validation - trust extension if MIME type is generic/missing
+    const fileExtension = selectedFile.name.toLowerCase().substring(
+      selectedFile.name.lastIndexOf(".")
+    );
+    const allowedExtensions = [".csv", ".xls", ".xlsx"];
+    const allowedMimeTypes = [
+      "text/csv",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/plain", // iOS sometimes reports CSV as text/plain
+    ];
+    
+    const isValidMimeType = allowedMimeTypes.includes(selectedFile.type);
+    const isValidExtension = allowedExtensions.includes(fileExtension);
+    
+    // Accept if MIME type is valid OR extension is valid (iOS fallback)
+    if (!isValidMimeType && !isValidExtension) {
+      setErrors(["Please upload a CSV or Excel file"]);
+      return;
+    }
+    
+    setFile(selectedFile);
+    parseFile(selectedFile);
   };
 
   const updateMapping = (sourceColumn: string, targetField: keyof Candidate | null) => {
@@ -249,6 +285,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
                 type="file"
                 accept=".csv,.xlsx,.xls"
                 onChange={handleFileChange}
+                onClick={handleFileInputClick}
                 className="hidden"
               />
               <FileSpreadsheet className="h-12 w-12 mx-auto text-accent mb-4" />

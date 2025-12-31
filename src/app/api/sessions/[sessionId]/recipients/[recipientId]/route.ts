@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 interface UpdateRecipientRequest {
   action: "OPEN" | "MARK_SENT" | "SKIP" | "MARK_FAILED";
   skippedReason?: string;
+  currentMessagePart?: number; // For split message mode: 1, 2, or 3
 }
 
 /**
@@ -26,7 +27,7 @@ export async function PATCH(
 
     const { sessionId, recipientId } = params;
     const body: UpdateRecipientRequest = await request.json();
-    const { action, skippedReason } = body;
+    const { action, skippedReason, currentMessagePart } = body;
 
     if (!action || !["OPEN", "MARK_SENT", "SKIP", "MARK_FAILED"].includes(action)) {
       return NextResponse.json(
@@ -38,11 +39,16 @@ export async function PATCH(
     // Get session to check terminal state
     const session = await prisma.guidedSendSession.findUnique({
       where: { id: sessionId },
+      include: { campaign: true },
     });
 
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
+
+    // Check if campaign uses split message mode
+    const isSplitMode = session.campaign.splitMessageMode;
+    const hasMessage3 = session.campaign.message3Template && session.campaign.message3Template.trim().length > 0;
 
     // Session-level guardrails: reject if session is CANCELLED or COMPLETED
     if (session.status === "CANCELLED" || session.status === "COMPLETED") {
@@ -105,6 +111,10 @@ export async function PATCH(
           // Set openedAt only on first OPEN (when transitioning from PENDING)
           ...(recipient.status === "PENDING" && { openedAt: new Date() }),
         };
+        // Update currentMessagePart if provided (for split mode)
+        if (currentMessagePart !== undefined && isSplitMode) {
+          updateData.currentMessagePart = currentMessagePart;
+        }
         break;
 
       case "MARK_SENT":
@@ -131,11 +141,36 @@ export async function PATCH(
             { status: 400 }
           );
         }
-        newStatus = "SENT";
-        updateData = {
-          status: newStatus,
-          sentAt: new Date(),
-        };
+        
+        // For split mode: only mark as SENT when all parts are complete
+        if (isSplitMode && currentMessagePart !== undefined) {
+          const finalPart = hasMessage3 ? 3 : 2;
+          if (currentMessagePart < finalPart) {
+            // Not the final part yet - keep as OPENED and update currentMessagePart
+            newStatus = "OPENED";
+            updateData = {
+              currentMessagePart: currentMessagePart + 1,
+            };
+          } else {
+            // Final part - mark as SENT
+            newStatus = "SENT";
+            updateData = {
+              status: newStatus,
+              currentMessagePart: null, // Clear when complete
+              sentAt: new Date(),
+            };
+          }
+        } else {
+          // Non-split mode or no currentMessagePart provided
+          newStatus = "SENT";
+          updateData = {
+            status: newStatus,
+            sentAt: new Date(),
+          };
+          if (currentMessagePart !== undefined) {
+            updateData.currentMessagePart = currentMessagePart;
+          }
+        }
         break;
 
       case "SKIP":

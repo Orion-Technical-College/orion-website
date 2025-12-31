@@ -86,6 +86,17 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       return sessionCallback({ session, token: token as any }) as any;
     },
+    async redirect({ url, baseUrl }) {
+      // After sign in, redirect to workspace selector
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/workspaces`;
+      }
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/workspaces`;
+    },
   },
   pages: {
     signIn: "/login",

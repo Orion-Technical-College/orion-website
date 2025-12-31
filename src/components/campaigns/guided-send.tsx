@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,9 @@ import {
   Share2,
   AlertCircle,
   ArrowLeft,
+  Link as LinkIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, interpolateTemplate } from "@/lib/utils";
 import { openComposeAndroid, openComposeWebShare } from "@/lib/sms-compose";
 import { saveSession, loadSession, clearSession } from "@/lib/session-storage";
 import { ReturnPrompt, useReturnDetection } from "./return-prompt";
@@ -37,6 +38,7 @@ interface GuidedSendRecipient {
   phoneE164?: string | null;
   renderedMessage: string;
   renderedFromTemplateVersion: number;
+  currentMessagePart?: number | null;
   status: "PENDING" | "OPENED" | "SENT" | "SKIPPED" | "BLOCKED" | "CANCELLED" | "FAILED";
   openedAt?: string | null;
   openCount: number;
@@ -54,6 +56,16 @@ interface GuidedSendSession {
   currentIndex: number;
   lastActiveRecipientId?: string | null;
   nextRecipientId?: string | null;
+  campaign?: {
+    id: string;
+    splitMessageMode: boolean;
+    message1Template?: string | null;
+    message2Template?: string | null;
+    message3Template?: string | null;
+    calendlyUrl?: string | null;
+    zoomUrl?: string | null;
+  };
+  variablesSnapshot?: string | null;
   counts: {
     total: number;
     actionableTotal: number;
@@ -91,7 +103,41 @@ export function GuidedSend({
   const [showReturnPrompt, setShowReturnPrompt] = useState(false);
   const [returnPromptRecipientId, setReturnPromptRecipientId] = useState<string | undefined>();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
+  
+  // Parse split message config from session
+  const splitMessageConfig = useMemo(() => {
+    if (!session?.campaign?.splitMessageMode) return null;
+    
+    try {
+      // Try to get from campaign first, then fallback to variablesSnapshot
+      let message1 = session.campaign.message1Template;
+      let message2 = session.campaign.message2Template;
+      let message3 = session.campaign.message3Template;
+      
+      if (!message1 || !message2) {
+        // Fallback to variablesSnapshot
+        if (session.variablesSnapshot) {
+          const vars = JSON.parse(session.variablesSnapshot);
+          message1 = message1 || vars.message1Template;
+          message2 = message2 || vars.message2Template;
+          message3 = message3 || vars.message3Template;
+        }
+      }
+      
+      return {
+        message1Template: message1 || "",
+        message2Template: message2 || "",
+        message3Template: message3 || "",
+        hasMessage3: message3 && message3.trim().length > 0,
+        calendlyUrl: session.campaign.calendlyUrl || "",
+        zoomUrl: session.campaign.zoomUrl || "",
+      };
+    } catch (err) {
+      console.error("[GUIDED_SEND] Failed to parse split message config:", err);
+      return null;
+    }
+  }, [session]);
+  
   const returnDetection = useReturnDetection((lastOpenedRecipientId) => {
     if (lastOpenedRecipientId) {
       setReturnPromptRecipientId(lastOpenedRecipientId);
@@ -131,13 +177,77 @@ export function GuidedSend({
     loadSessionState();
   }, [loadSessionState]);
 
+  // Auto-advance detection: reload session when app comes to foreground
+  useEffect(() => {
+    if (!splitMessageConfig) return;
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // App came to foreground - reload session state
+        loadSessionState();
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [splitMessageConfig, loadSessionState]);
+
+  // Get message for specific part (for split mode)
+  const getMessageForPart = useCallback((recipient: GuidedSendRecipient, part: 1 | 2 | 3): string => {
+    if (!splitMessageConfig) return recipient.renderedMessage;
+    
+    const candidate = recipient.candidate;
+    if (!candidate) return recipient.renderedMessage;
+    
+    const city = candidate.location?.split(",")[0]?.trim() || candidate.location || "";
+    const vars = {
+      name: candidate.name.split(" ")[0],
+      city,
+      role: candidate.jobTitle || "",
+      calendly_link: splitMessageConfig.calendlyUrl || "",
+      zoom_link: splitMessageConfig.zoomUrl || "N/A",
+    };
+    
+    if (part === 1) {
+      return interpolateTemplate(splitMessageConfig.message1Template, vars);
+    } else if (part === 2) {
+      return interpolateTemplate(splitMessageConfig.message2Template, vars);
+    } else {
+      return interpolateTemplate(splitMessageConfig.message3Template, vars);
+    }
+  }, [splitMessageConfig]);
+
   // Handle opening SMS compose
   const handleOpenSMS = useCallback(
-    async (recipient: GuidedSendRecipient) => {
+    async (recipient: GuidedSendRecipient, part?: 1 | 2 | 3) => {
       if (!recipient.phoneE164) {
         setToastMessage("Cannot send: phone number is invalid");
         setTimeout(() => setToastMessage(null), 3000);
         return;
+      }
+
+      // Determine which message to send
+      const isSplitMode = splitMessageConfig !== null;
+      const currentPart = recipient.currentMessagePart ?? null;
+      let partToSend: 1 | 2 | 3;
+      let message: string;
+      
+      if (part !== undefined) {
+        partToSend = part;
+        message = getMessageForPart(recipient, part);
+      } else if (isSplitMode) {
+        // Determine part based on currentMessagePart
+        if (currentPart === null || currentPart === 1) {
+          partToSend = 1;
+        } else if (currentPart === 2) {
+          partToSend = 2;
+        } else {
+          partToSend = 3;
+        }
+        message = getMessageForPart(recipient, partToSend);
+      } else {
+        message = recipient.renderedMessage;
+        partToSend = 1; // Not used in non-split mode
       }
 
       // Set awaiting return state
@@ -145,22 +255,46 @@ export function GuidedSend({
       returnDetection.setLastOpenedRecipientId(recipient.id);
 
       // Copy to clipboard and open SMS
-      const result = await openComposeAndroid(recipient.phoneE164, recipient.renderedMessage);
+      const result = await openComposeAndroid(recipient.phoneE164, message);
 
       if (result.method === "SMS_URI") {
         setToastMessage("Copied. Paste in Messages if not prefilled.");
         setTimeout(() => setToastMessage(null), 3000);
       }
 
-      // Update recipient status to OPENED
+      // Update recipient status to OPENED with currentMessagePart
       try {
         setUpdating(recipient.id);
-        const response = await fetch(
+        
+        // Use sendBeacon or fetch with keepalive for mobile reliability
+        const payload = JSON.stringify({ 
+          action: "OPEN",
+          currentMessagePart: isSplitMode ? partToSend : undefined,
+        });
+        
+        let response: Response;
+        if (navigator.sendBeacon && isSplitMode) {
+          // Use sendBeacon for split mode (more reliable on mobile)
+          const blob = new Blob([payload], { type: "application/json" });
+          const sent = navigator.sendBeacon(
+            `/api/sessions/${sessionId}/recipients/${recipient.id}`,
+            blob
+          );
+          if (sent) {
+            // Reload session state after a short delay
+            setTimeout(() => loadSessionState(), 500);
+            return;
+          }
+        }
+        
+        // Fallback to fetch with keepalive
+        response = await fetch(
           `/api/sessions/${sessionId}/recipients/${recipient.id}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "OPEN" }),
+            body: payload,
+            keepalive: true,
           }
         );
 
@@ -178,20 +312,69 @@ export function GuidedSend({
         setUpdating(null);
       }
     },
-    [sessionId, returnDetection]
+    [sessionId, returnDetection, splitMessageConfig, getMessageForPart, loadSessionState]
   );
 
   // Handle marking as sent
   const handleMarkSent = useCallback(
-    async (recipientId: string) => {
+    async (recipientId: string, part?: 1 | 2 | 3) => {
       try {
         setUpdating(recipientId);
-        const response = await fetch(
+        
+        const recipient = session?.recipients.find(r => r.id === recipientId);
+        if (!recipient) return;
+        
+        const isSplitMode = splitMessageConfig !== null;
+        const currentPart = recipient.currentMessagePart ?? null;
+        
+        // Determine next part or completion
+        let nextPart: number | undefined;
+        if (isSplitMode && part !== undefined) {
+          // Explicit part provided
+          if (part === 1) {
+            nextPart = 2;
+          } else if (part === 2) {
+            nextPart = splitMessageConfig.hasMessage3 ? 3 : undefined; // undefined means complete
+          } else {
+            nextPart = undefined; // Complete
+          }
+        } else if (isSplitMode) {
+          // Infer from current part
+          if (currentPart === null || currentPart === 1) {
+            nextPart = 2;
+          } else if (currentPart === 2) {
+            nextPart = splitMessageConfig.hasMessage3 ? 3 : undefined;
+          } else {
+            nextPart = undefined; // Complete
+          }
+        }
+        
+        const payload = JSON.stringify({ 
+          action: "MARK_SENT",
+          currentMessagePart: nextPart,
+        });
+        
+        // Use sendBeacon or fetch with keepalive
+        let response: Response;
+        if (navigator.sendBeacon && isSplitMode) {
+          const blob = new Blob([payload], { type: "application/json" });
+          const sent = navigator.sendBeacon(
+            `/api/sessions/${sessionId}/recipients/${recipientId}`,
+            blob
+          );
+          if (sent) {
+            setTimeout(() => loadSessionState(), 500);
+            return;
+          }
+        }
+        
+        response = await fetch(
           `/api/sessions/${sessionId}/recipients/${recipientId}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "MARK_SENT" }),
+            body: payload,
+            keepalive: true,
           }
         );
 
@@ -206,6 +389,12 @@ export function GuidedSend({
         await saveSession(sessionId, {
           lastViewedRecipientId: recipientId,
         });
+
+        // Auto-advance if Message 3 is disabled and we just sent Message 2
+        if (isSplitMode && !splitMessageConfig.hasMessage3 && currentPart === 2) {
+          // Auto-advance to next candidate
+          setTimeout(() => loadSessionState(), 1000);
+        }
 
         // Check if session is complete
         if (data.session.status === "COMPLETED") {
@@ -223,7 +412,23 @@ export function GuidedSend({
         setUpdating(null);
       }
     },
-    [sessionId, onComplete]
+    [sessionId, onComplete, session, splitMessageConfig, loadSessionState]
+  );
+  
+  // Handle sending Message 2 (Link)
+  const handleSendMessage2 = useCallback(
+    async (recipient: GuidedSendRecipient) => {
+      await handleOpenSMS(recipient, 2);
+    },
+    [handleOpenSMS]
+  );
+  
+  // Handle sending Message 3 (Follow-up)
+  const handleSendMessage3 = useCallback(
+    async (recipient: GuidedSendRecipient) => {
+      await handleOpenSMS(recipient, 3);
+    },
+    [handleOpenSMS]
   );
 
   // Handle skip
@@ -419,66 +624,183 @@ export function GuidedSend({
 
             {/* Message preview */}
             <div className="p-3 bg-background rounded border border-border">
-              <div className="text-xs text-foreground-muted mb-1">Message Preview:</div>
+              <div className="text-xs text-foreground-muted mb-1">
+                {splitMessageConfig ? 
+                  `Message ${currentRecipient.currentMessagePart ?? 1} Preview:` : 
+                  "Message Preview:"}
+              </div>
               <div className="text-sm text-foreground whitespace-pre-wrap">
-                {currentRecipient.renderedMessage}
+                {splitMessageConfig && currentRecipient.currentMessagePart ? 
+                  getMessageForPart(currentRecipient, currentRecipient.currentMessagePart as 1 | 2 | 3) :
+                  currentRecipient.renderedMessage}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2">
-              {currentRecipient.status !== "BLOCKED" && currentRecipient.phoneE164 && (
-                <>
+            {splitMessageConfig ? (
+              // Split mode: show part-specific buttons
+              <div className="space-y-2">
+                {(!currentRecipient.currentMessagePart || currentRecipient.currentMessagePart === 1) && (
+                  <>
+                    <Button
+                      onClick={() => handleOpenSMS(currentRecipient, 1)}
+                      disabled={updating === currentRecipient.id || !currentRecipient.phoneE164}
+                      className="w-full"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Send Message 1
+                    </Button>
+                    {currentRecipient.status === "OPENED" && (
+                      <div className="flex gap-2 pt-2 border-t border-border">
+                        <Button
+                          onClick={() => handleMarkSent(currentRecipient.id, 1)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Sent Message 1
+                        </Button>
+                        <Button
+                          onClick={() => handleSkip(currentRecipient.id)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Skip
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+                {currentRecipient.currentMessagePart === 2 && (
+                  <>
+                    <Button
+                      onClick={() => handleSendMessage2(currentRecipient)}
+                      disabled={updating === currentRecipient.id || !currentRecipient.phoneE164}
+                      className="w-full"
+                    >
+                      <LinkIcon className="h-4 w-4 mr-2" />
+                      Send Link
+                    </Button>
+                    {currentRecipient.status === "OPENED" && (
+                      <div className="flex gap-2 pt-2 border-t border-border">
+                        <Button
+                          onClick={() => handleMarkSent(currentRecipient.id, 2)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          {splitMessageConfig.hasMessage3 ? "Sent Link" : "Complete"}
+                        </Button>
+                        <Button
+                          onClick={() => handleSkip(currentRecipient.id)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Skip
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+                {currentRecipient.currentMessagePart === 3 && (
+                  <>
+                    <Button
+                      onClick={() => handleSendMessage3(currentRecipient)}
+                      disabled={updating === currentRecipient.id || !currentRecipient.phoneE164}
+                      className="w-full"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Send Follow-up
+                    </Button>
+                    {currentRecipient.status === "OPENED" && (
+                      <div className="flex gap-2 pt-2 border-t border-border">
+                        <Button
+                          onClick={() => handleMarkSent(currentRecipient.id, 3)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Complete
+                        </Button>
+                        <Button
+                          onClick={() => handleSkip(currentRecipient.id)}
+                          disabled={updating === currentRecipient.id}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Skip
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : (
+              // Non-split mode: original behavior
+              <>
+                <div className="flex gap-2">
+                  {currentRecipient.status !== "BLOCKED" && currentRecipient.phoneE164 && (
+                    <>
+                      <Button
+                        onClick={() => handleOpenSMS(currentRecipient)}
+                        disabled={updating === currentRecipient.id}
+                        className="flex-1"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open SMS
+                      </Button>
+                      <Button
+                        onClick={() => handleShare(currentRecipient)}
+                        variant="outline"
+                        size="sm"
+                        title="Share instead"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
                   <Button
-                    onClick={() => handleOpenSMS(currentRecipient)}
-                    disabled={updating === currentRecipient.id}
-                    className="flex-1"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open SMS
-                  </Button>
-                  <Button
-                    onClick={() => handleShare(currentRecipient)}
+                    onClick={() => handleCopy(currentRecipient.renderedMessage)}
                     variant="outline"
                     size="sm"
-                    title="Share instead"
+                    title="Copy message"
                   >
-                    <Share2 className="h-4 w-4" />
+                    <Copy className="h-4 w-4" />
                   </Button>
-                </>
-              )}
-              <Button
-                onClick={() => handleCopy(currentRecipient.renderedMessage)}
-                variant="outline"
-                size="sm"
-                title="Copy message"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
+                </div>
 
-            {/* Secondary actions */}
-            {currentRecipient.status === "OPENED" && (
-              <div className="flex gap-2 pt-2 border-t border-border">
-                <Button
-                  onClick={() => handleMarkSent(currentRecipient.id)}
-                  disabled={updating === currentRecipient.id}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Mark Sent
-                </Button>
-                <Button
-                  onClick={() => handleSkip(currentRecipient.id)}
-                  disabled={updating === currentRecipient.id}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Skip
-                </Button>
-              </div>
+                {/* Secondary actions */}
+                {currentRecipient.status === "OPENED" && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button
+                      onClick={() => handleMarkSent(currentRecipient.id)}
+                      disabled={updating === currentRecipient.id}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark Sent
+                    </Button>
+                    <Button
+                      onClick={() => handleSkip(currentRecipient.id)}
+                      disabled={updating === currentRecipient.id}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Skip
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

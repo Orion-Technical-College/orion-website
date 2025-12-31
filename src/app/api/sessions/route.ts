@@ -17,6 +17,10 @@ interface CreateSessionRequest {
   variablesConfig?: Record<string, string>;
   aiDraftMeta?: Record<string, any>;
   messagePolicy?: "LOCKED" | "EDITABLE_PER_RECIPIENT";
+  splitMessageMode?: boolean;
+  message1Template?: string;
+  message2Template?: string;
+  message3Template?: string;
 }
 
 /**
@@ -85,7 +89,18 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: CreateSessionRequest = await request.json();
-    let { campaignId, candidateIds, template, variablesConfig = {}, aiDraftMeta, messagePolicy = "LOCKED" } = body;
+    let { 
+      campaignId, 
+      candidateIds, 
+      template, 
+      variablesConfig = {}, 
+      aiDraftMeta, 
+      messagePolicy = "LOCKED",
+      splitMessageMode,
+      message1Template,
+      message2Template,
+      message3Template,
+    } = body;
 
     if (!campaignId || !candidateIds || candidateIds.length === 0 || !template) {
       return NextResponse.json(
@@ -107,6 +122,10 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           name: campaignId.startsWith("temp-") ? `Quick Send ${new Date().toLocaleDateString()}` : "Default Campaign",
           messageTemplate: template,
+          splitMessageMode: splitMessageMode || false,
+          message1Template: message1Template || null,
+          message2Template: message2Template || null,
+          message3Template: message3Template || null,
           calendlyUrl: variablesConfig?.calendly_link || null,
           zoomUrl: variablesConfig?.zoom_link || null,
           status: "ACTIVE",
@@ -116,6 +135,17 @@ export async function POST(request: NextRequest) {
       campaignId = campaign.id;
     } else if (!campaign) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    } else if (splitMessageMode !== undefined || message1Template || message2Template || message3Template) {
+      // Update existing campaign with split message configuration
+      campaign = await prisma.campaign.update({
+        where: { id: campaignId },
+        data: {
+          ...(splitMessageMode !== undefined && { splitMessageMode }),
+          ...(message1Template !== undefined && { message1Template }),
+          ...(message2Template !== undefined && { message2Template }),
+          ...(message3Template !== undefined && { message3Template }),
+        },
+      });
     }
 
     if (campaign.userId !== user.id && user.role !== "PLATFORM_ADMIN" && user.role !== "RECRUITER") {
@@ -212,7 +242,13 @@ export async function POST(request: NextRequest) {
           status: "ACTIVE",
           templateSnapshot: template,
           templateVersion: 1,
-          variablesSnapshot: JSON.stringify(variablesConfig),
+          variablesSnapshot: JSON.stringify({
+            ...variablesConfig,
+            splitMessageMode: campaign.splitMessageMode || false,
+            message1Template: campaign.message1Template,
+            message2Template: campaign.message2Template,
+            message3Template: campaign.message3Template,
+          }),
           messagePolicy,
           aiDraftMeta: aiDraftMeta ? JSON.stringify(aiDraftMeta) : null,
           currentIndex: 0,

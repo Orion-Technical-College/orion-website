@@ -14,49 +14,74 @@ datasource db {
 // Role values: PLATFORM_ADMIN, RECRUITER, CLIENT_ADMIN, CLIENT_USER, CANDIDATE
 
 model User {
-  id                 String     @id @default(cuid())
-  email              String     @unique
+  id                 String    @id @default(cuid())
+  email              String    @unique
   name               String
   phone              String?
-  role               String     @default("RECRUITER") // PLATFORM_ADMIN, RECRUITER, CLIENT_ADMIN, CLIENT_USER, CANDIDATE
+  role               String    @default("RECRUITER") // PLATFORM_ADMIN, RECRUITER, CLIENT_ADMIN, CLIENT_USER, CANDIDATE
   passwordHash       String?
   emailVerified      DateTime?
-  mustChangePassword Boolean    @default(false) // Force password change on next login
-  isActive           Boolean    @default(false) // Require activation
-  isInternal         Boolean    @default(false) // true for PLATFORM_ADMIN, RECRUITER
-  
+  mustChangePassword Boolean   @default(false) // Force password change on next login
+  isActive           Boolean   @default(false) // Require activation
+  isInternal         Boolean   @default(false) // true for PLATFORM_ADMIN, RECRUITER
+
   // Auth provider mapping (critical for Azure AD B2C)
-  authProvider       String?    // "credentials", "azureadb2c"
-  authProviderId     String?    // subject/oid from provider (stable identity)
-  
+  authProvider   String? // "credentials", "azureadb2c"
+  authProviderId String? // subject/oid from provider (stable identity)
+
   // Tenant scoping
-  clientId           String?    // Required for CLIENT_ADMIN, CLIENT_USER, CANDIDATE
-  client             Client?    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  
+  clientId String? // Required for CLIENT_ADMIN, CLIENT_USER, CANDIDATE
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   // User management tracking
-  createdBy          String?    // User ID who created this user (for audit)
-  creator            User?      @relation("UserCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdUsers       User[]     @relation("UserCreator")
-  
+  createdBy    String? // User ID who created this user (for audit)
+  creator      User?   @relation("UserCreator", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUsers User[]  @relation("UserCreator")
+
   // Soft delete
-  deletedAt          DateTime?  // Soft delete timestamp
-  
+  deletedAt DateTime? // Soft delete timestamp
+
   // Candidate relationship (one-directional: Candidate -> User)
-  candidate          Candidate? // One-to-one: if role is CANDIDATE
-  
+  candidate Candidate? // One-to-one: if role is CANDIDATE
+
   // User data
-  pushSubscription   String?    @db.Text
-  googleMessagesApiKey String?  @db.Text
-  calendlyApiKey     String?    @db.Text
-  zoomApiKey         String?    @db.Text
-  
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  
+  pushSubscription     String? @db.Text
+  googleMessagesApiKey String? @db.Text
+  calendlyApiKey       String? @db.Text
+  zoomApiKey           String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   campaigns          Campaign[]
-  candidatesManaged  Candidate[] @relation("CandidateRecruiter")
+  candidatesManaged  Candidate[]         @relation("CandidateRecruiter")
   guidedSendSessions GuidedSendSession[]
-  
+
+  // ELITE relations
+  orgMemberships         UserOrgMembership[]
+  cohortMemberships      CohortMember[]
+  hostedSessions         EliteSession[]
+  sessionAttendances     SessionAttendance[]
+  coachingNotesAsLearner CoachingNote[]      @relation("CoachingNoteLearner")
+  coachingNotesAsCoach   CoachingNote[]      @relation("CoachingNoteCoach")
+  actionPlansAsLearner   ActionPlanItem[]    @relation("ActionPlanLearner")
+  actionPlansAsCoach     ActionPlanItem[]    @relation("ActionPlanCoach")
+  tasksAssigned          Task[]              @relation("TaskAssignee")
+  tasksCreated           Task[]              @relation("TaskCreator")
+  artifacts              Artifact[]
+  assignmentsCreated     Assignment[]
+  submissions            Submission[]
+  messagesSent           Message[]           @relation("MessageSender")
+  messagesReceived       MessageRecipient[]
+  integrationTokens      IntegrationToken[]
+  zoomMappings           ZoomUserMapping[]
+
+  // Curriculum delivery relations
+  enrollments        Enrollment[]
+  quizAttempts       QuizAttempt[]
+  discussionPosts    DiscussionPost[]
+  discussionProgress DiscussionProgress[]
+
   @@index([role])
   @@index([clientId])
   @@index([isActive])
@@ -66,58 +91,83 @@ model User {
 }
 
 model Client {
-  id          String   @id @default(cuid())
-  name        String
-  domain      String?  // For email domain matching (optional)
-  isActive    Boolean  @default(true)
-  deletedAt   DateTime? // Soft delete timestamp
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  users       User[]
-  candidates  Candidate[]
-  
+  id         String      @id @default(cuid())
+  name       String
+  domain     String? // For email domain matching (optional)
+  isActive   Boolean     @default(true)
+  deletedAt  DateTime? // Soft delete timestamp
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  users      User[]
+  candidates Candidate[]
+
+  // ELITE relations
+  orgUnits                 OrgUnit[]
+  userOrgMemberships       UserOrgMembership[]
+  workspaceProfiles        WorkspaceProfile[]
+  workspaceProfileVersions WorkspaceProfileVersion[]
+  programTemplates         ProgramTemplate[]
+  programTemplateVersions  ProgramTemplateVersion[]
+  cohorts                  Cohort[]
+  cohortMembers            CohortMember[]
+  sessions                 EliteSession[]
+  sessionAttendances       SessionAttendance[]
+
+  // Curriculum delivery relations
+  courses                Course[]
+  courseModules          CourseModule[]
+  courseItems            CourseItem[]
+  enrollments            Enrollment[]
+  itemProgress           ItemProgress[]
+  moduleProgress         ModuleProgress[]
+  rubrics                Rubric[]
+  quizAttempts           QuizAttempt[]
+  discussionPosts        DiscussionPost[]
+  discussionRequirements DiscussionRequirement[]
+  discussionProgress     DiscussionProgress[]
+
   @@index([isActive])
   @@index([deletedAt])
 }
 
 model Candidate {
-  id                 String              @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Tenant boundary: Every candidate belongs to a client (REQUIRED)
-  clientId           String              // REQUIRED - no orphan candidates
-  client             Client              @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  
+  clientId String // REQUIRED - no orphan candidates
+  client   Client @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   // User relationship (one-directional: Candidate -> User)
-  userId             String?             @unique // If candidate has login account
-  user               User?               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  
+  userId String? @unique // If candidate has login account
+  user   User?   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   // Recruiter who manages this candidate
-  recruiterId        String?             // User ID of recruiter (for audit)
-  recruiter          User?               @relation("CandidateRecruiter", fields: [recruiterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  
+  recruiterId String? // User ID of recruiter (for audit)
+  recruiter   User?   @relation("CandidateRecruiter", fields: [recruiterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   // Candidate data
-  name               String
-  email              String
-  phone              String
-  source             String?
-  jobTitle           String?
-  location           String?
-  date               String?
-  status             String              @default("PENDING")
-  notes              String?             @db.Text
-  
+  name     String
+  email    String
+  phone    String
+  source   String?
+  jobTitle String?
+  location String?
+  date     String?
+  status   String  @default("PENDING")
+  notes    String? @db.Text
+
   // SMS consent tracking (compliance)
-  smsConsentStatus   String              @default("UNKNOWN") // UNKNOWN, OPTED_IN, OPTED_OUT
-  smsOptInAt         DateTime?
-  smsOptInSource     String?             // Source of consent (e.g., "IMPORT", "MANUAL", "API")
-  smsOptOutAt        DateTime?
-  smsOptOutReason    String?
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  campaignRecipients CampaignRecipient[]
+  smsConsentStatus String    @default("UNKNOWN") // UNKNOWN, OPTED_IN, OPTED_OUT
+  smsOptInAt       DateTime?
+  smsOptInSource   String? // Source of consent (e.g., "IMPORT", "MANUAL", "API")
+  smsOptOutAt      DateTime?
+  smsOptOutReason  String?
+
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  campaignRecipients   CampaignRecipient[]
   guidedSendRecipients GuidedSendRecipient[]
-  
+
   @@index([userId])
   @@index([status])
   @@index([clientId]) // Critical for tenant isolation
@@ -126,18 +176,22 @@ model Candidate {
 }
 
 model Campaign {
-  id                String              @id @default(cuid())
-  userId            String
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  name              String
-  calendlyUrl       String?
-  zoomUrl           String?
-  messageTemplate   String              @db.Text
-  reminderTimings   String?             // JSON array of hours, e.g., "[24, 2]"
-  status            String              @default("DRAFT") // DRAFT, ACTIVE, COMPLETED
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  recipients        CampaignRecipient[]
+  id                 String              @id @default(cuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  name               String
+  calendlyUrl        String?
+  zoomUrl            String?
+  messageTemplate    String              @db.Text
+  splitMessageMode   Boolean             @default(false) // Enable 3-part message sequencing
+  message1Template   String?             @db.Text // Text only, no links
+  message2Template   String?             @db.Text // Link only (Calendly/Zoom)
+  message3Template   String?             @db.Text // Fallback text (optional)
+  reminderTimings    String? // JSON array of hours, e.g., "[24, 2]"
+  status             String              @default("DRAFT") // DRAFT, ACTIVE, COMPLETED
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  recipients         CampaignRecipient[]
   guidedSendSessions GuidedSendSession[]
 
   @@index([userId])
@@ -145,16 +199,17 @@ model Campaign {
 }
 
 model CampaignRecipient {
-  id                 String    @id @default(cuid())
-  campaignId         String
-  campaign           Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  candidateId        String
-  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  personalizedMessage String   @db.Text
-  sentAt             DateTime?
-  status             String    @default("PENDING") // PENDING, SENT, SKIPPED
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  campaignId          String
+  campaign            Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  candidateId         String
+  candidate           Candidate @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  personalizedMessage String    @db.Text
+  currentMessagePart  Int?      // Track which part is being sent (1, 2, or 3) for split message mode
+  sentAt              DateTime?
+  status              String    @default("PENDING") // PENDING, SENT, SKIPPED
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@unique([campaignId, candidateId])
   @@index([campaignId])
@@ -163,15 +218,15 @@ model CampaignRecipient {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String   // User ID who performed action
-  actorRole String   // Role at time of action (PLATFORM_ADMIN, RECRUITER, etc.)
-  action    String   // e.g., "USER_CREATED", "CANDIDATE_UPDATED", "IMPERSONATION_STARTED"
-  targetId  String?  // ID of affected resource
+  id         String   @id @default(cuid())
+  actorId    String // User ID who performed action
+  actorRole  String // Role at time of action (PLATFORM_ADMIN, RECRUITER, etc.)
+  action     String // e.g., "USER_CREATED", "CANDIDATE_UPDATED", "IMPERSONATION_STARTED"
+  targetId   String? // ID of affected resource
   targetType String? // "User", "Candidate", "Client", etc.
-  metadata  String?  @db.Text // Additional context as JSON string (IP, user agent, impersonated user, etc.)
-  createdAt DateTime @default(now())
-  
+  metadata   String?  @db.Text // Additional context as JSON string (IP, user agent, impersonated user, etc.)
+  createdAt  DateTime @default(now())
+
   @@index([actorId])
   @@index([action])
   @@index([createdAt(sort: Desc)])
@@ -184,10 +239,10 @@ model SystemSetting {
   value       String   @db.Text // JSON or string value
   description String?
   isEnabled   Boolean  @default(true)
-  updatedBy   String   // User ID
+  updatedBy   String // User ID
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
-  
+
   @@index([key])
   @@index([isEnabled])
 }
@@ -196,27 +251,27 @@ model SystemSetting {
 // Note: SQL Server doesn't support native enums, using String with constraint comments
 
 model GuidedSendSession {
-  id                 String              @id @default(cuid())
-  campaignId         String
-  campaign           Campaign            @relation(fields: [campaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdByUserId    String
-  createdBy          User                @relation(fields: [createdByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  idempotencyKey     String?             // For idempotent session creation (scoped unique)
-  clientId           String              // Required - Tenant scope (for multi-tenant isolation)
-  status             String              @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
-  templateSnapshot   String              @db.Text // Exact template used when session started
-  templateVersion    Int                 @default(1) // Version if template is edited
-  variablesSnapshot  String?             @db.Text // JSON of variables used (not just template)
-  messagePolicy      String              @default("LOCKED") // LOCKED, EDITABLE_PER_RECIPIENT
-  aiDraftMeta        String?             @db.Text // JSON metadata about AI-generated template
-  currentIndex        Int                 @default(0) // Convenience field (not source of truth)
-  lastActiveRecipientId String?          // Deterministic resume (not just index)
-  device              String?             // e.g., "PWA_ANDROID"
-  startedAt           DateTime?
-  completedAt         DateTime?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  recipients          GuidedSendRecipient[]
+  id                    String                @id @default(cuid())
+  campaignId            String
+  campaign              Campaign              @relation(fields: [campaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUserId       String
+  createdBy             User                  @relation(fields: [createdByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  idempotencyKey        String? // For idempotent session creation (scoped unique)
+  clientId              String // Required - Tenant scope (for multi-tenant isolation)
+  status                String                @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  templateSnapshot      String                @db.Text // Exact template used when session started
+  templateVersion       Int                   @default(1) // Version if template is edited
+  variablesSnapshot     String?               @db.Text // JSON of variables used (not just template)
+  messagePolicy         String                @default("LOCKED") // LOCKED, EDITABLE_PER_RECIPIENT
+  aiDraftMeta           String?               @db.Text // JSON metadata about AI-generated template
+  currentIndex          Int                   @default(0) // Convenience field (not source of truth)
+  lastActiveRecipientId String? // Deterministic resume (not just index)
+  device                String? // e.g., "PWA_ANDROID"
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  recipients            GuidedSendRecipient[]
 
   @@unique([clientId, createdByUserId, idempotencyKey]) // Scoped idempotency (includes tenant scope)
   @@index([campaignId])
@@ -227,26 +282,27 @@ model GuidedSendSession {
 }
 
 model GuidedSendRecipient {
-  id                      String              @id @default(cuid())
-  sessionId               String
-  session                 GuidedSendSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  candidateId             String
-  candidate               Candidate           @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  order                   Int                 // Preserves sort order (not dependent on candidateIds array)
-  phoneRaw                String?             // Original phone number as entered (for auditability)
-  phoneE164               String?             // Normalized phone number in E.164 format (includes +) - nullable if invalid
-  renderedMessage         String              @db.Text // Exact text sent to this recipient (audit trail)
-  renderedFromTemplateVersion Int             @default(1) // Which template version was used (if edited mid-session)
-  status                  String              @default("PENDING") // PENDING, OPENED, SENT, SKIPPED, BLOCKED, CANCELLED, FAILED
-  openedAt                DateTime?
-  openCount               Int                 @default(0) // Number of times opened (for retry tracking)
-  lastOpenedAt            DateTime?           // Most recent open time
-  sentAt                  DateTime?
-  skippedReason           String?             // Why candidate was skipped (user action)
-  blockedReason           String?             // OPTED_OUT, CONSENT_UNKNOWN, INVALID_PHONE
-  audit                   String?             @db.Text // JSON metadata (message hash, edits, etc.)
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
+  id                          String            @id @default(cuid())
+  sessionId                   String
+  session                     GuidedSendSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidateId                 String
+  candidate                   Candidate         @relation(fields: [candidateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  order                       Int // Preserves sort order (not dependent on candidateIds array)
+  phoneRaw                    String? // Original phone number as entered (for auditability)
+  phoneE164                   String? // Normalized phone number in E.164 format (includes +) - nullable if invalid
+  renderedMessage             String            @db.Text // Exact text sent to this recipient (audit trail)
+  renderedFromTemplateVersion Int               @default(1) // Which template version was used (if edited mid-session)
+  currentMessagePart          Int?              // Track which part is being sent (1, 2, or 3) for split message mode
+  status                      String            @default("PENDING") // PENDING, OPENED, SENT, SKIPPED, BLOCKED, CANCELLED, FAILED
+  openedAt                    DateTime?
+  openCount                   Int               @default(0) // Number of times opened (for retry tracking)
+  lastOpenedAt                DateTime? // Most recent open time
+  sentAt                      DateTime?
+  skippedReason               String? // Why candidate was skipped (user action)
+  blockedReason               String? // OPTED_OUT, CONSENT_UNKNOWN, INVALID_PHONE
+  audit                       String?           @db.Text // JSON metadata (message hash, edits, etc.)
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
 
   @@unique([sessionId, candidateId]) // Prevent duplicate candidates in session
   @@unique([sessionId, order]) // Preserve order integrity
@@ -257,4 +313,917 @@ model GuidedSendRecipient {
   @@index([phoneE164])
   @@index([order])
   @@index([phoneRaw])
+}
+
+// ============================================
+// ELITE WORKSPACE MODELS
+// ============================================
+
+// Org Structure
+model OrgUnit {
+  id       String    @id @default(cuid())
+  clientId String
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name     String
+  parentId String?
+  parent   OrgUnit?  @relation("OrgUnitHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children OrgUnit[] @relation("OrgUnitHierarchy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members         UserOrgMembership[]
+  cohorts         Cohort[]
+  profileVersions WorkspaceProfileVersion[]
+
+  @@unique([clientId, name, parentId])
+  @@index([clientId])
+  @@index([clientId, parentId])
+}
+
+model UserOrgMembership {
+  id        String  @id @default(cuid())
+  clientId  String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orgUnitId String
+  orgUnit   OrgUnit @relation(fields: [orgUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roleScope String // ELITE role: PROGRAM_ADMIN, COACH, INSTRUCTOR, LEARNER, LEADERSHIP
+  isPrimary Boolean @default(false)
+  status    String  @default("ACTIVE") // ACTIVE, INACTIVE
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, orgUnitId, userId])
+  @@index([clientId, userId])
+  @@index([clientId, orgUnitId])
+  @@index([clientId, roleScope])
+}
+
+// Workspace Profiles (Versioned)
+model WorkspaceProfile {
+  id           String  @id @default(cuid())
+  clientId     String? // null = platform default
+  client       Client? @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  workspaceKey String // "ELITE", "RECRUITER", etc.
+  name         String
+  description  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions WorkspaceProfileVersion[]
+
+  @@unique([clientId, workspaceKey])
+  @@index([clientId])
+  @@index([workspaceKey])
+}
+
+model WorkspaceProfileVersion {
+  id            String           @id @default(cuid())
+  clientId      String?
+  client        Client?          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  profileId     String
+  profile       WorkspaceProfile @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  versionNumber Int
+
+  // Resolution scope (most specific wins)
+  orgUnitId String?
+  orgUnit   OrgUnit? @relation(fields: [orgUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roleScope String? // null = all roles
+
+  // Module composition (JSON)
+  modules      String  @db.Text // [{moduleKey, order, config}]
+  layoutConfig String? @db.Text // {navigation, theme}
+
+  // Publishing
+  status        String    @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  publishedBy   String?
+  publishedAt   DateTime?
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, versionNumber])
+  @@index([clientId, profileId])
+  @@index([profileId, orgUnitId, roleScope])
+  @@index([profileId, status, effectiveFrom, effectiveTo])
+}
+
+// Program Templates (Versioned)
+model ProgramTemplate {
+  id          String  @id @default(cuid())
+  clientId    String
+  client      Client  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name        String
+  description String? @db.Text
+  status      String  @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions ProgramTemplateVersion[]
+  cohorts  Cohort[]
+  courses  Course[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+  @@index([clientId, status])
+}
+
+model ProgramTemplateVersion {
+  id            String          @id @default(cuid())
+  clientId      String
+  client        Client          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  templateId    String
+  template      ProgramTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  versionNumber Int
+  syllabus      String?         @db.Text // JSON structure
+  milestones    String?         @db.Text // JSON structure
+
+  // Publishing
+  status        String    @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  publishedBy   String?
+  publishedAt   DateTime?
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, templateId, versionNumber])
+  @@index([clientId, templateId])
+  @@index([clientId, templateId, status])
+}
+
+// Cohorts
+model Cohort {
+  id                String          @id @default(cuid())
+  clientId          String
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orgUnitId         String?
+  orgUnit           OrgUnit?        @relation(fields: [orgUnitId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  programTemplateId String
+  programTemplate   ProgramTemplate @relation(fields: [programTemplateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  templateVersionId String? // Snapshot at cohort creation
+  name              String
+  status            String          @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, ARCHIVED
+  startDate         DateTime?
+  endDate           DateTime?
+  timezone          String          @default("UTC") // IANA timezone
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       CohortMember[]
+  sessions      EliteSession[]
+  assignments   Assignment[]
+  coachingNotes CoachingNote[]
+  tasks         Task[]
+  artifacts     Artifact[]
+  messages      Message[]
+  analytics     CohortAnalytics[]
+  enrollments   Enrollment[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+  @@index([clientId, status])
+  @@index([clientId, orgUnitId])
+  @@index([clientId, programTemplateId])
+}
+
+model CohortMember {
+  id       String   @id @default(cuid())
+  clientId String
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cohortId String
+  cohort   Cohort   @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role     String // LEARNER, COACH, INSTRUCTOR
+  status   String   @default("ACTIVE") // ACTIVE, WITHDRAWN, COMPLETED
+  joinedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, cohortId, userId])
+  @@index([clientId, cohortId])
+  @@index([clientId, userId])
+  @@index([clientId, cohortId, role])
+}
+
+// Sessions (renamed to EliteSession to avoid conflict with NextAuth Session)
+model EliteSession {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cohortId        String
+  cohort          Cohort   @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  title           String
+  description     String?  @db.Text
+  agenda          String?  @db.Text // JSON structure
+  hostUserId      String
+  host            User     @relation(fields: [hostUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scheduledAt     DateTime // UTC
+  timezone        String   @default("UTC") // Display timezone
+  duration        Int // minutes
+  zoomUrl         String?
+  calendarEventId String? // Graph calendar event ID if synced
+  status          String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendance    SessionAttendance[]
+  coachingNotes CoachingNote[]
+
+  @@index([clientId])
+  @@index([clientId, cohortId])
+  @@index([clientId, scheduledAt])
+  @@index([clientId, cohortId, scheduledAt])
+}
+
+model SessionAttendance {
+  id         String       @id @default(cuid())
+  clientId   String
+  client     Client       @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessionId  String
+  session    EliteSession @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status     String // PRESENT, ABSENT, EXCUSED
+  auditNote  String? // Reason for manual entry or override
+  recordedBy String? // User ID who recorded (for audit)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, sessionId, userId])
+  @@index([clientId, sessionId])
+  @@index([clientId, userId])
+}
+
+// ============================================
+// ELITE PHASE 2: Coaching, Tasks, Artifacts
+// ============================================
+
+model CoachingNote {
+  id        String        @id @default(cuid())
+  clientId  String
+  cohortId  String
+  cohort    Cohort        @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  learnerId String
+  learner   User          @relation("CoachingNoteLearner", fields: [learnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  coachId   String
+  coach     User          @relation("CoachingNoteCoach", fields: [coachId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessionId String?
+  session   EliteSession? @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Curriculum context anchoring
+  itemId       String? // Link to curriculum item
+  item         CourseItem? @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submissionId String? // Link to submission (for FEEDBACK type)
+
+  // Note type and status
+  noteType String  @default("PRIVATE") // PRIVATE, FEEDBACK, OBSERVATION
+  status   String? // DRAFT, FINAL (for FEEDBACK notes)
+
+  content         String @db.Text
+  visibilityScope String @default("COACH_ONLY") // COACH_ONLY, LEARNER_VISIBLE, COHORT_STAFF, ADMIN_ONLY
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  actionItems ActionPlanItem[]
+
+  @@index([clientId, cohortId])
+  @@index([clientId, learnerId])
+  @@index([clientId, coachId])
+  @@index([clientId, itemId])
+}
+
+model ActionPlanItem {
+  id          String        @id @default(cuid())
+  clientId    String
+  noteId      String?
+  note        CoachingNote? @relation(fields: [noteId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  learnerId   String
+  learner     User          @relation("ActionPlanLearner", fields: [learnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  coachId     String
+  coach       User          @relation("ActionPlanCoach", fields: [coachId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  title       String
+  description String?       @db.Text
+  dueDate     DateTime?
+  status      String        @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, learnerId])
+  @@index([clientId, coachId])
+  @@index([clientId, status])
+  @@index([clientId, dueDate])
+}
+
+model Task {
+  id          String  @id @default(cuid())
+  clientId    String
+  cohortId    String?
+  cohort      Cohort? @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assigneeId  String
+  assignee    User    @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdById String
+  createdBy   User    @relation("TaskCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Curriculum context anchoring
+  itemId                String? // Link to curriculum item
+  item                  CourseItem? @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  taskSource            String      @default("COACH") // SYSTEM, COACH, LEARNER
+  requiredForCompletion Boolean     @default(false)
+  autoCompleteOnEvent   String? // Event type that auto-completes: QUIZ_PASSED, SUBMISSION_APPROVED
+
+  title       String
+  description String?   @db.Text
+  dueDate     DateTime?
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, assigneeId])
+  @@index([clientId, cohortId])
+  @@index([clientId, status])
+  @@index([clientId, itemId])
+}
+
+model Artifact {
+  id        String  @id @default(cuid())
+  clientId  String
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cohortId  String?
+  cohort    Cohort? @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  type      String // FILE, LINK
+  name      String
+  url       String?
+  mimeType  String?
+  sizeBytes Int?
+  version   Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags        ArtifactTag[]
+  submissions Submission[]
+
+  @@index([clientId])
+  @@index([clientId, userId])
+  @@index([clientId, cohortId])
+}
+
+model ArtifactTag {
+  id         String   @id @default(cuid())
+  clientId   String
+  artifactId String
+  artifact   Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  tag        String
+
+  @@unique([clientId, artifactId, tag])
+  @@index([clientId, tag])
+}
+
+// ============================================
+// ELITE PHASE 3: Assignments, Messaging
+// ============================================
+
+model Assignment {
+  id          String @id @default(cuid())
+  clientId    String
+  cohortId    String
+  cohort      Cohort @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Curriculum link (for Demonstrate It items)
+  itemId String?
+  item   CourseItem? @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Rubric for coach scoring
+  rubricId String?
+  rubric   Rubric? @relation(fields: [rubricId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  title            String
+  instructions     String    @db.Text
+  dueDate          DateTime?
+  maxAttempts      Int       @default(1) // Allow resubmission
+  requiresApproval Boolean   @default(true) // ELITE capstone needs coach approval
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions Submission[]
+
+  @@index([clientId, cohortId])
+  @@index([clientId, dueDate])
+  @@index([clientId, itemId])
+}
+
+model Submission {
+  id            String     @id @default(cuid())
+  clientId      String
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  learnerId     String
+  learner       User       @relation(fields: [learnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  artifactId    String?
+  artifact      Artifact?  @relation(fields: [artifactId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  content       String?    @db.Text
+  attemptNumber Int        @default(1)
+  status        String     @default("SUBMITTED") // SUBMITTED, NEEDS_REVISION, APPROVED
+
+  // Coach review
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  feedback     String?   @db.Text
+  rubricScores String?   @db.Text // JSON: criterion scores
+
+  // Legacy fields (keeping for compatibility)
+  gradedBy    String?
+  gradedAt    DateTime?
+  submittedAt DateTime  @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, assignmentId, learnerId, attemptNumber])
+  @@index([clientId, assignmentId])
+  @@index([clientId, learnerId])
+  @@index([clientId, status])
+}
+
+// Rubric for assignment scoring
+model Rubric {
+  id          String  @id @default(cuid())
+  clientId    String
+  client      Client  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name        String
+  description String? @db.Text
+  criteria    String  @db.Text // JSON: [{name, description, maxPoints}]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignments Assignment[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+}
+
+model Message {
+  id       String  @id @default(cuid())
+  clientId String
+  cohortId String?
+  cohort   Cohort? @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  senderId String
+  sender   User    @relation("MessageSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  type     String // DIRECT, ANNOUNCEMENT
+  subject  String?
+  content  String  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipients MessageRecipient[]
+
+  @@index([clientId, cohortId, createdAt])
+  @@index([clientId, senderId])
+  @@index([clientId, type, createdAt])
+}
+
+model MessageRecipient {
+  id        String    @id @default(cuid())
+  clientId  String
+  messageId String
+  message   Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  readAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, messageId, userId])
+  @@index([clientId, userId, readAt])
+  @@index([clientId, messageId])
+}
+
+// ============================================
+// ELITE PHASE 4: Analytics, Events
+// ============================================
+
+model EliteEvent {
+  id       String @id @default(cuid())
+  clientId String
+
+  // Event identity
+  eventType  String // COHORT_CREATED, SESSION_ATTENDED, etc.
+  entityType String // Cohort, Session, etc.
+  entityId   String
+
+  // Dual timestamps (critical for late-arriving events)
+  eventTs    DateTime // When event occurred (source)
+  ingestedAt DateTime @default(now()) // When stored
+
+  // Payload
+  schemaVersion Int    @default(1)
+  eventData     String @db.Text // JSON
+
+  // Processing
+  processedAt DateTime?
+
+  // Actor
+  actorId   String?
+  actorRole String?
+
+  @@index([clientId, eventType, eventTs])
+  @@index([clientId, entityType, entityId])
+  @@index([clientId, ingestedAt])
+  @@index([processedAt])
+}
+
+model CohortAnalytics {
+  id       String @id @default(cuid())
+  clientId String
+  cohortId String
+  cohort   Cohort @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Metrics
+  attendanceRate           Float?
+  taskCompletionRate       Float?
+  assignmentSubmissionRate Float?
+  activeLearnerCount       Int?
+  totalLearnerCount        Int?
+
+  // Time window
+  periodStart DateTime
+  periodEnd   DateTime
+
+  computedAt DateTime @default(now())
+
+  @@unique([clientId, cohortId, periodStart, periodEnd])
+  @@index([clientId, cohortId])
+}
+
+// ============================================
+// ELITE PHASE 5: Integrations
+// ============================================
+
+model IntegrationToken {
+  id           String    @id @default(cuid())
+  clientId     String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider     String // GRAPH, ZOOM
+  accessToken  String    @db.Text
+  refreshToken String?   @db.Text
+  expiresAt    DateTime?
+  scopes       String? // JSON array
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, userId, provider])
+  @@index([clientId, provider])
+  @@index([expiresAt])
+}
+
+model ZoomUserMapping {
+  id         String @id @default(cuid())
+  clientId   String
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  zoomUserId String
+  zoomEmail  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, userId])
+  @@unique([clientId, zoomUserId])
+  @@index([clientId])
+}
+
+// ============================================
+// ELITE PHASE 6: Governance
+// ============================================
+
+model ConfigAuditLog {
+  id            String    @id @default(cuid())
+  clientId      String
+  entityType    String // ProgramTemplate, WorkspaceProfile, etc.
+  entityId      String
+  action        String // CREATED, PUBLISHED, UPDATED, ARCHIVED, ROLLED_BACK
+  actorId       String
+  previousValue String?   @db.Text // JSON snapshot
+  newValue      String?   @db.Text // JSON snapshot
+  effectiveAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, entityType, entityId])
+  @@index([clientId, createdAt])
+  @@index([clientId, actorId])
+}
+
+// ============================================
+// ELITE CURRICULUM DELIVERY (LMS)
+// ============================================
+
+// Course - Top level curriculum container
+model Course {
+  id          String           @id @default(cuid())
+  clientId    String
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  templateId  String? // Links to ProgramTemplate
+  template    ProgramTemplate? @relation(fields: [templateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name        String
+  description String?          @db.Text
+  status      String           @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  modules     CourseModule[]
+  enrollments Enrollment[]
+
+  @@unique([clientId, name])
+  @@index([clientId])
+  @@index([clientId, status])
+  @@index([clientId, templateId])
+}
+
+// CourseModule - Container for learning items within a course
+model CourseModule {
+  id                   String         @id @default(cuid())
+  clientId             String
+  client               Client         @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  courseId             String
+  course               Course         @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name                 String
+  description          String?        @db.Text
+  sortOrder            Int
+  prerequisiteModuleId String? // Gating - must complete this module first
+  prerequisiteModule   CourseModule?  @relation("ModulePrerequisite", fields: [prerequisiteModuleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  dependentModules     CourseModule[] @relation("ModulePrerequisite")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    CourseItem[]
+  progress ModuleProgress[]
+
+  @@unique([clientId, courseId, name])
+  @@index([clientId, courseId, sortOrder])
+  @@index([clientId, courseId])
+}
+
+// CourseItem - Individual learning activity
+// Types: READ, LEARN (quiz), DISCUSS, PRACTICE, DEMONSTRATE, SURVEY
+model CourseItem {
+  id                  String       @id @default(cuid())
+  clientId            String
+  client              Client       @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  moduleId            String
+  module              CourseModule @relation(fields: [moduleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name                String
+  description         String?      @db.Text
+  itemType            String // READ, LEARN, DISCUSS, PRACTICE, DEMONSTRATE, SURVEY
+  completionRule      String // VIEW, MARK_DONE, SUBMIT, SCORE_AT_LEAST
+  completionThreshold Int? // For SCORE_AT_LEAST (e.g., 80 = 80%)
+  content             String?      @db.Text // JSON - content specific to item type
+  sortOrder           Int
+
+  // Pacing guidance
+  suggestedDaysOffset Int? // Days from cohort start for suggested completion
+
+  // Competency tagging (ELITE principles: Focus, Design, Assessment)
+  competencyTags String? @db.Text // JSON array: ["FOCUS", "DESIGN", "ASSESSMENT"]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  progress              ItemProgress[]
+  quizAttempts          QuizAttempt[]
+  discussionPosts       DiscussionPost[]
+  discussionRequirement DiscussionRequirement?
+  discussionProgress    DiscussionProgress[]   @relation("DiscussionProgressItem")
+  assignments           Assignment[]
+  coachingNotes         CoachingNote[]
+  tasks                 Task[]
+
+  @@unique([clientId, moduleId, name])
+  @@index([clientId, moduleId, sortOrder])
+  @@index([clientId, moduleId])
+  @@index([clientId, itemType])
+}
+
+// ============================================
+// ELITE CURRICULUM PROGRESS TRACKING
+// ============================================
+
+// Enrollment - Learner enrollment in a course
+model Enrollment {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  courseId String
+  course   Course  @relation(fields: [courseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cohortId String? // Optional cohort association
+  cohort   Cohort? @relation(fields: [cohortId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status   String  @default("ACTIVE") // ACTIVE, COMPLETED, WITHDRAWN
+
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemProgress   ItemProgress[]
+  moduleProgress ModuleProgress[]
+
+  @@unique([clientId, courseId, userId])
+  @@index([clientId, cohortId])
+  @@index([clientId, userId])
+  @@index([clientId, courseId, status])
+}
+
+// ItemProgress - Tracks completion of individual items
+model ItemProgress {
+  id           String     @id @default(cuid())
+  clientId     String
+  client       Client     @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itemId       String
+  item         CourseItem @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status       String     @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+
+  completedAt DateTime?
+
+  // Completion evidence (depends on item type)
+  viewedAt     DateTime? // For VIEW completion rule
+  markedDoneAt DateTime? // For MARK_DONE completion rule
+  bestScore    Int? // For LEARN (quiz) items - best score achieved
+  submissionId String? // For DEMONSTRATE items - approved submission
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, enrollmentId, itemId])
+  @@index([clientId, enrollmentId])
+  @@index([clientId, itemId])
+  @@index([clientId, enrollmentId, status])
+}
+
+// ModuleProgress - Tracks completion of modules (derived from item progress)
+model ModuleProgress {
+  id           String       @id @default(cuid())
+  clientId     String
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  enrollmentId String
+  enrollment   Enrollment   @relation(fields: [enrollmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  moduleId     String
+  module       CourseModule @relation(fields: [moduleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status       String       @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, enrollmentId, moduleId])
+  @@index([clientId, enrollmentId])
+  @@index([clientId, moduleId])
+}
+
+// ============================================
+// ELITE QUIZ ENGINE (Learn It)
+// ============================================
+
+// QuizAttempt - Records each quiz attempt for mastery tracking
+model QuizAttempt {
+  id       String     @id @default(cuid())
+  clientId String
+  client   Client     @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itemId   String
+  item     CourseItem @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Scoring
+  score          Int // Percentage 0-100
+  totalQuestions Int @default(0)
+  correctAnswers Int @default(0)
+
+  // Answers stored as JSON for review and analytics
+  answers String @db.Text // JSON: [{questionId, answer, correct}]
+
+  // Timing
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  timeSpentSeconds Int? // Time spent on the quiz
+
+  // Attempt tracking for mastery
+  attemptNumber Int @default(1)
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, itemId, userId])
+  @@index([clientId, userId, completedAt])
+  @@index([clientId, itemId, score])
+}
+
+// ============================================
+// ELITE DISCUSSION ENGINE (Discuss It)
+// ============================================
+
+// DiscussionPost - Discussion forum posts and replies
+model DiscussionPost {
+  id       String     @id @default(cuid())
+  clientId String
+  client   Client     @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itemId   String
+  item     CourseItem @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  authorId String
+  author   User       @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Thread structure
+  parentId String? // null = root post, set = reply
+  parent   DiscussionPost?  @relation("DiscussionReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies  DiscussionPost[] @relation("DiscussionReplies")
+
+  // Content
+  content String @db.Text
+
+  // Moderation
+  isHidden Boolean   @default(false)
+  hiddenBy String?
+  hiddenAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId, itemId, createdAt])
+  @@index([clientId, itemId, authorId])
+  @@index([clientId, parentId])
+}
+
+// DiscussionRequirement - Participation requirements for a discussion item
+model DiscussionRequirement {
+  id       String     @id @default(cuid())
+  clientId String
+  client   Client     @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itemId   String     @unique
+  item     CourseItem @relation(fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Requirements (ELITE: must post AND reply to at least 1 peer)
+  requirePost Boolean @default(true)
+  minReplies  Int     @default(1) // Minimum replies to other posts
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+// DiscussionProgress - Tracks user participation toward requirements
+model DiscussionProgress {
+  id       String     @id @default(cuid())
+  clientId String
+  client   Client     @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itemId   String
+  item     CourseItem @relation("DiscussionProgressItem", fields: [itemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Participation counts
+  postCount  Int @default(0)
+  replyCount Int @default(0)
+
+  // Requirement status
+  requirementMet Boolean   @default(false)
+  metAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, itemId, userId])
+  @@index([clientId, itemId])
+  @@index([clientId, userId])
 }

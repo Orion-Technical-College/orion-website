@@ -1,18 +1,31 @@
 # EMC Workspace
 
-A Progressive Web App (PWA) for recruiter workflow automation, built for [EMC Support](https://emcsupport.com/).
+A Progressive Web App (PWA) for recruiter workflow automation and leadership training, built for [EMC Support](https://emcsupport.com/).
 
 ## Overview
 
-EMC Workspace streamlines the candidate outreach process by automating personalized SMS messaging. Recruiters can upload candidate data, create message templates with merge tags, and send personalized texts directly from their personal phone number.
+EMC Workspace is a multi-tenant platform supporting two primary workspaces:
 
-### Key Features
+1. **Recruiter Workspace**: Streamlines candidate outreach by automating personalized SMS messaging
+2. **ELITE Leadership**: Full LMS for delivering the ELITE Leadership Training Program
+
+### Recruiter Features
 
 - **Data Workspace**: Upload and manage candidate data with sortable, filterable tables
 - **SMS Campaigns**: Create personalized message templates with merge tags (`{{name}}`, `{{role}}`, `{{calendly_link}}`)
 - **Quick Send**: One-tap SMS sending via native Messages app (personal number)
 - **AI Assistant**: Natural language queries and CSV upload via chat
 - **PWA**: Installable on mobile/desktop with offline support
+
+### ELITE Leadership Features
+
+- **Curriculum Delivery**: Course → Module → Item structure with multiple activity types
+- **Activity Types**: Read It, Learn It (quiz), Discuss It, Practice It, Demonstrate It, Survey
+- **Progress Tracking**: Item, module, and course-level completion tracking
+- **Quiz Mastery**: Score-based completion with retry support
+- **Discussion Forums**: Peer discussion with participation requirements
+- **Submission Workflow**: Coach approval gates for capstone assignments
+- **Coach Dashboard**: Review queue and at-risk learner monitoring
 
 ## Tech Stack
 
@@ -83,19 +96,39 @@ Copy `env.example` to `.env.local` and configure:
 emc-workspace/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── globals.css         # Global styles (dark theme)
-│   │   ├── layout.tsx          # Root layout with PWA config
+│   │   ├── elite/              # ELITE Leadership workspace routes
+│   │   ├── admin/              # Platform admin routes
+│   │   ├── workspaces/         # Workspace selector
+│   │   ├── api/                # API routes
+│   │   │   └── elite/          # ELITE-specific APIs
 │   │   └── page.tsx            # Main workspace page
 │   ├── components/
 │   │   ├── ui/                 # Reusable UI components
 │   │   ├── layout/             # Sidebar, AI Assistant
-│   │   ├── workspace/          # Data table
+│   │   ├── workspace/          # Data table, workspace shell
 │   │   ├── campaigns/          # SMS campaign builder
-│   │   └── import/             # CSV import wizard
-│   ├── lib/                    # Utilities
+│   │   ├── import/             # CSV import wizard
+│   │   └── elite/              # ELITE-specific components
+│   │       ├── course/         # Course map, navigation
+│   │       ├── delivery/       # Activity type viewers
+│   │       ├── coach/          # Coach dashboard
+│   │       ├── cohorts/        # Cohort management
+│   │       └── sessions/       # Session management
+│   ├── lib/
+│   │   ├── elite/              # ELITE domain logic
+│   │   │   ├── kernel/         # Context, Policy, Audit, Events
+│   │   │   ├── services/       # Business logic services
+│   │   │   └── permissions.ts  # Role-based permissions
+│   │   ├── workspace/          # Workspace resolution
+│   │   └── modules/            # Module registry
 │   └── types/                  # TypeScript definitions
 ├── prisma/
-│   └── schema.prisma           # Database schema
+│   ├── schema.prisma           # Database schema
+│   ├── seed.ts                 # Base seed script
+│   └── seed-elite-module1.ts   # ELITE Module 1 content
+├── docs/                       # Documentation
+│   ├── ELITE_CURRICULUM.md     # Curriculum system docs
+│   └── adr/                    # Architecture Decision Records
 ├── public/
 │   ├── manifest.json           # PWA manifest
 │   └── icons/                  # PWA icons

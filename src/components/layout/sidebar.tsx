@@ -62,27 +62,43 @@ function SidebarComponent({ activeTab, onTabChange, userName: userNameProp, show
     >
       {/* Logo */}
       <div className="flex items-center justify-between px-2 py-2 border-b border-border">
-        {!collapsed && (
+        {!collapsed ? (
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-5 rounded bg-accent flex items-center justify-center">
               <span className="text-background font-bold text-xs">E</span>
             </div>
             <span className="font-semibold text-foreground text-xs">EMC</span>
           </div>
+        ) : (
+          <div className="mx-auto">
+            <div className="w-5 h-5 rounded bg-accent flex items-center justify-center">
+              <span className="text-background font-bold text-xs">E</span>
+            </div>
+          </div>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className={cn("h-5 w-5", collapsed && "mx-auto")}
+          className={cn("h-5 w-5", collapsed && "hidden")}
         >
-          {collapsed ? (
-            <ChevronRight className="h-3 w-3" />
-          ) : (
-            <ChevronLeft className="h-3 w-3" />
-          )}
+          <ChevronLeft className="h-3 w-3" />
         </Button>
       </div>
+      
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="px-1 py-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(false)}
+            className="h-5 w-5 mx-auto"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-1 space-y-0.5">

@@ -21,10 +21,21 @@ export async function GET(
 
     const { sessionId } = params;
 
-    // Get session with recipients
+    // Get session with recipients and campaign
     const session = await prisma.guidedSendSession.findUnique({
       where: { id: sessionId },
       include: {
+        campaign: {
+          select: {
+            id: true,
+            splitMessageMode: true,
+            message1Template: true,
+            message2Template: true,
+            message3Template: true,
+            calendlyUrl: true,
+            zoomUrl: true,
+          },
+        },
         recipients: {
           include: {
             candidate: {
@@ -73,6 +84,16 @@ export async function GET(
       lastActiveRecipientId: session.lastActiveRecipientId,
       nextRecipientId,
       counts,
+      campaign: {
+        id: session.campaign.id,
+        splitMessageMode: session.campaign.splitMessageMode,
+        message1Template: session.campaign.message1Template,
+        message2Template: session.campaign.message2Template,
+        message3Template: session.campaign.message3Template,
+        calendlyUrl: session.campaign.calendlyUrl,
+        zoomUrl: session.campaign.zoomUrl,
+      },
+      variablesSnapshot: session.variablesSnapshot,
       recipients: session.recipients.map((r) => ({
         id: r.id,
         candidateId: r.candidateId,
@@ -82,6 +103,7 @@ export async function GET(
         phoneE164: r.phoneE164,
         renderedMessage: r.renderedMessage,
         renderedFromTemplateVersion: r.renderedFromTemplateVersion,
+        currentMessagePart: r.currentMessagePart,
         status: r.status,
         openedAt: r.openedAt,
         openCount: r.openCount,
