@@ -10,13 +10,15 @@
  * 
  * - DEFAULT: The default recruiter/EMC workspace
  * - EMC: Explicit EMC workspace (alias for default)
- * - OTC: Orion Technical College workspace (tenant-specific route)
+ * - MARKETING: Marketing automation workspace
+ * - OTC: Orion Technical College (tenant that uses marketing workspace)
  * - ELITE: ELITE Leadership Training workspace
  */
 export const WORKSPACE_KEYS = {
   DEFAULT: "DEFAULT",
   EMC: "EMC",
-  OTC: "OTC",
+  MARKETING: "MARKETING",
+  OTC: "OTC", // Legacy - redirects to /marketing
   ELITE: "ELITE",
 } as const;
 
@@ -99,7 +101,8 @@ export interface WorkspaceResolutionResult {
 export const WORKSPACE_ROUTES: Record<WorkspaceKey, string> = {
   [WORKSPACE_KEYS.DEFAULT]: "/",
   [WORKSPACE_KEYS.EMC]: "/emc",
-  [WORKSPACE_KEYS.OTC]: "/otc",
+  [WORKSPACE_KEYS.MARKETING]: "/marketing",
+  [WORKSPACE_KEYS.OTC]: "/marketing", // OTC tenant uses marketing workspace
   [WORKSPACE_KEYS.ELITE]: "/elite",
 };
 
@@ -108,8 +111,10 @@ export const WORKSPACE_ROUTES: Record<WorkspaceKey, string> = {
  */
 export function routeToWorkspaceKey(pathname: string): WorkspaceKey {
   switch (pathname) {
+    case "/marketing":
+      return WORKSPACE_KEYS.MARKETING;
     case "/otc":
-      return WORKSPACE_KEYS.OTC;
+      return WORKSPACE_KEYS.MARKETING; // OTC redirects to marketing
     case "/emc":
       return WORKSPACE_KEYS.EMC;
     case "/elite":

@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Building2,
   LogOut,
-  Loader2
+  Loader2,
+  Megaphone
 } from "lucide-react";
 
 interface WorkspaceOption {
@@ -31,18 +32,19 @@ interface WorkspaceOption {
   tenantName: string;
   workspaceName: string;
   description: string;
-  icon: "users" | "graduation" | "chart" | "building";
+  icon: "users" | "graduation" | "chart" | "building" | "megaphone";
   href: string;
   color: string;
   available: boolean;
   badge?: string;
 }
 
-const ICON_MAP = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   users: Users,
   graduation: GraduationCap,
   chart: BarChart3,
   building: Building2,
+  megaphone: Megaphone,
 };
 
 const COLOR_MAP: Record<string, { bg: string; border: string; icon: string; glow: string }> = {
@@ -73,8 +75,13 @@ const COLOR_MAP: Record<string, { bg: string; border: string; icon: string; glow
 };
 
 function WorkspaceCard({ workspace }: { workspace: WorkspaceOption }) {
-  const Icon = ICON_MAP[workspace.icon];
+  // Safely get icon with fallback - use type assertion to handle dynamic key lookup
+  const iconKey = workspace.icon as keyof typeof ICON_MAP;
+  const Icon = ICON_MAP[iconKey] ?? Building2;
   const colors = COLOR_MAP[workspace.color] || COLOR_MAP.cyan;
+  
+  // Safety check - if Icon is still undefined, use Building2
+  const SafeIcon = Icon || Building2;
 
   // Show tenant name as subtitle if different from workspace name
   const showTenantSubtitle = workspace.tenantName !== workspace.workspaceName && 
@@ -93,7 +100,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOption }) {
               w-14 h-14 rounded-xl bg-zinc-800/80 flex items-center justify-center
               border border-zinc-700/50
             `}>
-              <Icon className="w-7 h-7 text-zinc-500" />
+              <SafeIcon className="w-7 h-7 text-zinc-500" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -134,7 +141,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOption }) {
             border border-zinc-700/50 group-hover:border-zinc-600
             transition-all duration-300 group-hover:scale-105
           `}>
-            <Icon className={`w-7 h-7 ${colors.icon}`} />
+            <SafeIcon className={`w-7 h-7 ${colors.icon}`} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -147,10 +154,6 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceOption }) {
                 </span>
               )}
             </div>
-            {/* Debug: Show raw values */}
-            <p className="text-[10px] text-zinc-600">
-              [{workspace.key}] name: {workspace.workspaceName || "empty"}
-            </p>
             {showTenantSubtitle && (
               <p className="text-xs text-zinc-500 mb-1">{workspace.tenantName}</p>
             )}
@@ -187,7 +190,13 @@ export default function WorkspacesPage() {
 
   async function fetchWorkspaces() {
     try {
-      const response = await fetch("/api/workspaces");
+      // Fetch with no-store to prevent browser caching
+      const response = await fetch("/api/workspaces", {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setWorkspaces(data.workspaces);
@@ -207,15 +216,27 @@ export default function WorkspacesPage() {
     const tenantName = session?.user?.name || "EMC Platform";
     return [
       {
-        id: "tenant",
-        key: "OTC",
-        platformName: "EMC Workspace",
+        id: "recruiter",
+        key: "DEFAULT",
+        platformName: "EMC Recruiter",
         tenantName: tenantName,
-        workspaceName: "EMC Workspace",
+        workspaceName: "EMC Recruiter",
         description: "Recruiter workflow automation with AI-powered candidate management and SMS campaigns",
-        icon: "building",
-        href: "/otc",
+        icon: "users",
+        href: "/recruiter",
         color: "cyan",
+        available: true,
+      },
+      {
+        id: "marketing",
+        key: "MARKETING",
+        platformName: "Marketing",
+        tenantName: tenantName,
+        workspaceName: "Marketing",
+        description: "SMS campaigns, email marketing, and outreach automation",
+        icon: "chart", // Using chart instead of megaphone temporarily
+        href: "/marketing",
+        color: "emerald",
         available: true,
       },
       {
@@ -309,7 +330,7 @@ export default function WorkspacesPage() {
             </h3>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => router.push("/otc")}
+                onClick={() => router.push("/recruiter")}
                 className="px-4 py-2 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 text-sm text-zinc-300 hover:text-white transition-all flex items-center gap-2"
               >
                 <Users className="w-4 h-4" />

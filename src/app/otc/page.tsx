@@ -1,39 +1,26 @@
 "use client";
 
 /**
- * OTC Workspace Route
+ * OTC Route (Legacy)
  * 
- * Orion Technical College workspace with workspaceKey="OTC".
+ * Redirects to /marketing.
+ * OTC (Orion Technical College) is a tenant that uses the marketing workspace.
  */
 
-export default function OTCWorkspacePage() {
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
+
+export default function OTCRedirectPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/marketing");
+  }, [router]);
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#0a0a0a', 
-      padding: '2rem',
-      color: 'white' 
-    }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-        OTC Workspace
-      </h1>
-      <p style={{ color: '#888' }}>
-        workspaceKey: OTC
-      </p>
-      <p style={{ color: '#666', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-        This is the Orion Technical College workspace.
-      </p>
-      <a 
-        href="/workspaces" 
-        style={{ 
-          display: 'inline-block',
-          marginTop: '1rem',
-          color: '#0ea5e9',
-          textDecoration: 'underline'
-        }}
-      >
-        ← Back to Workspaces
-      </a>
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
     </div>
   );
 }

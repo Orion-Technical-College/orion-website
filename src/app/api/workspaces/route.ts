@@ -20,7 +20,7 @@ interface WorkspaceOption {
   tenantName: string;
   workspaceName: string;
   description: string;
-  icon: "users" | "graduation" | "chart" | "building";
+  icon: "users" | "graduation" | "chart" | "building" | "megaphone";
   href: string;
   color: string;
   available: boolean;
@@ -58,17 +58,32 @@ export async function GET() {
       }
     }
 
-    // Tenant Workspace - the user's organization workspace
+    // Recruiter Workspace - the main EMC Recruiter workflow
     workspaces.push({
-      id: "tenant",
-      key: WORKSPACE_KEYS.OTC,
-      platformName: "EMC Workspace",
+      id: "recruiter",
+      key: WORKSPACE_KEYS.DEFAULT,
+      platformName: "EMC Recruiter",
       tenantName: tenantName,
-      workspaceName: tenantName, // Show tenant name as the card title
+      workspaceName: "EMC Recruiter",
       description: "Recruiter workflow automation with AI-powered candidate management and SMS campaigns",
-      icon: "building",
-      href: "/otc",
+      icon: "users",
+      href: "/recruiter",
       color: "cyan",
+      available: true,
+      badge: clientBadge,
+    });
+
+    // Marketing Workspace - SMS campaigns and marketing automation
+    workspaces.push({
+      id: "marketing",
+      key: WORKSPACE_KEYS.MARKETING,
+      platformName: "Marketing",
+      tenantName: tenantName,
+      workspaceName: "Marketing",
+      description: "SMS campaigns, email marketing, and outreach automation",
+      icon: "chart", // Using chart instead of megaphone temporarily
+      href: "/marketing",
+      color: "emerald",
       available: true,
       badge: clientBadge,
     });
@@ -158,14 +173,40 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ workspaces });
+    // Return with no-cache headers to ensure fresh data on each request
+    return NextResponse.json(
+      { workspaces },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("[GET /api/workspaces] Error:", error);
     
     if (error instanceof Error && error.message === "Authentication required") {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        {
+          status: 401,
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+          },
+        }
+      );
     }
     
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   }
 }
