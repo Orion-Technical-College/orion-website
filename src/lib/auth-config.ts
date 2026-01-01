@@ -10,6 +10,16 @@ import {
   sessionCallback,
 } from "@/lib/auth-provider";
 
+// Debug: Log auth configuration status
+console.log("[Auth Config] Environment check:", {
+  hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
+  nextAuthUrlValue: process.env.NEXTAUTH_URL?.substring(0, 30) + "...",
+  hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+  nextAuthSecretLength: process.env.NEXTAUTH_SECRET?.length || 0,
+  hasDatabaseUrl: !!process.env.DATABASE_URL,
+  nodeEnv: process.env.NODE_ENV,
+});
+
 // Validate config on module load (logs warnings, doesn't throw)
 validateAuthConfig();
 
