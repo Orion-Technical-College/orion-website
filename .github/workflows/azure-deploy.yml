@@ -92,18 +92,22 @@ jobs:
 
       - name: Configure app settings
         timeout-minutes: 2
+        env:
+          DB_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
           BUILD_ID="${{ github.run_number }}-${{ github.sha }}"
           
+          # Use environment variables to avoid shell interpretation of special characters
           az webapp config appsettings set \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               WEBSITE_RUN_FROM_PACKAGE=1 \
-              DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              DATABASE_URL="$DB_URL" \
               NEXTAUTH_URL="https://emc-workspace.azurewebsites.net" \
-              NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+              NEXTAUTH_SECRET="$AUTH_SECRET" \
               PORT=8080 \
               WEBSITE_PORT=8080 \
               WEBSITES_PORT=8080 \
