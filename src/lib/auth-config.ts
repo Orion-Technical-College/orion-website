@@ -10,13 +10,8 @@ import {
   sessionCallback,
 } from "@/lib/auth-provider";
 
-// Validate config on module load
-try {
-  validateAuthConfig();
-} catch (error: any) {
-  console.error("Auth configuration validation failed:", error.message);
-  // In production, we might want to throw here, but for now just log
-}
+// Validate config on module load (logs warnings, doesn't throw)
+validateAuthConfig();
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

@@ -1,37 +1,38 @@
 /**
  * Validates critical authentication configuration before app startup
- * Throws error if configuration is invalid
+ * Logs warnings for configuration issues instead of throwing errors
+ * to prevent the app from crashing during startup
  */
 export function validateAuthConfig() {
-  const errors: string[] = [];
+  const warnings: string[] = [];
 
   if (!process.env.NEXTAUTH_URL) {
-    errors.push("NEXTAUTH_URL is required");
+    warnings.push("NEXTAUTH_URL is not set - authentication may not work correctly");
   } else {
     // Validate URL format
     try {
       const url = new URL(process.env.NEXTAUTH_URL);
       // Ensure it's HTTPS in production
       if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
-        errors.push("NEXTAUTH_URL must use HTTPS in production");
+        warnings.push("NEXTAUTH_URL should use HTTPS in production");
       }
     } catch {
-      errors.push("NEXTAUTH_URL must be a valid URL");
+      warnings.push("NEXTAUTH_URL is not a valid URL");
     }
   }
 
   if (!process.env.NEXTAUTH_SECRET) {
-    errors.push("NEXTAUTH_SECRET is required");
+    warnings.push("NEXTAUTH_SECRET is not set - authentication will not work");
   } else if (process.env.NEXTAUTH_SECRET.length < 32) {
-    errors.push("NEXTAUTH_SECRET must be at least 32 characters");
+    warnings.push(`NEXTAUTH_SECRET is only ${process.env.NEXTAUTH_SECRET.length} characters (recommended: 32+)`);
   }
 
   if (!process.env.DATABASE_URL) {
-    errors.push("DATABASE_URL is required");
+    warnings.push("DATABASE_URL is not set - database operations will fail");
   }
 
-  if (errors.length > 0) {
-    throw new Error(`Configuration validation failed:\n${errors.join("\n")}`);
+  if (warnings.length > 0) {
+    console.warn("⚠️ Configuration warnings:\n" + warnings.map(w => `  - ${w}`).join("\n"));
   }
 }
 
