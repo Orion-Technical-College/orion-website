@@ -102,6 +102,8 @@ jobs:
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               WEBSITE_RUN_FROM_PACKAGE=1 \
               DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              NEXTAUTH_URL="https://emc-workspace.azurewebsites.net" \
+              NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
               PORT=8080 \
               WEBSITE_PORT=8080 \
               WEBSITES_PORT=8080 \
