@@ -50,8 +50,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("[Auth] Missing credentials");
           return null;
         }
+
+        // Normalize email (trim and lowercase)
+        const email = credentials.email.trim().toLowerCase();
+        const password = credentials.password;
 
         const ip =
           (req?.headers?.["x-forwarded-for"] as string) ||
@@ -59,17 +64,26 @@ export const authOptions: NextAuthOptions = {
           "unknown";
 
         try {
+          console.log("[Auth] Attempting login for:", email);
           const result = await authorizeCredentials(
             {
-              email: credentials.email,
-              password: credentials.password,
+              email,
+              password,
               ip,
             },
             prisma
           );
+          
+          if (result) {
+            console.log("[Auth] Login successful for:", result.email);
+          } else {
+            console.log("[Auth] Login failed - authorizeCredentials returned null");
+          }
+          
           // Cast to User type expected by NextAuth
           return result as any;
         } catch (error: any) {
+          console.error("[Auth] Login error:", error.message);
           // Re-throw rate limit errors
           if (error.message?.includes("Too many login attempts")) {
             throw error;
