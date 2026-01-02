@@ -75,8 +75,12 @@ export async function authorizeCredentials(
     }
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
+  // Normalize email for case-insensitive lookup
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // Try exact match first, then case-insensitive fallback
+  let user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
     select: {
       id: true,
       email: true,
@@ -89,6 +93,24 @@ export async function authorizeCredentials(
       mustChangePassword: true,
     },
   });
+  
+  // If not found with normalized email, try original (for backwards compatibility)
+  if (!user) {
+    user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        passwordHash: true,
+        isActive: true,
+        clientId: true,
+        isInternal: true,
+        mustChangePassword: true,
+      },
+    });
+  }
 
   if (!user || !user.passwordHash || !user.isActive) {
     // Log failed attempt
