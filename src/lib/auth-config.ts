@@ -1,6 +1,5 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@/lib/permissions";
 import { validateAuthConfig } from "@/lib/config-validation";
@@ -24,7 +23,7 @@ console.log("[Auth Config] Environment check:", {
 validateAuthConfig();
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // Using JWT strategy, so no adapter needed
   session: {
     strategy: "jwt",
   },
@@ -76,12 +75,27 @@ export const authOptions: NextAuthOptions = {
           
           if (result) {
             console.log("[Auth] Login successful for:", result.email);
+            console.log("[Auth] Returning user object:", {
+              id: result.id,
+              email: result.email,
+              name: result.name,
+              role: result.role,
+            });
+            
+            // Return in format expected by NextAuth
+            return {
+              id: result.id,
+              email: result.email,
+              name: result.name,
+              role: result.role,
+              clientId: result.clientId,
+              isInternal: result.isInternal,
+              mustChangePassword: result.mustChangePassword,
+            };
           } else {
             console.log("[Auth] Login failed - authorizeCredentials returned null");
+            return null;
           }
-          
-          // Cast to User type expected by NextAuth
-          return result as any;
         } catch (error: any) {
           console.error("[Auth] Login error:", error.message);
           // Re-throw rate limit errors
