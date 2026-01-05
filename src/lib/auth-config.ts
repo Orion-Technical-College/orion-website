@@ -87,7 +87,7 @@ export const authOptions: NextAuthOptions = {
               id: result.id,
               email: result.email,
               name: result.name,
-              role: result.role,
+              role: result.role as Role,
               clientId: result.clientId,
               isInternal: result.isInternal,
               mustChangePassword: result.mustChangePassword,
