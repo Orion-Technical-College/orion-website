@@ -82,7 +82,10 @@ jobs:
           npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: "https://emc-workspace.azurewebsites.net"
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXT_BUILD_ID: ${{ github.run_number }}-${{ github.sha }}
+          NODE_ENV: production
 
       - name: Login to Azure
         timeout-minutes: 2

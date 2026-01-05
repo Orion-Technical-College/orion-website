@@ -9,15 +9,21 @@ import {
   sessionCallback,
 } from "@/lib/auth-provider";
 
-// Debug: Log auth configuration status
-console.log("[Auth Config] Environment check:", {
-  hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
-  nextAuthUrlValue: process.env.NEXTAUTH_URL?.substring(0, 30) + "...",
-  hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
-  nextAuthSecretLength: process.env.NEXTAUTH_SECRET?.length || 0,
-  hasDatabaseUrl: !!process.env.DATABASE_URL,
-  nodeEnv: process.env.NODE_ENV,
-});
+// Debug: Log auth configuration status (only in non-production or when explicitly enabled)
+if (process.env.NODE_ENV !== "production" || process.env.ENABLE_AUTH_DEBUG === "true") {
+  try {
+    console.log("[Auth Config] Environment check:", {
+      hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
+      nextAuthUrlValue: process.env.NEXTAUTH_URL?.substring(0, 30) + "...",
+      hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
+      nextAuthSecretLength: process.env.NEXTAUTH_SECRET?.length || 0,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      nodeEnv: process.env.NODE_ENV,
+    });
+  } catch (error) {
+    // Silently fail if logging causes issues
+  }
+}
 
 // Validate config on module load (logs warnings, doesn't throw)
 validateAuthConfig();
