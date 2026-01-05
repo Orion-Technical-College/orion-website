@@ -27,11 +27,20 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        // Show the actual error message for debugging
+        const errorMessage = result.error === "CredentialsSignin" 
+          ? "Invalid email or password" 
+          : result.error;
+        console.error("[LoginForm] Sign in error:", result.error);
+        setError(errorMessage);
         setLoading(false);
-      } else {
+      } else if (result?.ok) {
         router.push("/");
         router.refresh();
+      } else {
+        console.error("[LoginForm] Unexpected result:", result);
+        setError("An unexpected error occurred");
+        setLoading(false);
       }
     } catch (err) {
       setError("An error occurred. Please try again.");

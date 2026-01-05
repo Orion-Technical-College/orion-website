@@ -64,6 +64,9 @@ export const authOptions: NextAuthOptions = {
 
         try {
           console.log("[Auth] Attempting login for:", email);
+          console.log("[Auth] Password length:", password.length);
+          console.log("[Auth] IP:", ip);
+          
           const result = await authorizeCredentials(
             {
               email,
@@ -74,7 +77,7 @@ export const authOptions: NextAuthOptions = {
           );
           
           if (result) {
-            console.log("[Auth] Login successful for:", result.email);
+            console.log("[Auth] ✅ Login successful for:", result.email);
             console.log("[Auth] Returning user object:", {
               id: result.id,
               email: result.email,
@@ -83,7 +86,7 @@ export const authOptions: NextAuthOptions = {
             });
             
             // Return in format expected by NextAuth
-            return {
+            const userObject = {
               id: result.id,
               email: result.email,
               name: result.name,
@@ -92,16 +95,26 @@ export const authOptions: NextAuthOptions = {
               isInternal: result.isInternal,
               mustChangePassword: result.mustChangePassword,
             };
+            
+            console.log("[Auth] User object to return:", JSON.stringify(userObject, null, 2));
+            return userObject;
           } else {
-            console.log("[Auth] Login failed - authorizeCredentials returned null");
+            console.log("[Auth] ❌ Login failed - authorizeCredentials returned null");
+            console.log("[Auth] This means: user not found, inactive, or password incorrect");
             return null;
           }
         } catch (error: any) {
-          console.error("[Auth] Login error:", error.message);
-          // Re-throw rate limit errors
+          console.error("[Auth] ❌ Exception caught:", error.message);
+          console.error("[Auth] Error stack:", error.stack);
+          
+          // Re-throw rate limit errors so NextAuth can handle them properly
           if (error.message?.includes("Too many login attempts")) {
+            console.error("[Auth] Rate limit error - re-throwing");
             throw error;
           }
+          
+          // For other errors, return null (NextAuth will treat as invalid credentials)
+          console.error("[Auth] Returning null due to error");
           return null;
         }
       },
