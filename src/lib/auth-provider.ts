@@ -236,6 +236,7 @@ export function jwtCallback(params: {
 
   // Initial sign in
   if (user) {
+    console.log("[JWT] Creating token for user:", user.email);
     token.id = user.id;
     token.email = user.email;
     token.name = user.name;
@@ -252,6 +253,10 @@ export function jwtCallback(params: {
       token.authProvider = "credentials";
       token.authProviderId = user.id;
     }
+    
+    console.log("[JWT] Token created successfully");
+  } else {
+    console.log("[JWT] No user provided, returning existing token");
   }
 
   return token;
@@ -282,6 +287,7 @@ export function sessionCallback(params: {
   const { session, token } = params;
 
   if (session.user) {
+    console.log("[Session] Creating session for:", token.email);
     session.user.id = token.id as string;
     session.user.email = token.email as string;
     session.user.name = token.name as string;
@@ -289,6 +295,9 @@ export function sessionCallback(params: {
     session.user.clientId = (token.clientId as string | null) ?? null;
     session.user.isInternal = (token.isInternal as boolean) ?? false;
     session.user.mustChangePassword = (token.mustChangePassword as boolean) ?? false;
+    console.log("[Session] Session created successfully");
+  } else {
+    console.log("[Session] No session.user found");
   }
 
   return session;
