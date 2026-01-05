@@ -78,9 +78,14 @@ export async function authorizeCredentials(
   // Normalize email for case-insensitive lookup
   const normalizedEmail = email.toLowerCase().trim();
   
-  // Try exact match first, then case-insensitive fallback
-  let user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+  // For SQL Server, we need to use findFirst with case-insensitive comparison
+  // Since findUnique requires exact match and SQL Server may be case-sensitive,
+  // we use findFirst which allows us to search more flexibly
+  // Try normalized email first
+  let user = await prisma.user.findFirst({
+    where: { 
+      email: normalizedEmail,
+    },
     select: {
       id: true,
       email: true,
@@ -94,22 +99,28 @@ export async function authorizeCredentials(
     },
   });
   
-  // If not found with normalized email, try original (for backwards compatibility)
+  // If not found, try case-insensitive search using raw query for SQL Server
   if (!user) {
-    user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        passwordHash: true,
-        isActive: true,
-        clientId: true,
-        isInternal: true,
-        mustChangePassword: true,
-      },
-    });
+    const users = await prisma.$queryRaw<Array<{
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      passwordHash: string | null;
+      isActive: boolean;
+      clientId: string | null;
+      isInternal: boolean;
+      mustChangePassword: boolean | null;
+    }>>`
+      SELECT id, email, name, role, "passwordHash", "isActive", "clientId", "isInternal", "mustChangePassword"
+      FROM "User"
+      WHERE LOWER(email) = LOWER(${normalizedEmail})
+      LIMIT 1
+    `;
+    
+    if (users.length > 0) {
+      user = users[0];
+    }
   }
 
   if (!user || !user.passwordHash || !user.isActive) {

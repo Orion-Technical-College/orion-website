@@ -54,14 +54,29 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
+        console.log("[Auth] ===== AUTHORIZE CALLED =====");
+        console.log("[Auth] Credentials received:", {
+          hasEmail: !!credentials?.email,
+          emailLength: credentials?.email?.length || 0,
+          hasPassword: !!credentials?.password,
+          passwordLength: credentials?.password?.length || 0,
+          emailPreview: credentials?.email?.substring(0, 20) + "...",
+        });
+        
         if (!credentials?.email || !credentials?.password) {
-          console.log("[Auth] Missing credentials");
+          console.log("[Auth] ❌ Missing credentials - returning null");
           return null;
         }
 
         // Normalize email (trim and lowercase)
         const email = credentials.email.trim().toLowerCase();
         const password = credentials.password;
+        
+        console.log("[Auth] After normalization:", {
+          originalEmail: credentials.email,
+          normalizedEmail: email,
+          passwordLength: password.length,
+        });
 
         const ip =
           (req?.headers?.["x-forwarded-for"] as string) ||
