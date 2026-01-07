@@ -119,7 +119,19 @@ export async function authorizeCredentials(
     `;
     
     if (users.length > 0) {
-      user = users[0];
+      const rawUser = users[0];
+      // Convert raw SQL result to match Prisma select type
+      user = {
+        id: rawUser.id,
+        email: rawUser.email,
+        name: rawUser.name,
+        role: rawUser.role,
+        passwordHash: rawUser.passwordHash,
+        isActive: rawUser.isActive,
+        clientId: rawUser.clientId,
+        isInternal: rawUser.isInternal,
+        mustChangePassword: rawUser.mustChangePassword ?? false,
+      };
     }
   }
 
