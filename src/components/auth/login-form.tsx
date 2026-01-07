@@ -19,14 +19,6 @@ export function LoginForm() {
     setError("");
     setLoading(true);
 
-    console.log("[LoginForm] Submitting with:", {
-      email: email ? `${email.substring(0, 5)}...` : "empty",
-      emailLength: email.length,
-      passwordLength: password.length,
-      hasEmail: !!email,
-      hasPassword: !!password,
-    });
-
     try {
       const result = await signIn("credentials", {
         email,
@@ -35,18 +27,15 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        // Show the actual error message for debugging
         const errorMessage = result.error === "CredentialsSignin" 
           ? "Invalid email or password" 
           : result.error;
-        console.error("[LoginForm] Sign in error:", result.error);
         setError(errorMessage);
         setLoading(false);
       } else if (result?.ok) {
         router.push("/");
         router.refresh();
       } else {
-        console.error("[LoginForm] Unexpected result:", result);
         setError("An unexpected error occurred");
         setLoading(false);
       }

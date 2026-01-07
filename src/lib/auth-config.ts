@@ -54,40 +54,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
-        console.log("[Auth] ===== AUTHORIZE CALLED =====");
-        console.log("[Auth] Request method:", req?.method);
-        console.log("[Auth] Request headers:", JSON.stringify(req?.headers || {}, null, 2));
-        console.log("[Auth] Full credentials object:", JSON.stringify(credentials, null, 2));
-        console.log("[Auth] Credentials keys:", credentials ? Object.keys(credentials) : "null");
-        console.log("[Auth] Credentials type:", typeof credentials);
-        console.log("[Auth] Credentials email type:", typeof credentials?.email);
-        console.log("[Auth] Credentials password type:", typeof credentials?.password);
-        console.log("[Auth] Credentials received:", {
-          hasEmail: !!credentials?.email,
-          emailLength: credentials?.email?.length || 0,
-          hasPassword: !!credentials?.password,
-          passwordLength: credentials?.password?.length || 0,
-          emailPreview: credentials?.email?.substring(0, 20) + "...",
-        });
-        
         // Check for missing or empty credentials
         if (!credentials?.email || !credentials?.password || 
             credentials.email.trim() === "" || credentials.password.trim() === "") {
-          console.log("[Auth] ❌ Missing or empty credentials - returning null");
-          console.log("[Auth] Email value:", credentials?.email || "undefined");
-          console.log("[Auth] Password value:", credentials?.password ? "***" : "undefined");
           return null;
         }
 
         // Normalize email (trim and lowercase)
         const email = credentials.email.trim().toLowerCase();
         const password = credentials.password;
-        
-        console.log("[Auth] After normalization:", {
-          originalEmail: credentials.email,
-          normalizedEmail: email,
-          passwordLength: password.length,
-        });
 
         const ip =
           (req?.headers?.["x-forwarded-for"] as string) ||
@@ -95,10 +70,6 @@ export const authOptions: NextAuthOptions = {
           "unknown";
 
         try {
-          console.log("[Auth] Attempting login for:", email);
-          console.log("[Auth] Password length:", password.length);
-          console.log("[Auth] IP:", ip);
-          
           const result = await authorizeCredentials(
             {
               email,
@@ -109,16 +80,8 @@ export const authOptions: NextAuthOptions = {
           );
           
           if (result) {
-            console.log("[Auth] ✅ Login successful for:", result.email);
-            console.log("[Auth] Returning user object:", {
-              id: result.id,
-              email: result.email,
-              name: result.name,
-              role: result.role,
-            });
-            
             // Return in format expected by NextAuth
-            const userObject = {
+            return {
               id: result.id,
               email: result.email,
               name: result.name,
@@ -127,26 +90,17 @@ export const authOptions: NextAuthOptions = {
               isInternal: result.isInternal,
               mustChangePassword: result.mustChangePassword,
             };
-            
-            console.log("[Auth] User object to return:", JSON.stringify(userObject, null, 2));
-            return userObject;
-          } else {
-            console.log("[Auth] ❌ Login failed - authorizeCredentials returned null");
-            console.log("[Auth] This means: user not found, inactive, or password incorrect");
-            return null;
           }
-        } catch (error: any) {
-          console.error("[Auth] ❌ Exception caught:", error.message);
-          console.error("[Auth] Error stack:", error.stack);
           
+          return null;
+        } catch (error: any) {
           // Re-throw rate limit errors so NextAuth can handle them properly
           if (error.message?.includes("Too many login attempts")) {
-            console.error("[Auth] Rate limit error - re-throwing");
             throw error;
           }
           
           // For other errors, return null (NextAuth will treat as invalid credentials)
-          console.error("[Auth] Returning null due to error");
+          console.error("[Auth] Login error:", error.message);
           return null;
         }
       },
