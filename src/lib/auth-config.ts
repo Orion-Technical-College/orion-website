@@ -70,12 +70,12 @@ export const authOptions: NextAuthOptions = {
           emailPreview: credentials?.email?.substring(0, 20) + "...",
         });
         
-        // Check for empty strings as well as undefined/null
-        if (!credentials?.email || credentials.email.trim() === "" || 
-            !credentials?.password || credentials.password.trim() === "") {
+        // Check for missing or empty credentials
+        if (!credentials?.email || !credentials?.password || 
+            credentials.email.trim() === "" || credentials.password.trim() === "") {
           console.log("[Auth] ❌ Missing or empty credentials - returning null");
-          console.log("[Auth] Email value:", credentials?.email ? `"${credentials.email}"` : "undefined");
-          console.log("[Auth] Password value:", credentials?.password ? `"${credentials.password.substring(0, 1)}..."` : "undefined");
+          console.log("[Auth] Email value:", credentials?.email || "undefined");
+          console.log("[Auth] Password value:", credentials?.password ? "***" : "undefined");
           return null;
         }
 
