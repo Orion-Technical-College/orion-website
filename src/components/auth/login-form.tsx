@@ -19,6 +19,14 @@ export function LoginForm() {
     setError("");
     setLoading(true);
 
+    console.log("[LoginForm] Submitting with:", {
+      email: email ? `${email.substring(0, 5)}...` : "empty",
+      emailLength: email.length,
+      passwordLength: password.length,
+      hasEmail: !!email,
+      hasPassword: !!password,
+    });
+
     try {
       const result = await signIn("credentials", {
         email,
