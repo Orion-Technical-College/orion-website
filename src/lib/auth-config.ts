@@ -55,6 +55,8 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         console.log("[Auth] ===== AUTHORIZE CALLED =====");
+        console.log("[Auth] Full credentials object:", JSON.stringify(credentials, null, 2));
+        console.log("[Auth] Credentials keys:", credentials ? Object.keys(credentials) : "null");
         console.log("[Auth] Credentials received:", {
           hasEmail: !!credentials?.email,
           emailLength: credentials?.email?.length || 0,
