@@ -81,7 +81,9 @@ describe("CSV Import iOS Fixes", () => {
         "text/csv",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/plain", // iOS sometimes reports CSV as text/plain
+        "text/plain", // iOS/Android sometimes reports CSV as text/plain
+        "application/csv", // Android sometimes uses this
+        "application/octet-stream", // Android fallback for CSV files
       ];
 
       const isValidMimeType = allowedMimeTypes.includes(selectedFile.type);

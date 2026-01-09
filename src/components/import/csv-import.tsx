@@ -56,23 +56,117 @@ export function CSVImport({ onImport }: CSVImportProps) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      encoding: "UTF-8",
+      transformHeader: (header: string) => {
+        // Remove BOM (Byte Order Mark) that can appear on mobile devices
+        return header.replace(/^\uFEFF/, "").trim();
+      },
+      transform: (value: string) => {
+        // Clean up values from mobile-exported CSVs
+        let cleaned = value.trim();
+        // Remove leading apostrophes/quotes that can appear in phone numbers
+        if (cleaned.startsWith("'") || cleaned.startsWith('"')) {
+          cleaned = cleaned.slice(1);
+        }
+        // Remove trailing quotes
+        if (cleaned.endsWith("'") || cleaned.endsWith('"')) {
+          cleaned = cleaned.slice(0, -1);
+        }
+        return cleaned.trim();
+      },
       complete: (results) => {
         const data = results.data as Record<string, string>[];
         if (data.length > 0) {
-          const fileHeaders = Object.keys(data[0]);
-          setCsvData(data);
+          // Filter out PapaParse artifacts and empty columns
+          const fileHeaders = Object.keys(data[0]).filter(
+            (header) =>
+              header !== "__parsed_extra" &&
+              header !== "_parsed_extra" &&
+              header.trim() !== "" &&
+              !header.startsWith("__")
+          );
+          
+          // Clean data by removing parsed_extra fields
+          const cleanedData = data.map((row) => {
+            const cleaned: Record<string, string> = {};
+            fileHeaders.forEach((header) => {
+              cleaned[header] = row[header] || "";
+            });
+            return cleaned;
+          });
+          
+          setCsvData(cleanedData);
           setHeaders(fileHeaders);
           
-          // Auto-map columns based on similarity
+          // Auto-map columns based on similarity with improved email detection
           const autoMappings: ColumnMapping[] = fileHeaders.map((header) => {
             const headerLower = header.toLowerCase().replace(/[_\s-]/g, "");
             const matchedField = TARGET_FIELDS.find((field) => {
               const fieldLower = field.key.toLowerCase();
+              
+              // Enhanced matching logic
+              if (field.key === "email") {
+                // Match email variations: email, e-mail, email address, mail, etc.
+                return (
+                  headerLower.includes("email") ||
+                  headerLower.includes("e-mail") ||
+                  headerLower === "mail" ||
+                  headerLower.includes("mailaddress") ||
+                  (headerLower.includes("contact") && headerLower.includes("email"))
+                );
+              }
+              
+              if (field.key === "phone") {
+                // Match phone variations
+                return (
+                  headerLower.includes("phone") ||
+                  headerLower.includes("tel") ||
+                  headerLower.includes("mobile") ||
+                  headerLower.includes("cell") ||
+                  headerLower.includes("number")
+                );
+              }
+              
+              if (field.key === "name") {
+                return (
+                  headerLower.includes("name") ||
+                  headerLower.includes("candidate") ||
+                  headerLower === "fullname" ||
+                  headerLower === "full_name"
+                );
+              }
+              
+              if (field.key === "jobTitle") {
+                return (
+                  headerLower.includes("job") ||
+                  headerLower.includes("title") ||
+                  headerLower.includes("position") ||
+                  headerLower.includes("role") ||
+                  (headerLower.includes("job") && headerLower.includes("title"))
+                );
+              }
+              
+              if (field.key === "location") {
+                return (
+                  headerLower.includes("location") ||
+                  headerLower.includes("address") ||
+                  headerLower.includes("city") ||
+                  (headerLower.includes("candidate") && headerLower.includes("location"))
+                );
+              }
+              
+              if (field.key === "client") {
+                return (
+                  headerLower.includes("client") ||
+                  headerLower.includes("company") ||
+                  headerLower.includes("employer")
+                );
+              }
+              
+              // Default matching for other fields
               return (
                 headerLower.includes(fieldLower) ||
-                fieldLower.includes(headerLower) ||
-                (field.key === "name" && headerLower.includes("candidate")) ||
-                (field.key === "jobTitle" && (headerLower.includes("job") || headerLower.includes("title") || headerLower.includes("position")))
+                fieldLower.includes(headerLower)
               );
             });
             return {
@@ -83,10 +177,12 @@ export function CSVImport({ onImport }: CSVImportProps) {
           
           setMappings(autoMappings);
           setStep("mapping");
+        } else {
+          setErrors(["File appears to be empty or could not be parsed"]);
         }
       },
       error: (error) => {
-        setErrors([`Error parsing file: ${error.message}`]);
+        setErrors([`Error parsing file: ${error.message}. Please ensure your CSV file is properly formatted.`]);
       },
     });
   };
@@ -135,7 +231,9 @@ export function CSVImport({ onImport }: CSVImportProps) {
       "text/csv",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "text/plain", // iOS sometimes reports CSV as text/plain
+      "text/plain", // iOS/Android sometimes reports CSV as text/plain
+      "application/csv", // Android sometimes uses this
+      "application/octet-stream", // Android fallback for CSV files
     ];
     
     const isValidMimeType = allowedMimeTypes.includes(selectedFile.type);
@@ -334,39 +432,55 @@ export function CSVImport({ onImport }: CSVImportProps) {
           <CardContent>
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-3">
-                {mappings.map((mapping) => (
-                  <div
-                    key={mapping.sourceColumn}
-                    className="flex items-center gap-4 p-3 bg-background-tertiary rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {mapping.sourceColumn}
-                      </p>
-                      <p className="text-xs text-foreground-muted">
-                        Sample: {csvData[0]?.[mapping.sourceColumn] || "—"}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-foreground-muted" />
-                    <select
-                      value={mapping.targetField || ""}
-                      onChange={(e) =>
-                        updateMapping(
-                          mapping.sourceColumn,
-                          (e.target.value as keyof Candidate) || null
-                        )
-                      }
-                      className="flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="">— Skip this column —</option>
-                      {TARGET_FIELDS.map((field) => (
-                        <option key={field.key} value={field.key}>
-                          {field.label} {field.required && "*"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+                {mappings
+                  .filter((mapping) => {
+                    // Filter out any remaining parsed_extra columns that might have slipped through
+                    return (
+                      !mapping.sourceColumn.includes("parsed_extra") &&
+                      !mapping.sourceColumn.startsWith("__")
+                    );
+                  })
+                  .map((mapping) => {
+                    const sampleValue = csvData[0]?.[mapping.sourceColumn] || "";
+                    const isGarbled = /^[\x00-\x08\x0E-\x1F\x7F-\x9F]+$/.test(sampleValue) && sampleValue.length > 10;
+                    
+                    return (
+                      <div
+                        key={mapping.sourceColumn}
+                        className="flex items-center gap-4 p-3 bg-background-tertiary rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {mapping.sourceColumn}
+                          </p>
+                          <p className={cn(
+                            "text-xs",
+                            isGarbled ? "text-status-denied" : "text-foreground-muted"
+                          )}>
+                            Sample: {isGarbled ? "⚠️ Invalid data detected" : (sampleValue || "—")}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-foreground-muted" />
+                        <select
+                          value={mapping.targetField || ""}
+                          onChange={(e) =>
+                            updateMapping(
+                              mapping.sourceColumn,
+                              (e.target.value as keyof Candidate) || null
+                            )
+                          }
+                          className="flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm"
+                        >
+                          <option value="">— Skip this column —</option>
+                          {TARGET_FIELDS.map((field) => (
+                            <option key={field.key} value={field.key}>
+                              {field.label} {field.required && "*"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
               </div>
             </ScrollArea>
 
