@@ -8,6 +8,7 @@ import {
   jwtCallback,
   sessionCallback,
 } from "@/lib/auth-provider";
+import { AuthError, AuthErrorType, getUserFriendlyMessage } from "@/lib/auth-errors";
 
 // Debug: Log auth configuration status (only in non-production or when explicitly enabled)
 if (process.env.NODE_ENV !== "production" || process.env.ENABLE_AUTH_DEBUG === "true") {
@@ -92,15 +93,65 @@ export const authOptions: NextAuthOptions = {
             };
           }
           
+          // No result means invalid credentials (user not found or wrong password)
           return null;
-        } catch (error: any) {
-          // Re-throw rate limit errors so NextAuth can handle them properly
-          if (error.message?.includes("Too many login attempts")) {
-            throw error;
+        } catch (error: unknown) {
+          // Handle AuthError instances with proper error classification
+          if (error instanceof AuthError) {
+            // Re-throw rate limit and account inactive errors so NextAuth can handle them
+            if (error.type === AuthErrorType.RATE_LIMIT || error.type === AuthErrorType.ACCOUNT_INACTIVE) {
+              throw new Error(getUserFriendlyMessage(error.type));
+            }
+            
+            // For database and system errors, log and throw user-friendly message
+            if (error.type === AuthErrorType.DATABASE_ERROR || error.type === AuthErrorType.SYSTEM_ERROR) {
+              // Log structured error for monitoring
+              console.error("[Auth] System error during login:", {
+                type: error.type,
+                message: error.message,
+                email: email,
+                originalError: error.originalError?.message,
+                metadata: error.metadata,
+              });
+              
+              // Throw user-friendly error message
+              throw new Error(getUserFriendlyMessage(error.type));
+            }
+            
+            // For other errors, return null (NextAuth will treat as invalid credentials)
+            console.error("[Auth] Login error:", {
+              type: error.type,
+              message: error.message,
+              email: email,
+            });
+            return null;
           }
           
-          // For other errors, return null (NextAuth will treat as invalid credentials)
-          console.error("[Auth] Login error:", error.message);
+          // Handle non-AuthError exceptions
+          if (error instanceof Error) {
+            // Check if it's a rate limit error (legacy format)
+            if (error.message.includes("Too many login attempts")) {
+              throw error;
+            }
+            
+            // Classify unknown errors
+            const errorType = AuthErrorType.SYSTEM_ERROR;
+            console.error("[Auth] Unexpected error during login:", {
+              type: errorType,
+              message: error.message,
+              stack: error.stack,
+              email: email,
+            });
+            
+            // Return null for unknown errors to maintain security (don't reveal system internals)
+            return null;
+          }
+          
+          // Handle non-Error exceptions
+          console.error("[Auth] Non-Error exception during login:", {
+            error: String(error),
+            email: email,
+          });
           return null;
         }
       },

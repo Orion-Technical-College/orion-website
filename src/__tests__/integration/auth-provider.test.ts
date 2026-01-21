@@ -14,9 +14,9 @@ import { makeUser } from "@/__tests__/fixtures/users";
 import { cleanDatabase } from "@/__tests__/setup/teardown";
 
 // Mock rate limiting and audit to avoid side effects in tests
-jest.mock("@/lib/rate-limit", () => ({
-  checkRateLimit: jest.fn(() => ({ allowed: true, remaining: 4, resetAt: Date.now() + 900000 })),
-  clearRateLimit: jest.fn(),
+jest.mock("@/lib/rate-limit-db", () => ({
+  checkRateLimit: jest.fn(() => Promise.resolve({ allowed: true, remaining: 4, resetAt: Date.now() + 900000 })),
+  clearRateLimit: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock("@/lib/audit", () => ({
@@ -26,6 +26,14 @@ jest.mock("@/lib/audit", () => ({
 jest.mock("@/lib/auth-metrics", () => ({
   recordSuccessfulLogin: jest.fn(),
   recordFailedLogin: jest.fn(),
+}));
+
+jest.mock("@/lib/auth-logger", () => ({
+  logLoginSuccess: jest.fn(),
+  logLoginFailure: jest.fn(),
+  logRateLimitExceeded: jest.fn(),
+  logDatabaseError: jest.fn(),
+  logSystemError: jest.fn(),
 }));
 
 describe("auth-provider integration", () => {

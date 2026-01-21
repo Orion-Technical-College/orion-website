@@ -247,6 +247,18 @@ model SystemSetting {
   @@index([isEnabled])
 }
 
+model RateLimit {
+  id       String   @id @default(cuid())
+  key      String   // Unique identifier (e.g., "login:email:user@example.com" or "login:ip:192.168.1.1")
+  count    Int      @default(1)
+  resetAt  DateTime // When the rate limit window resets
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key])
+  @@index([resetAt]) // For cleanup of expired rate limits
+}
+
 // Guided Send Session Models
 // Note: SQL Server doesn't support native enums, using String with constraint comments
 

@@ -27,16 +27,27 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        const errorMessage = result.error === "CredentialsSignin" 
-          ? "Invalid email or password" 
-          : result.error;
+        // Handle different error types with user-friendly messages
+        let errorMessage = "Invalid email or password";
+        
+        if (result.error.includes("Too many login attempts")) {
+          errorMessage = result.error;
+        } else if (result.error.includes("temporarily unavailable")) {
+          errorMessage = "System temporarily unavailable. Please try again in a moment.";
+        } else if (result.error.includes("inactive")) {
+          errorMessage = "Your account is inactive. Please contact support.";
+        } else if (result.error !== "CredentialsSignin") {
+          // Use the error message if it's not the generic CredentialsSignin
+          errorMessage = result.error;
+        }
+        
         setError(errorMessage);
         setLoading(false);
       } else if (result?.ok) {
         router.push("/");
         router.refresh();
       } else {
-        setError("An unexpected error occurred");
+        setError("An unexpected error occurred. Please try again.");
         setLoading(false);
       }
     } catch (err) {
