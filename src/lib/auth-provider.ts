@@ -127,10 +127,9 @@ export async function authorizeCredentials(
           isInternal: boolean;
           mustChangePassword: boolean | null;
         }>>`
-          SELECT id, email, name, role, "passwordHash", "isActive", "clientId", "isInternal", "mustChangePassword"
+          SELECT TOP 1 id, email, name, role, "passwordHash", "isActive", "clientId", "isInternal", "mustChangePassword"
           FROM "User"
           WHERE LOWER(email) = LOWER(${normalizedEmail})
-          LIMIT 1
         `,
       {
         maxRetries: 3,
