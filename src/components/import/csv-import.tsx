@@ -52,7 +52,59 @@ export function CSVImport({ onImport }: CSVImportProps) {
     }
   }, []);
 
-  const parseFile = (file: File) => {
+  const detectFileType = async (file: File): Promise<"csv" | "excel" | "binary" | "unknown"> => {
+    // Check file extension first
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (extension === 'xlsx' || extension === 'xls') {
+      return "excel";
+    }
+    if (extension === 'csv') {
+      // Read first few bytes to check for binary content
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          if (arrayBuffer) {
+            const bytes = new Uint8Array(arrayBuffer.slice(0, 4));
+            // Check for ZIP signature (Excel files are ZIP archives)
+            if (bytes[0] === 0x50 && bytes[1] === 0x4B) {
+              resolve("binary");
+            } else {
+              resolve("csv");
+            }
+          } else {
+            resolve("csv");
+          }
+        };
+        reader.onerror = () => resolve("csv");
+        reader.readAsArrayBuffer(file.slice(0, 4));
+      });
+    }
+    return "unknown";
+  };
+
+  const parseFile = async (file: File) => {
+    // Detect file type before parsing
+    const fileType = await detectFileType(file);
+    
+    if (fileType === "excel" || fileType === "binary") {
+      setErrors([
+        "Excel files (.xlsx, .xls) are not directly supported. Please export your file as CSV first.",
+        "To convert: Open in Excel/Google Sheets → File → Save As → CSV format"
+      ]);
+      setFile(null);
+      return;
+    }
+    
+    if (fileType === "unknown") {
+      setErrors([
+        "Unsupported file type. Please upload a CSV file.",
+        "The file may be corrupted or in an unsupported format."
+      ]);
+      setFile(null);
+      return;
+    }
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -182,7 +234,18 @@ export function CSVImport({ onImport }: CSVImportProps) {
         }
       },
       error: (error) => {
-        setErrors([`Error parsing file: ${error.message}. Please ensure your CSV file is properly formatted.`]);
+        // Check if error is due to binary content
+        if (error.message?.includes("binary") || error.message?.includes("Invalid")) {
+          setErrors([
+            "This file appears to be a binary file (Excel/ZIP format), not a CSV.",
+            "Please export your file as CSV: Open in Excel/Sheets → File → Save As → CSV"
+          ]);
+        } else {
+          setErrors([
+            `Error parsing file: ${error.message || "Unknown error"}`,
+            "Please ensure your CSV file is properly formatted and contains valid text data."
+          ]);
+        }
       },
     });
   };
@@ -246,7 +309,9 @@ export function CSVImport({ onImport }: CSVImportProps) {
     }
     
     setFile(selectedFile);
-    parseFile(selectedFile);
+    parseFile(selectedFile).catch((error) => {
+      setErrors([`Error processing file: ${error.message || "Unknown error"}`]);
+    });
   };
 
   const updateMapping = (sourceColumn: string, targetField: keyof Candidate | null) => {
@@ -313,9 +378,23 @@ export function CSVImport({ onImport }: CSVImportProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      {/* Error Banner - Sticky on mobile for visibility */}
+      {errors.length > 0 && (
+        <div className="sticky top-0 z-50 mb-4 p-4 bg-status-denied/95 backdrop-blur-sm border-b-2 border-status-denied rounded-lg shadow-lg">
+          <div className="space-y-2">
+            {errors.map((error, i) => (
+              <p key={i} className="text-sm sm:text-base text-white flex items-start gap-2 font-medium">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Progress Steps */}
-      <div className="flex items-center justify-center mb-8">
+      <div className="flex items-center justify-center mb-6 sm:mb-8 overflow-x-auto pb-2">
         {["Upload", "Map Columns", "Preview"].map((label, index) => {
           const stepNames = ["upload", "mapping", "preview"];
           const isActive = stepNames[index] === step;
@@ -323,30 +402,31 @@ export function CSVImport({ onImport }: CSVImportProps) {
 
           return (
             <React.Fragment key={label}>
-              <div className="flex items-center">
+              <div className="flex items-center flex-shrink-0">
                 <div
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                    "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-colors",
                     isComplete && "bg-status-hired text-white",
                     isActive && "bg-accent text-background",
                     !isComplete && !isActive && "bg-background-tertiary text-foreground-muted"
                   )}
                 >
-                  {isComplete ? <CheckCircle2 className="h-5 w-5" /> : index + 1}
+                  {isComplete ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> : index + 1}
                 </div>
                 <span
                   className={cn(
-                    "ml-2 text-sm font-medium",
+                    "ml-2 text-xs sm:text-sm font-medium whitespace-nowrap",
                     isActive ? "text-accent" : "text-foreground-muted"
                   )}
                 >
-                  {label}
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden">{label.split(" ")[0]}</span>
                 </span>
               </div>
               {index < 2 && (
                 <div
                   className={cn(
-                    "w-16 h-0.5 mx-4",
+                    "w-8 sm:w-16 h-0.5 mx-2 sm:mx-4 flex-shrink-0",
                     isComplete ? "bg-status-hired" : "bg-border"
                   )}
                 />
@@ -398,17 +478,6 @@ export function CSVImport({ onImport }: CSVImportProps) {
                 Choose File
               </Button>
             </div>
-
-            {errors.length > 0 && (
-              <div className="mt-4 p-4 bg-status-denied/10 border border-status-denied/20 rounded-lg">
-                {errors.map((error, i) => (
-                  <p key={i} className="text-sm text-status-denied flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -430,7 +499,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[calc(100vh-400px)] sm:h-[400px] min-h-[300px] max-h-[500px] pr-2 sm:pr-4">
               <div className="space-y-3">
                 {mappings
                   .filter((mapping) => {
@@ -447,20 +516,21 @@ export function CSVImport({ onImport }: CSVImportProps) {
                     return (
                       <div
                         key={mapping.sourceColumn}
-                        className="flex items-center gap-4 p-3 bg-background-tertiary rounded-lg"
+                        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 p-3 bg-background-tertiary rounded-lg"
                       >
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {mapping.sourceColumn}
                           </p>
                           <p className={cn(
-                            "text-xs",
-                            isGarbled ? "text-status-denied" : "text-foreground-muted"
+                            "text-xs mt-1 break-words",
+                            isGarbled ? "text-status-denied font-medium" : "text-foreground-muted"
                           )}>
-                            Sample: {isGarbled ? "⚠️ Invalid data detected" : (sampleValue || "—")}
+                            Sample: {isGarbled ? "⚠️ Invalid data detected" : (sampleValue.substring(0, 50) || "—")}
+                            {sampleValue.length > 50 && !isGarbled && "..."}
                           </p>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-foreground-muted" />
+                        <ArrowRight className="h-4 w-4 text-foreground-muted hidden sm:block flex-shrink-0" />
                         <select
                           value={mapping.targetField || ""}
                           onChange={(e) =>
@@ -469,7 +539,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
                               (e.target.value as keyof Candidate) || null
                             )
                           }
-                          className="flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm"
+                          className="w-full sm:flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm min-w-[140px]"
                         >
                           <option value="">— Skip this column —</option>
                           {TARGET_FIELDS.map((field) => (
@@ -484,22 +554,11 @@ export function CSVImport({ onImport }: CSVImportProps) {
               </div>
             </ScrollArea>
 
-            {errors.length > 0 && (
-              <div className="mt-4 p-4 bg-status-denied/10 border border-status-denied/20 rounded-lg">
-                {errors.map((error, i) => (
-                  <p key={i} className="text-sm text-status-denied flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setStep("upload")}>
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3">
+              <Button variant="outline" onClick={() => setStep("upload")} className="w-full sm:w-auto">
                 Back
               </Button>
-              <Button onClick={handleProceedToPreview}>
+              <Button onClick={handleProceedToPreview} className="w-full sm:w-auto">
                 Continue to Preview
               </Button>
             </div>
@@ -525,8 +584,9 @@ export function CSVImport({ onImport }: CSVImportProps) {
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                  <table className="min-w-full divide-y divide-border">
                   <thead className="bg-background-tertiary">
                     <tr>
                       {mappings
@@ -557,7 +617,8 @@ export function CSVImport({ onImport }: CSVImportProps) {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
               {csvData.length > 5 && (
                 <div className="px-4 py-2 bg-background-tertiary text-sm text-foreground-muted">
@@ -566,11 +627,11 @@ export function CSVImport({ onImport }: CSVImportProps) {
               )}
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setStep("mapping")}>
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3">
+              <Button variant="outline" onClick={() => setStep("mapping")} className="w-full sm:w-auto">
                 Back
               </Button>
-              <Button onClick={handleImport}>
+              <Button onClick={handleImport} className="w-full sm:w-auto">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 Import {csvData.length} Candidates
               </Button>
