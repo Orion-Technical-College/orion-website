@@ -160,9 +160,31 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (candidates.length !== candidateIds.length) {
+    // Identify which candidates were not found or are not accessible
+    const foundCandidateIds = new Set(candidates.map((c) => c.id));
+    const missingCandidateIds = candidateIds.filter((id) => !foundCandidateIds.has(id));
+    
+    // Log missing candidates for debugging
+    if (missingCandidateIds.length > 0) {
+      console.warn("[SESSIONS] Some candidates were not found or are not accessible:", {
+        missingIds: missingCandidateIds,
+        requestedCount: candidateIds.length,
+        foundCount: candidates.length,
+        userId: user.id,
+        clientId: user.clientId,
+      });
+    }
+
+    // Proceed with partial success - only process accessible candidates
+    // If no candidates are accessible, return error
+    if (candidates.length === 0) {
       return NextResponse.json(
-        { error: "Some candidates were not found or are not accessible" },
+        { 
+          error: "No candidates were found or are accessible",
+          detail: missingCandidateIds.length > 0 
+            ? `${missingCandidateIds.length} candidate(s) were not found or are not accessible` 
+            : "All candidates were filtered out by tenant restrictions"
+        },
         { status: 400 }
       );
     }
@@ -291,6 +313,7 @@ export async function POST(request: NextRequest) {
         campaignId,
         recipientCount: session.recipients.length,
         blockedCount: counts.blocked,
+        skippedCount: missingCandidateIds.length,
       }
     ).catch(() => { });
 
@@ -309,6 +332,12 @@ export async function POST(request: NextRequest) {
       currentIndex: 0,
       nextRecipientId,
       counts,
+      // Include information about skipped candidates
+      skippedCandidates: missingCandidateIds.length > 0 ? {
+        count: missingCandidateIds.length,
+        ids: missingCandidateIds,
+        message: `Starting session for ${candidates.length} of ${candidateIds.length} candidates. ${missingCandidateIds.length} were not found or are not accessible.`,
+      } : undefined,
     });
   } catch (error: any) {
     console.error("[SESSIONS] Error creating session:", error);

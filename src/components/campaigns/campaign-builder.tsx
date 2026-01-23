@@ -304,11 +304,21 @@ function CampaignBuilderComponent({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create session");
+        throw new Error(error.error || error.detail || "Failed to create session");
       }
 
       const data = await response.json();
       setSessionId(data.sessionId);
+
+      // Notify user if some candidates were skipped
+      if (data.skippedCandidates && data.skippedCandidates.count > 0) {
+        const message = data.skippedCandidates.message || 
+          `Starting session for ${data.counts?.total || 0} of ${selectedCandidates.size} candidates. ${data.skippedCandidates.count} were not accessible.`;
+        // Use a more user-friendly notification (could be replaced with toast/notification system)
+        console.warn("[CAMPAIGN_BUILDER]", message);
+        // Show alert for now - could be replaced with toast notification
+        alert(message);
+      }
 
       // Trigger navigation to guided send (handled by parent)
       if (onStartGuidedSend) {
@@ -415,11 +425,17 @@ function CampaignBuilderComponent({
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  Message 1: Text only (no links) *
-                </label>
+            <div className="space-y-6">
+              {/* Message 1: Step 1 - Intro */}
+              <div className="border border-border rounded-lg p-4 bg-background-secondary">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-xs font-semibold text-accent">
+                    1
+                  </div>
+                  <label className="text-sm font-semibold text-foreground">
+                    Step 1: Intro Message (Text only, no links) *
+                  </label>
+                </div>
                 <Textarea
                   placeholder="Hi {{name}}, thanks for your interest..."
                   value={message1Template}
@@ -432,38 +448,50 @@ function CampaignBuilderComponent({
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  Message 2: Link only (Calendly/Zoom) *
-                </label>
+              {/* Message 2: Step 2 - Link */}
+              <div className="border-2 border-accent/30 rounded-lg p-4 bg-background-secondary">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-xs font-semibold text-background">
+                    2
+                  </div>
+                  <label className="text-sm font-semibold text-foreground">
+                    Step 2: Link Message (Calendly/Zoom only) *
+                  </label>
+                </div>
                 <Textarea
                   placeholder="Book a call: {{calendly_link}}"
                   value={message2Template}
                   onChange={(e) => setMessage2Template(e.target.value)}
                   className="min-h-[80px] font-mono text-sm"
                 />
-                <div className="flex justify-between mt-1.5 text-xs text-foreground-muted">
+                <div className="flex flex-wrap justify-between gap-2 mt-1.5 text-xs text-foreground-muted">
                   <span>{message2Count} characters</span>
                   <span>~{message2Segments} SMS segment{message2Segments !== 1 ? "s" : ""}</span>
                   {selectedCandidatesList.length > 0 && (
-                    <span className="text-amber-500">
+                    <span className="text-amber-500 font-medium">
                       Preview: {getMessage2Preview(selectedCandidatesList[0]).length} chars with URLs
                     </span>
                   )}
                 </div>
               </div>
 
-              <div>
-                <label className="flex items-center gap-2 mb-1.5 cursor-pointer">
+              {/* Message 3: Step 3 - Follow-up */}
+              <div className="border border-border rounded-lg p-4 bg-background-secondary">
+                <label className="flex items-center gap-2 mb-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={enableMessage3}
                     onChange={(e) => setEnableMessage3(e.target.checked)}
                     className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    Message 3: Fallback text (Optional)
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-semibold text-foreground-muted">
+                      3
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">
+                      Step 3: Follow-up Message (Optional)
+                    </span>
+                  </div>
                 </label>
                 {enableMessage3 && (
                   <>
@@ -471,7 +499,7 @@ function CampaignBuilderComponent({
                       placeholder="Let me know if you didn't see the link..."
                       value={message3Template}
                       onChange={(e) => setMessage3Template(e.target.value)}
-                      className="min-h-[80px] font-mono text-sm"
+                      className="min-h-[80px] font-mono text-sm mt-1.5"
                     />
                     <div className="flex justify-between mt-1.5 text-xs text-foreground-muted">
                       <span>{message3Count} characters</span>

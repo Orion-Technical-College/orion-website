@@ -34,6 +34,119 @@ const TARGET_FIELDS: { key: keyof Candidate; label: string; required: boolean }[
   { key: "notes", label: "Notes", required: false },
 ];
 
+/**
+ * Improved auto-mapping logic that checks both header names and sample data
+ */
+function autoMapColumn(
+  header: string,
+  sampleValue: string,
+  allHeaders: string[]
+): keyof Candidate | null {
+  const headerLower = header.toLowerCase().replace(/[_\s-]/g, "");
+  const sampleLower = sampleValue.toLowerCase().trim();
+  
+  // Check for email
+  if (
+    headerLower.includes("email") ||
+    headerLower.includes("e-mail") ||
+    headerLower === "mail" ||
+    headerLower.includes("mailaddress") ||
+    (headerLower.includes("contact") && headerLower.includes("email"))
+  ) {
+    // Validate: sample should contain @ symbol
+    if (sampleValue.includes("@")) {
+      return "email";
+    }
+  }
+  
+  // Check for phone
+  if (
+    headerLower.includes("phone") ||
+    headerLower.includes("tel") ||
+    headerLower.includes("mobile") ||
+    headerLower.includes("cell") ||
+    headerLower.includes("number")
+  ) {
+    // Validate: sample should contain digits
+    if (/\d/.test(sampleValue)) {
+      return "phone";
+    }
+  }
+  
+  // Check for location (with strict validation)
+  const locationPatterns = [
+    headerLower.includes("location"),
+    headerLower.includes("address"),
+    headerLower.includes("city"),
+    headerLower.includes("state"),
+    headerLower.includes("zip"),
+    headerLower.includes("postal"),
+  ];
+  
+  // Check if sample data looks like location (City, State format)
+  const looksLikeLocation = 
+    /^[^,]+,\s*[A-Z]{2}(\s+\d{5})?$/i.test(sampleValue) || // "City, ST" or "City, ST 12345"
+    sampleLower.includes("virginia") ||
+    sampleLower.includes("california") ||
+    sampleLower.includes("texas") ||
+    sampleLower.match(/\b(street|st|avenue|ave|road|rd|drive|dr|lane|ln|boulevard|blvd)\b/i);
+  
+  if (locationPatterns.some(Boolean) || looksLikeLocation) {
+    return "location";
+  }
+  
+  // Check for name (with negative patterns to exclude locations)
+  const namePatterns = [
+    headerLower.includes("name"),
+    headerLower.includes("candidate"),
+    headerLower === "fullname",
+    headerLower === "full_name",
+  ];
+  
+  // Negative patterns: exclude if header or sample suggests location
+  const negativePatterns = [
+    headerLower.includes("city"),
+    headerLower.includes("state"),
+    headerLower.includes("zip"),
+    headerLower.includes("address"),
+    headerLower.includes("location"),
+    sampleLower.includes("virginia"),
+    sampleLower.includes("california"),
+    sampleLower.includes("texas"),
+    // Reject if sample contains comma (likely "City, State" format)
+    sampleValue.includes(",") && /^[^,]+,\s*[A-Z]{2}/i.test(sampleValue),
+  ];
+  
+  if (namePatterns.some(Boolean) && !negativePatterns.some(Boolean)) {
+    // Additional validation: name should not look like location
+    if (!looksLikeLocation && !sampleValue.includes(",")) {
+      return "name";
+    }
+  }
+  
+  // Check for jobTitle
+  if (
+    headerLower.includes("job") ||
+    headerLower.includes("title") ||
+    headerLower.includes("position") ||
+    headerLower.includes("role") ||
+    (headerLower.includes("job") && headerLower.includes("title"))
+  ) {
+    return "jobTitle";
+  }
+  
+  // Check for client
+  if (
+    headerLower.includes("client") ||
+    headerLower.includes("company") ||
+    headerLower.includes("employer")
+  ) {
+    return "client";
+  }
+  
+  return null;
+}
+
 export function CSVImport({ onImport }: CSVImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
@@ -158,79 +271,15 @@ export function CSVImport({ onImport }: CSVImportProps) {
       setCsvData(parsedData);
       setHeaders(cleanedHeaders);
       
-      // Auto-map columns (same logic as CSV)
+      // Auto-map columns using improved logic with sample data validation
       const autoMappings: ColumnMapping[] = cleanedHeaders.map((header) => {
-        const headerLower = header.toLowerCase().replace(/[_\s-]/g, "");
-        const matchedField = TARGET_FIELDS.find((field) => {
-          const fieldLower = field.key.toLowerCase();
-          
-          // Enhanced matching logic (same as CSV)
-          if (field.key === "email") {
-            return (
-              headerLower.includes("email") ||
-              headerLower.includes("e-mail") ||
-              headerLower === "mail" ||
-              headerLower.includes("mailaddress") ||
-              (headerLower.includes("contact") && headerLower.includes("email"))
-            );
-          }
-          
-          if (field.key === "phone") {
-            return (
-              headerLower.includes("phone") ||
-              headerLower.includes("tel") ||
-              headerLower.includes("mobile") ||
-              headerLower.includes("cell") ||
-              headerLower.includes("number")
-            );
-          }
-          
-          if (field.key === "name") {
-            return (
-              headerLower.includes("name") ||
-              headerLower.includes("candidate") ||
-              headerLower === "fullname" ||
-              headerLower === "full_name"
-            );
-          }
-          
-          if (field.key === "jobTitle") {
-            return (
-              headerLower.includes("job") ||
-              headerLower.includes("title") ||
-              headerLower.includes("position") ||
-              headerLower.includes("role") ||
-              (headerLower.includes("job") && headerLower.includes("title"))
-            );
-          }
-          
-          if (field.key === "location") {
-            return (
-              headerLower.includes("location") ||
-              headerLower.includes("address") ||
-              headerLower.includes("city") ||
-              (headerLower.includes("candidate") && headerLower.includes("location"))
-            );
-          }
-          
-          if (field.key === "client") {
-            return (
-              headerLower.includes("client") ||
-              headerLower.includes("company") ||
-              headerLower.includes("employer")
-            );
-          }
-          
-          // Default matching for other fields
-          const fieldKey = String(field.key);
-          return (
-            headerLower.includes(fieldKey.toLowerCase()) ||
-            fieldKey.toLowerCase().includes(headerLower)
-          );
-        });
+        // Get sample value from first data row
+        const sampleValue = parsedData[0]?.[header] || "";
+        const matchedField = autoMapColumn(header, sampleValue, cleanedHeaders);
+        
         return {
           sourceColumn: header,
-          targetField: matchedField?.key || null,
+          targetField: matchedField,
         };
       });
       
@@ -327,80 +376,15 @@ export function CSVImport({ onImport }: CSVImportProps) {
           setCsvData(cleanedData);
           setHeaders(fileHeaders);
           
-          // Auto-map columns based on similarity with improved email detection
+          // Auto-map columns using improved logic with sample data validation
           const autoMappings: ColumnMapping[] = fileHeaders.map((header) => {
-            const headerLower = header.toLowerCase().replace(/[_\s-]/g, "");
-            const matchedField = TARGET_FIELDS.find((field) => {
-              const fieldLower = field.key.toLowerCase();
-              
-              // Enhanced matching logic
-              if (field.key === "email") {
-                // Match email variations: email, e-mail, email address, mail, etc.
-                return (
-                  headerLower.includes("email") ||
-                  headerLower.includes("e-mail") ||
-                  headerLower === "mail" ||
-                  headerLower.includes("mailaddress") ||
-                  (headerLower.includes("contact") && headerLower.includes("email"))
-                );
-              }
-              
-              if (field.key === "phone") {
-                // Match phone variations
-                return (
-                  headerLower.includes("phone") ||
-                  headerLower.includes("tel") ||
-                  headerLower.includes("mobile") ||
-                  headerLower.includes("cell") ||
-                  headerLower.includes("number")
-                );
-              }
-              
-              if (field.key === "name") {
-                return (
-                  headerLower.includes("name") ||
-                  headerLower.includes("candidate") ||
-                  headerLower === "fullname" ||
-                  headerLower === "full_name"
-                );
-              }
-              
-              if (field.key === "jobTitle") {
-                return (
-                  headerLower.includes("job") ||
-                  headerLower.includes("title") ||
-                  headerLower.includes("position") ||
-                  headerLower.includes("role") ||
-                  (headerLower.includes("job") && headerLower.includes("title"))
-                );
-              }
-              
-              if (field.key === "location") {
-                return (
-                  headerLower.includes("location") ||
-                  headerLower.includes("address") ||
-                  headerLower.includes("city") ||
-                  (headerLower.includes("candidate") && headerLower.includes("location"))
-                );
-              }
-              
-              if (field.key === "client") {
-                return (
-                  headerLower.includes("client") ||
-                  headerLower.includes("company") ||
-                  headerLower.includes("employer")
-                );
-              }
-              
-              // Default matching for other fields
-              return (
-                headerLower.includes(fieldLower) ||
-                fieldLower.includes(headerLower)
-              );
-            });
+            // Get sample value from first data row
+            const sampleValue = cleanedData[0]?.[header] || "";
+            const matchedField = autoMapColumn(header, sampleValue, fileHeaders);
+            
             return {
               sourceColumn: header,
-              targetField: matchedField?.key || null,
+              targetField: matchedField,
             };
           });
           
@@ -566,7 +550,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-24 sm:pb-0">
       {/* Error Banner - Sticky on mobile for visibility */}
       {errors.length > 0 && (
         <div className="sticky top-0 z-50 mb-4 p-4 bg-status-denied/95 backdrop-blur-sm border-b-2 border-status-denied rounded-lg shadow-lg">
@@ -687,7 +671,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-400px)] sm:h-[400px] min-h-[300px] max-h-[500px] pr-2 sm:pr-4">
+            <ScrollArea className="h-[calc(100vh-500px)] sm:h-[400px] min-h-[250px] max-h-[500px] pr-2 sm:pr-4">
               <div className="space-y-3">
                 {mappings
                   .filter((mapping) => {
@@ -727,7 +711,7 @@ export function CSVImport({ onImport }: CSVImportProps) {
                               (e.target.value as keyof Candidate) || null
                             )
                           }
-                          className="w-full sm:flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm min-w-[140px]"
+                          className="w-full sm:flex-1 bg-background-secondary border border-border rounded-md px-3 py-2 text-sm min-w-[140px] min-h-[44px]"
                         >
                           <option value="">— Skip this column —</option>
                           {TARGET_FIELDS.map((field) => (
@@ -742,11 +726,11 @@ export function CSVImport({ onImport }: CSVImportProps) {
               </div>
             </ScrollArea>
 
-            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3">
-              <Button variant="outline" onClick={() => setStep("upload")} className="w-full sm:w-auto">
+            <div className="sticky bottom-0 left-0 right-0 mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3 bg-background-secondary sm:bg-transparent pt-4 pb-4 sm:pb-0 border-t border-border sm:border-t-0 -mx-6 px-6 sm:mx-0 sm:px-0 z-10">
+              <Button variant="outline" onClick={() => setStep("upload")} className="w-full sm:w-auto min-h-[44px]">
                 Back
               </Button>
-              <Button onClick={handleProceedToPreview} className="w-full sm:w-auto">
+              <Button onClick={handleProceedToPreview} className="w-full sm:w-auto min-h-[44px]">
                 Continue to Preview
               </Button>
             </div>
@@ -815,11 +799,11 @@ export function CSVImport({ onImport }: CSVImportProps) {
               )}
             </div>
 
-            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3">
-              <Button variant="outline" onClick={() => setStep("mapping")} className="w-full sm:w-auto">
+            <div className="sticky bottom-0 left-0 right-0 mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-3 bg-background-secondary sm:bg-transparent pt-4 pb-4 sm:pb-0 border-t border-border sm:border-t-0 -mx-6 px-6 sm:mx-0 sm:px-0 z-10">
+              <Button variant="outline" onClick={() => setStep("mapping")} className="w-full sm:w-auto min-h-[44px]">
                 Back
               </Button>
-              <Button onClick={handleImport} className="w-full sm:w-auto">
+              <Button onClick={handleImport} className="w-full sm:w-auto min-h-[44px]">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 Import {csvData.length} Candidates
               </Button>

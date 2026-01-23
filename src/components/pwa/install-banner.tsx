@@ -44,7 +44,12 @@ export function InstallBanner() {
   }
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-in slide-in-from-bottom-4 duration-300">
+    <div 
+      className="fixed left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-in slide-in-from-bottom-4 duration-300"
+      style={{
+        bottom: `max(1rem, env(safe-area-inset-bottom, 1rem))`,
+      }}
+    >
       <div className="bg-background-secondary border border-border rounded-lg shadow-lg p-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
