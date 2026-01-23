@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { Candidate, ColumnMapping } from "@/types";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 interface CSVImportProps {
   onImport: (candidates: Partial<Candidate>[]) => void;
@@ -83,14 +84,189 @@ export function CSVImport({ onImport }: CSVImportProps) {
     return "unknown";
   };
 
+  const parseExcelFile = async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      
+      // Get the first worksheet
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        setErrors(["Excel file appears to be empty or has no worksheets"]);
+        return;
+      }
+      
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Convert to JSON with header row (array format)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1, // Use array format first
+        defval: "", // Default value for empty cells
+        raw: false, // Convert dates and numbers to strings
+      }) as unknown[][];
+      
+      if (jsonData.length === 0) {
+        setErrors(["Excel file appears to be empty"]);
+        return;
+      }
+      
+      // First row is headers
+      const headers = jsonData[0] as unknown[];
+      if (!headers || headers.length === 0) {
+        setErrors(["Excel file has no header row"]);
+        return;
+      }
+      
+      // Clean headers (remove BOM, trim, filter empty)
+      const cleanedHeaders = headers
+        .map((h) => String(h).replace(/^\uFEFF/, "").trim())
+        .filter((h) => h !== "" && h !== "__parsed_extra" && !h.startsWith("__"));
+      
+      if (cleanedHeaders.length === 0) {
+        setErrors(["Excel file has no valid column headers"]);
+        return;
+      }
+      
+      // Convert remaining rows to objects
+      const dataRows = jsonData.slice(1);
+      const parsedData: Record<string, string>[] = dataRows
+        .filter((row) => row && row.length > 0) // Filter empty rows
+        .map((row) => {
+          const rowObj: Record<string, string> = {};
+          cleanedHeaders.forEach((header, index) => {
+            const value = row[index];
+            // Convert to string and clean
+            let cleaned = value != null ? String(value).trim() : "";
+            // Remove leading/trailing quotes
+            if (cleaned.startsWith("'") || cleaned.startsWith('"')) {
+              cleaned = cleaned.slice(1);
+            }
+            if (cleaned.endsWith("'") || cleaned.endsWith('"')) {
+              cleaned = cleaned.slice(0, -1);
+            }
+            rowObj[header] = cleaned;
+          });
+          return rowObj;
+        });
+      
+      if (parsedData.length === 0) {
+        setErrors(["Excel file has no data rows"]);
+        return;
+      }
+      
+      // Set data and proceed with mapping (same as CSV flow)
+      setCsvData(parsedData);
+      setHeaders(cleanedHeaders);
+      
+      // Auto-map columns (same logic as CSV)
+      const autoMappings: ColumnMapping[] = cleanedHeaders.map((header) => {
+        const headerLower = header.toLowerCase().replace(/[_\s-]/g, "");
+        const matchedField = TARGET_FIELDS.find((field) => {
+          const fieldLower = field.key.toLowerCase();
+          
+          // Enhanced matching logic (same as CSV)
+          if (field.key === "email") {
+            return (
+              headerLower.includes("email") ||
+              headerLower.includes("e-mail") ||
+              headerLower === "mail" ||
+              headerLower.includes("mailaddress") ||
+              (headerLower.includes("contact") && headerLower.includes("email"))
+            );
+          }
+          
+          if (field.key === "phone") {
+            return (
+              headerLower.includes("phone") ||
+              headerLower.includes("tel") ||
+              headerLower.includes("mobile") ||
+              headerLower.includes("cell") ||
+              headerLower.includes("number")
+            );
+          }
+          
+          if (field.key === "name") {
+            return (
+              headerLower.includes("name") ||
+              headerLower.includes("candidate") ||
+              headerLower === "fullname" ||
+              headerLower === "full_name"
+            );
+          }
+          
+          if (field.key === "jobTitle") {
+            return (
+              headerLower.includes("job") ||
+              headerLower.includes("title") ||
+              headerLower.includes("position") ||
+              headerLower.includes("role") ||
+              (headerLower.includes("job") && headerLower.includes("title"))
+            );
+          }
+          
+          if (field.key === "location") {
+            return (
+              headerLower.includes("location") ||
+              headerLower.includes("address") ||
+              headerLower.includes("city") ||
+              (headerLower.includes("candidate") && headerLower.includes("location"))
+            );
+          }
+          
+          if (field.key === "client") {
+            return (
+              headerLower.includes("client") ||
+              headerLower.includes("company") ||
+              headerLower.includes("employer")
+            );
+          }
+          
+          // Default matching for other fields
+          const fieldKey = String(field.key);
+          return (
+            headerLower.includes(fieldKey.toLowerCase()) ||
+            fieldKey.toLowerCase().includes(headerLower)
+          );
+        });
+        return {
+          sourceColumn: header,
+          targetField: matchedField?.key || null,
+        };
+      });
+      
+      setMappings(autoMappings);
+      setStep("mapping");
+    } catch (error) {
+      console.error("Excel parsing error:", error);
+      setErrors([
+        `Error parsing Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "Please ensure your Excel file is properly formatted and not corrupted."
+      ]);
+    }
+  };
+
   const parseFile = async (file: File) => {
     // Detect file type before parsing
     const fileType = await detectFileType(file);
     
-    if (fileType === "excel" || fileType === "binary") {
+    // Handle Excel files
+    if (fileType === "excel") {
+      await parseExcelFile(file);
+      return;
+    }
+    
+    // Handle binary files that might be Excel
+    if (fileType === "binary") {
+      // Try to parse as Excel first
+      const extension = file.name.toLowerCase().split('.').pop();
+      if (extension === 'xlsx' || extension === 'xls') {
+        await parseExcelFile(file);
+        return;
+      }
+      // Otherwise show error
       setErrors([
-        "Excel files (.xlsx, .xls) are not directly supported. Please export your file as CSV first.",
-        "To convert: Open in Excel/Google Sheets → File → Save As → CSV format"
+        "This file appears to be a binary file, not a CSV.",
+        "Please export your file as CSV: Open in Excel/Sheets → File → Save As → CSV"
       ]);
       setFile(null);
       return;
@@ -98,13 +274,14 @@ export function CSVImport({ onImport }: CSVImportProps) {
     
     if (fileType === "unknown") {
       setErrors([
-        "Unsupported file type. Please upload a CSV file.",
+        "Unsupported file type. Please upload a CSV or Excel file.",
         "The file may be corrupted or in an unsupported format."
       ]);
       setFile(null);
       return;
     }
 
+    // Parse CSV files
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -234,15 +411,26 @@ export function CSVImport({ onImport }: CSVImportProps) {
         }
       },
       error: (error) => {
-        // Check if error is due to binary content
+        // Check if error is due to binary content - try Excel parsing
         if (error.message?.includes("binary") || error.message?.includes("Invalid")) {
-          setErrors([
-            "This file appears to be a binary file (Excel/ZIP format), not a CSV.",
-            "Please export your file as CSV: Open in Excel/Sheets → File → Save As → CSV"
-          ]);
+          const extension = file.name.toLowerCase().split('.').pop();
+          if (extension === 'xlsx' || extension === 'xls') {
+            // Try parsing as Excel
+            parseExcelFile(file).catch(() => {
+              setErrors([
+                "This file appears to be a binary file (Excel/ZIP format), not a CSV.",
+                "Please export your file as CSV: Open in Excel/Sheets → File → Save As → CSV"
+              ]);
+            });
+          } else {
+            setErrors([
+              "This file appears to be a binary file, not a CSV.",
+              "Please export your file as CSV: Open in Excel/Sheets → File → Save As → CSV"
+            ]);
+          }
         } else {
           setErrors([
-            `Error parsing file: ${error.message || "Unknown error"}`,
+            `Error parsing CSV file: ${error.message || "Unknown error"}`,
             "Please ensure your CSV file is properly formatted and contains valid text data."
           ]);
         }
