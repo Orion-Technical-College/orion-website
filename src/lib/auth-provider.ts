@@ -450,14 +450,16 @@ export function sessionCallback(params: {
 }): Session {
   const { session, token } = params;
 
-  if (session.user) {
-    session.user.id = token.id as string;
-    session.user.email = token.email as string;
-    session.user.name = token.name as string;
-    session.user.role = token.role as Role;
-    session.user.clientId = (token.clientId as string | null) ?? null;
-    session.user.isInternal = (token.isInternal as boolean) ?? false;
-    session.user.mustChangePassword = (token.mustChangePassword as boolean) ?? false;
+  // Ensure session.user exists and populate from token
+  if (session.user && token) {
+    // Only assign if token values are defined to avoid overwriting with undefined
+    if (token.id) session.user.id = token.id;
+    if (token.email) session.user.email = token.email;
+    if (token.name) session.user.name = token.name;
+    if (token.role) session.user.role = token.role as Role;
+    session.user.clientId = token.clientId ?? null;
+    session.user.isInternal = token.isInternal ?? false;
+    session.user.mustChangePassword = token.mustChangePassword ?? false;
   }
 
   return session;

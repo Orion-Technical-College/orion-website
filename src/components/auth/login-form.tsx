@@ -44,8 +44,9 @@ export function LoginForm() {
         setError(errorMessage);
         setLoading(false);
       } else if (result?.ok) {
-        router.push("/");
-        router.refresh();
+        // Use NextAuth's built-in redirect to ensure session is established
+        // This will trigger the redirect callback in auth-config.ts
+        window.location.href = "/workspaces";
       } else {
         setError("An unexpected error occurred. Please try again.");
         setLoading(false);
