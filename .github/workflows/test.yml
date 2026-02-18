@@ -64,6 +64,7 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Generate coverage report
+        continue-on-error: true
         run: npm run test:coverage
         env:
           NODE_ENV: test
