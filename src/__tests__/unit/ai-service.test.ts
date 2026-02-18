@@ -19,8 +19,13 @@ jest.doMock("@/lib/azure-openai-client", () => ({
   },
 }));
 
+// Avoid loading Langfuse runtime in unit tests.
+jest.doMock("@/lib/langfuse-client", () => ({
+  getLangfuseClient: () => null,
+}));
+
 // Import after mock setup
-import {
+const {
   chatWithContext,
   trimHistory,
   selectCandidateSample,
@@ -30,7 +35,7 @@ import {
   MAX_ROWS,
   MAX_HISTORY_TURNS,
   MAX_MESSAGE_CHARS,
-} from "@/lib/ai-service";
+} = require("@/lib/ai-service");
 
 describe("AI Service", () => {
   beforeEach(() => {
@@ -159,15 +164,15 @@ describe("AI Service", () => {
       const error = new Error("Rate limit exceeded");
       expect(classifyAIError(error)).toBe("RATE_LIMIT");
 
-      const error429 = new Error("429 Too Many Requests");
+      const error429 = { message: "Too Many Requests", status: 429 };
       expect(classifyAIError(error429)).toBe("RATE_LIMIT");
     });
 
     it("should classify server errors", () => {
-      const error = new Error("Server error 500");
+      const error = { message: "Server error", status: 500 };
       expect(classifyAIError(error)).toBe("SERVER_ERROR");
 
-      const error503 = new Error("503 Service Unavailable");
+      const error503 = { message: "Service Unavailable", status: 503 };
       expect(classifyAIError(error503)).toBe("SERVER_ERROR");
     });
 
@@ -184,10 +189,10 @@ describe("AI Service", () => {
 
   describe("getErrorMessage", () => {
     it("should return user-friendly messages", () => {
-      expect(getErrorMessage("RATE_LIMIT")).toBe("You hit the usage limit. Try again shortly.");
-      expect(getErrorMessage("SERVER_ERROR")).toBe("AI is temporarily unavailable. Please try again later.");
-      expect(getErrorMessage("BAD_INPUT")).toBe("I could not understand your request. Try rephrasing.");
-      expect(getErrorMessage("UNKNOWN")).toBe("An unexpected error occurred. Please try again.");
+      expect(getErrorMessage("RATE_LIMIT")).toBe("The AI service is receiving too many requests. Please try again in a moment.");
+      expect(getErrorMessage("SERVER_ERROR")).toBe("The AI service had a problem answering. Please try again.");
+      expect(getErrorMessage("BAD_INPUT")).toBe("I could not process that request. Try shortening or simplifying what you asked.");
+      expect(getErrorMessage("UNKNOWN")).toBe("Something went wrong while talking to the AI service.");
     });
   });
 

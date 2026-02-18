@@ -7,7 +7,6 @@
  */
 
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
-import { adminWhere, canDeleteUser, canDeleteClient, getSystemSetting, setSystemSetting } from "@/lib/admin-helpers";
 import { createTestUser } from "../utils/mock-auth";
 import { ROLES } from "@/lib/permissions";
 import type { SessionUser } from "@/types/auth";
@@ -29,9 +28,16 @@ jest.mock("@/lib/prisma", () => ({
       upsert: jest.fn(),
     },
   },
-}), { virtual: true });
+}));
 
 const { prisma } = require("@/lib/prisma");
+const {
+  adminWhere,
+  canDeleteUser,
+  canDeleteClient,
+  getSystemSetting,
+  setSystemSetting,
+} = require("@/lib/admin-helpers");
 
 describe("Admin Helpers", () => {
   describe("adminWhere", () => {
@@ -268,6 +274,10 @@ describe("Admin Helpers", () => {
   });
 
   describe("setSystemSetting", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it("should update system setting in database", async () => {
       prisma.systemSetting.upsert.mockResolvedValue({
         key: "FEATURE_AI_ASSISTANT",
@@ -298,7 +308,8 @@ describe("Admin Helpers", () => {
       await setSystemSetting("FEATURE_TEST", false, "admin-1");
 
       expect(prisma.systemSetting.upsert).toHaveBeenCalled();
-      const callArgs = (prisma.systemSetting.upsert as jest.Mock).mock.calls[0][0];
+      const calls = (prisma.systemSetting.upsert as jest.Mock).mock.calls;
+      const callArgs = calls[calls.length - 1][0];
       expect(callArgs.where.key).toBe("FEATURE_TEST");
     });
   });

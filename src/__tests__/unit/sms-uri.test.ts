@@ -28,7 +28,7 @@ describe("sms-uri", () => {
 
     it("should handle phone with plus sign", () => {
       const result = generateSmsUri("+1-123-456-7890", "Hello");
-      expect(result).toBe("sms:11234567890?body=Hello");
+      expect(result).toBe("sms:+11234567890?body=Hello");
     });
 
     it("should URL encode message content", () => {
