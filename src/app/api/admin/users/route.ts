@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { ROLES, isValidRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { adminWhere } from "@/lib/admin-helpers";
 import { logAction } from "@/lib/audit";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import type { UserQueryFilters, UserFormData } from "@/types/admin";
+import type { UserFormData } from "@/types/admin";
+import { sendInviteEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -227,11 +227,13 @@ export async function POST(request: NextRequest) {
 
     // Generate password if sending invite
     let passwordHash: string | undefined;
+    let temporaryPassword: string | undefined;
     if (sendInvite) {
-      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase() + "!";
-      passwordHash = await bcrypt.hash(tempPassword, 10);
-      // TODO: Send email with temporary password
-      console.log(`[ADMIN_USERS][${correlationId}] Generated temp password for ${email} (not sent - email service not configured)`);
+      temporaryPassword =
+        Math.random().toString(36).slice(-12) +
+        Math.random().toString(36).slice(-12).toUpperCase() +
+        "!";
+      passwordHash = await bcrypt.hash(temporaryPassword, 10);
     }
 
     // Create user
@@ -268,6 +270,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    let inviteEmailSent = false;
+    let inviteEmailError: string | undefined;
+    if (sendInvite && temporaryPassword) {
+      const emailResult = await sendInviteEmail({
+        toEmail: newUser.email,
+        toName: newUser.name,
+        temporaryPassword,
+        correlationId,
+      });
+      inviteEmailSent = emailResult.success;
+      inviteEmailError = emailResult.error;
+    }
+
     // Audit log
     await logAction(
       user,
@@ -278,6 +293,9 @@ export async function POST(request: NextRequest) {
         email: newUser.email,
         role: newUser.role,
         clientId: newUser.clientId,
+        sendInvite: !!sendInvite,
+        inviteEmailSent,
+        inviteEmailError,
         correlationId,
       }
     );
@@ -287,6 +305,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: newUser,
+      inviteEmailSent,
+      inviteEmailError,
       correlationId,
     });
   } catch (error: any) {

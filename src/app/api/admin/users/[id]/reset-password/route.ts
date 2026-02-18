@@ -6,6 +6,7 @@ import { logAction } from "@/lib/audit";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { sendPasswordResetEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -126,8 +127,18 @@ export async function POST(
       },
     });
 
-    // Log password set (for debugging - in production, send via email)
-    console.log(`[ADMIN_USERS][${correlationId}] Password ${customPassword ? 'set' : 'reset'} for ${existingUser.email}. (EMAIL NOT SENT - service not configured)`);
+    let passwordEmailSent = false;
+    let passwordEmailError: string | undefined;
+
+    const emailResult = await sendPasswordResetEmail({
+      toEmail: existingUser.email,
+      toName: existingUser.name,
+      password: finalPassword,
+      customPasswordUsed: !!customPassword,
+      correlationId,
+    });
+    passwordEmailSent = emailResult.success;
+    passwordEmailError = emailResult.error;
 
     // Audit log
     await logAction(
@@ -138,6 +149,8 @@ export async function POST(
       {
         email: existingUser.email,
         customPasswordUsed: !!customPassword,
+        passwordEmailSent,
+        passwordEmailError,
         correlationId,
       }
     );
@@ -147,6 +160,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: "Password set successfully.",
+      passwordEmailSent,
+      passwordEmailError,
       correlationId,
     });
   } catch (error: any) {

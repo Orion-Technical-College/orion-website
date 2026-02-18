@@ -28,11 +28,10 @@ import {
   Edit,
   Trash2,
   Key,
+  Mail,
   Copy,
   Check,
-  X,
   AlertCircle,
-  MoreVertical,
 } from "lucide-react";
 import { ROLES } from "@/lib/permissions";
 import { UserFormDialog } from "./user-form-dialog";
@@ -157,6 +156,36 @@ export function UserManagement() {
 
     return () => clearTimeout(timer);
   }, [filters.search]);
+
+  const handleResendInvite = useCallback(async (targetUser: UserWithClient) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/users/${targetUser.id}/resend-invite`, {
+        method: "POST",
+      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to resend invite");
+      }
+
+      if (result.inviteEmailSent) {
+        setSuccessMessage(`Invite email resent to ${targetUser.email}.`);
+      } else {
+        setSuccessMessage(`Invite regenerated for ${targetUser.email}.`);
+        if (result.inviteEmailError) {
+          setError(`Invite email failed: ${result.inviteEmailError}`);
+        }
+      }
+      setTimeout(() => setSuccessMessage(null), 5000);
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message || "Failed to resend invite");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [fetchUsers]);
 
   const columns: ColumnDef<UserWithClient>[] = useMemo(
     () => [
@@ -357,6 +386,18 @@ export function UserManagement() {
                   <Key className="h-3.5 w-3.5" />
                 </Button>
               )}
+              {!isOAuth && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => handleResendInvite(user)}
+                  title="Resend invite"
+                  disabled={isSubmitting}
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -374,7 +415,7 @@ export function UserManagement() {
         },
       },
     ],
-    [copiedId]
+    [copiedId, handleResendInvite, isSubmitting]
   );
 
   const table = useReactTable({
@@ -430,7 +471,18 @@ export function UserManagement() {
           throw new Error(result.error?.message || "Failed to create user");
         }
 
-        setSuccessMessage("User created successfully");
+        if (data.sendInvite) {
+          if (result.inviteEmailSent) {
+            setSuccessMessage("User created and invite email sent successfully.");
+          } else {
+            setSuccessMessage("User created successfully.");
+            if (result.inviteEmailError) {
+              setError(`User was created, but invite email failed: ${result.inviteEmailError}`);
+            }
+          }
+        } else {
+          setSuccessMessage("User created successfully");
+        }
       }
 
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -488,7 +540,14 @@ export function UserManagement() {
         throw new Error(result.error?.message || "Failed to set password");
       }
 
-      setSuccessMessage("Password set successfully. User will be required to change password on next login.");
+      if (result.passwordEmailSent) {
+        setSuccessMessage("Password set and email notification sent successfully.");
+      } else {
+        setSuccessMessage("Password set successfully.");
+        if (result.passwordEmailError) {
+          setError(`Password was updated, but email failed: ${result.passwordEmailError}`);
+        }
+      }
       setTimeout(() => setSuccessMessage(null), 5000);
       fetchUsers();
     } catch (err: any) {

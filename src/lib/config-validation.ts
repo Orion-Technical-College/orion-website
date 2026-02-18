@@ -31,6 +31,16 @@ export function validateAuthConfig() {
     warnings.push("DATABASE_URL is not set - database operations will fail");
   }
 
+  const emailProvider = process.env.EMAIL_PROVIDER;
+  if (emailProvider === "azure_communication_services") {
+    if (!process.env.ACS_EMAIL_CONNECTION_STRING) {
+      warnings.push("ACS_EMAIL_CONNECTION_STRING is missing for Azure Communication Services email");
+    }
+    if (!process.env.ACS_EMAIL_SENDER_ADDRESS) {
+      warnings.push("ACS_EMAIL_SENDER_ADDRESS is missing for Azure Communication Services email");
+    }
+  }
+
   if (warnings.length > 0) {
     console.warn("⚠️ Configuration warnings:\n" + warnings.map(w => `  - ${w}`).join("\n"));
   }

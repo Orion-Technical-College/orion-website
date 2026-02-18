@@ -15,6 +15,7 @@ import type { SessionUser } from "@/types/auth";
 import { GET, POST } from "@/app/api/admin/users/route";
 import { PATCH, DELETE } from "@/app/api/admin/users/[id]/route";
 import { POST as ResetPasswordPOST } from "@/app/api/admin/users/[id]/reset-password/route";
+import { POST as ResendInvitePOST } from "@/app/api/admin/users/[id]/resend-invite/route";
 
 // Mock dependencies
 jest.mock("@/lib/prisma", () => ({
@@ -59,9 +60,15 @@ jest.mock("bcryptjs", () => ({
   hash: jest.fn().mockResolvedValue("hashed-password"),
 }), { virtual: true });
 
+jest.mock("@/lib/email", () => ({
+  sendInviteEmail: jest.fn().mockResolvedValue({ success: true }),
+  sendPasswordResetEmail: jest.fn().mockResolvedValue({ success: true }),
+}), { virtual: true });
+
 const { prisma } = require("@/lib/prisma");
 const { requireAuth, requireRole } = require("@/lib/auth");
 const { logAction } = require("@/lib/audit");
+const { sendInviteEmail, sendPasswordResetEmail } = require("@/lib/email");
 
 describe("Admin User Management API", () => {
   let platformAdmin: SessionUser;
@@ -229,6 +236,49 @@ describe("Admin User Management API", () => {
         newUser.id,
         "User",
         expect.any(Object)
+      );
+    });
+
+    it("should send invite email when sendInvite is true", async () => {
+      const newUser = {
+        id: "new-user-2",
+        name: "Invited User",
+        email: "invited@example.com",
+        role: ROLES.RECRUITER,
+        isActive: true,
+        emailVerified: null,
+        mustChangePassword: false,
+        authProvider: "credentials",
+        clientId: null,
+        client: null,
+        createdAt: new Date(),
+      };
+
+      prisma.user.findFirst.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue(newUser);
+
+      const request = new NextRequest("http://localhost/api/admin/users", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Invited User",
+          email: "invited@example.com",
+          role: ROLES.RECRUITER,
+          isActive: true,
+          sendInvite: true,
+        }),
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.inviteEmailSent).toBe(true);
+      expect(sendInviteEmail).toHaveBeenCalledTimes(1);
+      expect(sendInviteEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toEmail: "invited@example.com",
+        })
       );
     });
 
@@ -528,7 +578,7 @@ describe("Admin User Management API", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.message).toContain("Password reset");
+      expect(data.message).toContain("Password");
       expect(logAction).toHaveBeenCalledWith(
         platformAdmin,
         "USER_PASSWORD_RESET",
@@ -536,6 +586,7 @@ describe("Admin User Management API", () => {
         "User",
         expect.any(Object)
       );
+      expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
     });
 
     it("should reject password reset for OAuth users", async () => {
@@ -553,6 +604,65 @@ describe("Admin User Management API", () => {
       });
 
       const response = await ResetPasswordPOST(request, { params: { id: "user-1" } });
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error.message).toContain("OAuth users");
+    });
+  });
+
+  describe("POST /api/admin/users/[id]/resend-invite", () => {
+    it("should resend invite for credentials user", async () => {
+      const existingUser = {
+        id: "user-1",
+        email: "user@example.com",
+        name: "Test User",
+        authProvider: "credentials",
+        deletedAt: null,
+      };
+
+      prisma.user.findUnique.mockResolvedValue(existingUser);
+      prisma.user.update.mockResolvedValue({
+        ...existingUser,
+        mustChangePassword: false,
+      });
+
+      const request = new NextRequest("http://localhost/api/admin/users/user-1/resend-invite", {
+        method: "POST",
+      });
+
+      const response = await ResendInvitePOST(request, { params: { id: "user-1" } });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.inviteEmailSent).toBe(true);
+      expect(sendInviteEmail).toHaveBeenCalledTimes(1);
+      expect(logAction).toHaveBeenCalledWith(
+        platformAdmin,
+        "USER_INVITE_RESENT",
+        "user-1",
+        "User",
+        expect.any(Object)
+      );
+    });
+
+    it("should reject resend invite for OAuth users", async () => {
+      const oauthUser = {
+        id: "user-1",
+        email: "user@example.com",
+        authProvider: "azureadb2c",
+        deletedAt: null,
+      };
+
+      prisma.user.findUnique.mockResolvedValue(oauthUser);
+
+      const request = new NextRequest("http://localhost/api/admin/users/user-1/resend-invite", {
+        method: "POST",
+      });
+
+      const response = await ResendInvitePOST(request, { params: { id: "user-1" } });
       const data = await response.json();
 
       expect(response.status).toBe(400);
