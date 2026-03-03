@@ -108,13 +108,17 @@ export function RecruiterWorkspace({
   const [workspaceTab, setWorkspaceTab] = useState("data-table");
   const [campaignRecipients, setCampaignRecipients] = useState<Candidate[]>([]);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [guidedSendSessionId, setGuidedSendSessionId] = useState<string>("");
+  const [guidedSendCampaignName, setGuidedSendCampaignName] = useState<string>("Campaign");
   const chatInputRef = useRef<HTMLInputElement>(null);
   const [chatInput, setChatInput] = useState("");
 
   // Check if user is Platform Admin
   const isPlatformAdmin = userRole === ROLES.PLATFORM_ADMIN;
 
-  // Load candidates from database
+  const CANDIDATES_STORAGE_KEY = "emc-workspace-candidates";
+
+  // Load candidates: DB first, fall back to localStorage (preserves CSV imports across reloads)
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
@@ -123,10 +127,24 @@ export function RecruiterWorkspace({
           const data = await response.json();
           if (data.candidates && data.candidates.length > 0) {
             setCandidates(data.candidates);
+            return;
           }
         }
       } catch (error) {
         console.error("Failed to fetch candidates:", error);
+      }
+
+      // Fall back to localStorage-persisted candidates (e.g. CSV imports)
+      try {
+        const stored = localStorage.getItem(CANDIDATES_STORAGE_KEY);
+        if (stored) {
+          const parsed: Candidate[] = JSON.parse(stored);
+          if (parsed.length > 0) {
+            setCandidates(parsed);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load candidates from localStorage:", error);
       }
     };
 
@@ -165,9 +183,9 @@ export function RecruiterWorkspace({
     []
   );
 
-  // Import handler
+  // Import handler — persists imported candidates to localStorage so they
+  // survive page reloads caused by the SMS app round-trip on mobile.
   const handleImport = useCallback((importedCandidates: Partial<Candidate>[]) => {
-    // Cast partial candidates to full candidates with defaults
     const fullCandidates: Candidate[] = importedCandidates.map((c, index) => ({
       id: c.id || `imported-${Date.now()}-${index}`,
       name: c.name || "",
@@ -183,7 +201,15 @@ export function RecruiterWorkspace({
       createdAt: c.createdAt || new Date(),
       updatedAt: c.updatedAt || new Date(),
     }));
-    setCandidates((prev) => [...prev, ...fullCandidates]);
+    setCandidates((prev) => {
+      const merged = [...prev, ...fullCandidates];
+      try {
+        localStorage.setItem(CANDIDATES_STORAGE_KEY, JSON.stringify(merged));
+      } catch (error) {
+        console.error("Failed to persist candidates to localStorage:", error);
+      }
+      return merged;
+    });
     setActiveTab("workspace");
   }, []);
 
@@ -193,6 +219,14 @@ export function RecruiterWorkspace({
     setCampaignRecipients(recipients);
     setWorkspaceTab("send-sms");
   }, [candidates, selectedRows]);
+
+  // Called by CampaignBuilder once it has created a real session on the server.
+  // Stores the session ID and switches to the guided-send tab.
+  const handleStartGuidedSend = useCallback((sessionId: string, campaignName?: string) => {
+    setGuidedSendSessionId(sessionId);
+    setGuidedSendCampaignName(campaignName || "Campaign");
+    setWorkspaceTab("send-sms");
+  }, []);
 
   // Mobile menu toggle
   const toggleMobileMenu = useCallback(() => {
@@ -301,11 +335,35 @@ export function RecruiterWorkspace({
                 </TabsContent>
 
                 <TabsContent value="send-sms" className="flex-1 m-0">
-                  <GuidedSend
-                    sessionId=""
-                    campaignName="Campaign"
-                    onBack={() => setWorkspaceTab("data-table")}
-                  />
+                  {guidedSendSessionId ? (
+                    <GuidedSend
+                      sessionId={guidedSendSessionId}
+                      campaignName={guidedSendCampaignName}
+                      onBack={() => {
+                        setWorkspaceTab("data-table");
+                        setGuidedSendSessionId("");
+                      }}
+                      onComplete={() => {
+                        setWorkspaceTab("data-table");
+                        setGuidedSendSessionId("");
+                      }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
+                      <p className="text-sm text-foreground-muted">
+                        No active send session.
+                      </p>
+                      <p className="text-xs text-foreground-muted">
+                        Go to <strong>Campaigns</strong>, build your message, select candidates, then click <strong>Start Guided Send</strong>.
+                      </p>
+                      <button
+                        onClick={() => setActiveTab("campaigns")}
+                        className="text-xs text-accent underline"
+                      >
+                        Open Campaigns →
+                      </button>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -328,6 +386,7 @@ export function RecruiterWorkspace({
               }}
               onSelectAll={() => setSelectedRows(new Set(candidates.map(c => c.id)))}
               onDeselectAll={() => setSelectedRows(new Set())}
+              onStartGuidedSend={(sessionId) => handleStartGuidedSend(sessionId)}
             />
           )}
 

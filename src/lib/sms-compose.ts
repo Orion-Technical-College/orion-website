@@ -90,9 +90,15 @@ export async function openComposeAndroid(
       };
     }
 
-    // window.location.href doesn't throw, so we can't detect failure
-    // Treat as success - user will see if it didn't work
-    window.location.href = smsUri;
+    // Use an anchor click instead of window.location.href to avoid
+    // adding an sms: entry to the browser history stack. If history gets
+    // polluted with sms: entries, pressing the back arrow cycles through
+    // them and eventually pushes the user back to the login page.
+    const a = document.createElement("a");
+    a.href = smsUri;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
     return {
       method: "SMS_URI",
