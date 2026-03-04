@@ -10,6 +10,7 @@ import { Page } from "@playwright/test";
 /**
  * Real login: Fill in the login form and submit.
  * Useful for smoke tests and happy path scenarios.
+ * After login, user lands on /workspaces or /change-password (when required).
  */
 export async function loginWithCredentials(
   page: Page,
@@ -20,7 +21,12 @@ export async function loginWithCredentials(
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
-  await page.waitForURL((url) => !url.pathname.includes("/login"));
+  await page.waitForURL(
+    (url) =>
+      url.pathname === "/workspaces" ||
+      url.pathname === "/change-password",
+    { timeout: 15000 }
+  );
 }
 
 /**
@@ -42,33 +48,51 @@ export async function loginProgrammatically(
 
 /**
  * Logout helper.
+ * Clicks Sign Out (workspaces header icon with title, or sidebar/layout "Sign Out" text).
  */
 export async function logout(page: Page): Promise<void> {
-  // Find and click logout button
-  // This depends on your UI implementation
-  await page.click('button:has-text("Logout")');
-  await page.waitForURL((url) => url.pathname.includes("/login"));
+  const signOutButton = page
+    .locator('button[title="Sign out"]')
+    .or(page.locator('button:has-text("Sign Out")'));
+  await signOutButton.first().click();
+  await page.waitForURL((url) => url.pathname.includes("/login"), {
+    timeout: 10000,
+  });
 }
 
 /**
  * Check if user is logged in by checking for session indicator.
+ * Prefers data-testid="session-indicator" when present; otherwise uses
+ * "not on login page" plus presence of "Welcome back" or Sign Out control.
  */
 export async function isLoggedIn(page: Page): Promise<boolean> {
-  // Check for user name or profile indicator
-  const userIndicator = await page.locator('[data-testid="user-name"]').count();
-  return userIndicator > 0;
+  const url = page.url();
+  if (url.includes("/login")) return false;
+  const byTestId = await page.locator('[data-testid="session-indicator"]').count();
+  if (byTestId > 0) return true;
+  const welcomeBack = await page.locator('text=/Welcome back/i').count();
+  if (welcomeBack > 0) return true;
+  const signOut =
+    (await page.locator('button[title="Sign out"]').count()) +
+    (await page.locator('button:has-text("Sign Out")').count());
+  return signOut > 0;
 }
 
 /**
- * Wait for authentication to complete.
+ * Wait for authentication to complete (session visible after redirect to workspaces/change-password).
  */
 export async function waitForAuth(page: Page): Promise<void> {
-  await page.waitForSelector('[data-testid="user-name"]', { timeout: 5000 }).catch(() => {
-    // If user name selector doesn't exist, check for redirect to login
-    const url = page.url();
-    if (url.includes("/login")) {
+  const timeout = 10000;
+  try {
+    await Promise.race([
+      page.waitForSelector('[data-testid="session-indicator"]', { timeout }),
+      page.waitForSelector('text=/Welcome back/i', { timeout }),
+      page.waitForSelector('button[title="Sign out"], button:has-text("Sign Out")', { timeout }),
+    ]);
+  } catch {
+    if (page.url().includes("/login")) {
       throw new Error("User was redirected to login page");
     }
-  });
+  }
 }
 

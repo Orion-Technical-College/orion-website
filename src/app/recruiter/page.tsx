@@ -10,16 +10,25 @@ import { RecruiterWorkspace } from "@/components/workspace/recruiter-workspace";
 import { WORKSPACE_KEYS } from "@/lib/workspace";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function RecruiterWorkspacePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const hasSeenSessionLoading = useRef(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
+    if (status === "loading") {
+      hasSeenSessionLoading.current = true;
+      return;
+    }
+    if (status === "unauthenticated" && hasSeenSessionLoading.current) {
+      const t = setTimeout(() => router.push("/login"), 500);
+      return () => clearTimeout(t);
+    }
+    if (status === "authenticated") {
+      hasSeenSessionLoading.current = true;
     }
   }, [status, router]);
 

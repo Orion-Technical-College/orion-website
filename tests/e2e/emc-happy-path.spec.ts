@@ -5,9 +5,10 @@ test.describe("EMC Happy Path", () => {
   test("should complete full workflow: login → workspace → table → send SMS", async ({ page }) => {
     // Step 1: Login
     await loginWithCredentials(page, "rjames@orion.edu", "Password123!");
-    await expect(page).toHaveURL("/");
-    
-    // Step 2: Navigate to workspace (should be default)
+    await expect(page).toHaveURL(/\/(workspaces|change-password)/);
+
+    // Step 2: Navigate to recruiter workspace (to get table)
+    await page.goto("/recruiter");
     await page.waitForSelector("table", { timeout: 10000 });
     
     // Step 3: Verify table is visible with candidates
@@ -49,8 +50,9 @@ test.describe("EMC Happy Path", () => {
 
   test("should filter candidates and send messages", async ({ page }) => {
     await loginWithCredentials(page, "rjames@orion.edu", "Password123!");
-    await expect(page).toHaveURL("/");
-    
+    await expect(page).toHaveURL(/\/(workspaces|change-password)/);
+
+    await page.goto("/recruiter");
     // Wait for table to load
     await page.waitForSelector("table", { timeout: 10000 });
     

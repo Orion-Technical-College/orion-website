@@ -14,7 +14,7 @@ export default function DocsPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/workspaces")}
           className="text-foreground-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

@@ -9,7 +9,7 @@
  * - Subtitle: tenantName (when different from workspace name)
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
@@ -176,15 +176,23 @@ export default function WorkspacesPage() {
   const { data: session, status } = useSession();
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasSeenSessionLoading = useRef(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
+    if (status === "loading") {
+      hasSeenSessionLoading.current = true;
       return;
     }
-
     if (status === "authenticated") {
+      hasSeenSessionLoading.current = true;
       fetchWorkspaces();
+      return;
+    }
+    if (status === "unauthenticated") {
+      if (hasSeenSessionLoading.current) {
+        const t = setTimeout(() => router.push("/login"), 500);
+        return () => clearTimeout(t);
+      }
     }
   }, [status, router]);
 
@@ -286,7 +294,7 @@ export default function WorkspacesPage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4" data-testid="session-indicator">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-zinc-200">{session?.user?.name}</p>
                 <p className="text-xs text-zinc-500">{session?.user?.email}</p>

@@ -15,10 +15,10 @@ test.describe("Authentication Flow", () => {
 
   test("should login with valid credentials", async ({ page }) => {
     await loginWithCredentials(page, "rjames@orion.edu", "Password123!");
-    
-    // Should redirect to home page after login
-    await expect(page).toHaveURL("/");
-    
+
+    // Should land on workspaces or change-password after login
+    await expect(page).toHaveURL(/\/(workspaces|change-password)/);
+
     // Should show user is logged in
     const loggedIn = await isLoggedIn(page);
     expect(loggedIn).toBe(true);
@@ -58,22 +58,27 @@ test.describe("Authentication Flow", () => {
     await page.fill('input[name="confirmPassword"]', "NewPassword123!");
     await page.click('button[type="submit"]');
     
-    // Should redirect to home after successful password change
-    await expect(page).toHaveURL("/");
+    // Should redirect to workspaces after successful password change
+    await expect(page).toHaveURL(/\/workspaces/);
   });
 
   test("should logout successfully", async ({ page }) => {
     await loginWithCredentials(page, "rjames@orion.edu", "Password123!");
-    
-    // Wait for login to complete
-    await expect(page).toHaveURL("/");
-    
-    // Logout
+
+    // Wait for login to complete (workspaces or change-password)
+    await expect(page).toHaveURL(/\/(workspaces|change-password)/);
+
+    // Ensure we're on a page with Sign Out (change-password has no logout control)
+    if (page.url().includes("/change-password")) {
+      await page.goto("/workspaces");
+      await expect(page).toHaveURL(/\/workspaces/);
+    }
+
     await logout(page);
-    
+
     // Should redirect to login
     await expect(page).toHaveURL(/\/login/);
-    
+
     // Should not be logged in
     const loggedIn = await isLoggedIn(page);
     expect(loggedIn).toBe(false);

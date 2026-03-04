@@ -10,17 +10,26 @@
 import { WORKSPACE_KEYS } from "@/lib/workspace";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Loader2, Megaphone, Mail, MessageSquare, BarChart3, Settings, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function MarketingWorkspacePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const hasSeenSessionLoading = useRef(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
+    if (status === "loading") {
+      hasSeenSessionLoading.current = true;
+      return;
+    }
+    if (status === "unauthenticated" && hasSeenSessionLoading.current) {
+      const t = setTimeout(() => router.push("/login"), 500);
+      return () => clearTimeout(t);
+    }
+    if (status === "authenticated") {
+      hasSeenSessionLoading.current = true;
     }
   }, [status, router]);
 

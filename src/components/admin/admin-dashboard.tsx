@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "./user-management";
@@ -100,13 +101,13 @@ export function AdminDashboard() {
         {/* Navigation Header */}
         <header className="sticky top-0 z-10 bg-background-secondary border-b border-border">
           <div className="container mx-auto px-6 h-14 flex items-center justify-between">
-            <a
-              href="/"
+            <Link
+              href="/workspaces"
               className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="text-sm font-medium">Back to Workspace</span>
-            </a>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
@@ -130,13 +131,13 @@ export function AdminDashboard() {
       {/* Navigation Header */}
       <header className="sticky top-0 z-10 bg-background-secondary border-b border-border">
         <div className="container mx-auto px-6 h-14 flex items-center justify-between">
-          <a
-            href="/"
+          <Link
+            href="/workspaces"
             className="flex items-center gap-2 text-foreground-muted hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Back to Workspace</span>
-          </a>
+          </Link>
           <Button
             variant="ghost"
             size="sm"
