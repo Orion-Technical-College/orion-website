@@ -13,7 +13,8 @@ const conn =
 
 if (conn) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // Dynamic require so this module is server-only and not bundled for client
+    // eslint-disable-next-line
     const appInsights = require("applicationinsights");
     appInsights.setup(conn).start();
     const client = appInsights.defaultClient;
