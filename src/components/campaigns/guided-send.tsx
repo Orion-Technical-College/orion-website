@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { getSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,17 @@ import { openComposeAndroid, openComposeWebShare } from "@/lib/sms-compose";
 import { saveSession, loadSession, clearSession } from "@/lib/session-storage";
 import { ReturnPrompt, useReturnDetection } from "./return-prompt";
 import type { Candidate } from "@/types";
+
+/**
+ * Fetch with one retry on 401 after refreshing session (mobile/cellular: cookie may not be sent on first request after app switch).
+ */
+async function fetchWithRetryOn401(url: string, options: RequestInit = {}): Promise<Response> {
+  const res = await fetch(url, options);
+  if (res.status !== 401) return res;
+  const session = await getSession();
+  if (session) return fetch(url, options);
+  return res;
+}
 
 interface GuidedSendRecipient {
   id: string;
@@ -151,7 +163,10 @@ export function GuidedSend({
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/sessions/${sessionId}`);
+      const response = await fetchWithRetryOn401(`/api/sessions/${sessionId}`);
+      if (response.status === 401) {
+        console.warn("[GUIDED_SEND] Request returned 401", { action: "load_session", sessionId });
+      }
       if (!response.ok) {
         throw new Error("Failed to load session");
       }
@@ -287,8 +302,8 @@ export function GuidedSend({
           }
         }
         
-        // Fallback to fetch with keepalive
-        response = await fetch(
+        // Fallback to fetch with keepalive (retry once on 401 after session refresh)
+        response = await fetchWithRetryOn401(
           `/api/sessions/${sessionId}/recipients/${recipient.id}`,
           {
             method: "PATCH",
@@ -298,6 +313,9 @@ export function GuidedSend({
           }
         );
 
+        if (response.status === 401) {
+          console.warn("[GUIDED_SEND] Request returned 401", { action: "update_recipient", sessionId });
+        }
         if (!response.ok) {
           throw new Error("Failed to update recipient status");
         }
@@ -368,7 +386,7 @@ export function GuidedSend({
           }
         }
         
-        response = await fetch(
+        response = await fetchWithRetryOn401(
           `/api/sessions/${sessionId}/recipients/${recipientId}`,
           {
             method: "PATCH",
@@ -378,6 +396,9 @@ export function GuidedSend({
           }
         );
 
+        if (response.status === 401) {
+          console.warn("[GUIDED_SEND] Request returned 401", { action: "mark_sent", sessionId });
+        }
         if (!response.ok) {
           throw new Error("Failed to mark as sent");
         }
@@ -436,7 +457,7 @@ export function GuidedSend({
     async (recipientId: string) => {
       try {
         setUpdating(recipientId);
-        const response = await fetch(
+        const response = await fetchWithRetryOn401(
           `/api/sessions/${sessionId}/recipients/${recipientId}`,
           {
             method: "PATCH",
@@ -445,6 +466,9 @@ export function GuidedSend({
           }
         );
 
+        if (response.status === 401) {
+          console.warn("[GUIDED_SEND] Request returned 401", { action: "skip", sessionId });
+        }
         if (!response.ok) {
           throw new Error("Failed to skip");
         }

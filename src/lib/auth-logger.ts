@@ -43,19 +43,24 @@ export function logAuthEvent(entry: Omit<AuthLogEntry, "timestamp">): void {
       break;
   }
 
-  // TODO: Send to Application Insights or structured logging service
-  // Example:
-  // if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
-  //   appInsights.defaultClient.trackEvent({
-  //     name: entry.event,
-  //     properties: {
-  //       email: entry.email,
-  //       userId: entry.userId,
-  //       errorType: entry.errorType,
-  //       ...entry.metadata,
-  //     },
-  //   });
-  // }
+  // Optional: server-only sink (e.g. Application Insights) when registered
+  if (_authLogSink) {
+    try {
+      _authLogSink(entry);
+    } catch {
+      // Sink failed; skip
+    }
+  }
+}
+
+export type AuthLogSink = (entry: Omit<AuthLogEntry, "timestamp">) => void;
+let _authLogSink: AuthLogSink | null = null;
+
+/**
+ * Register a sink for auth events (e.g. Application Insights). Only call from server-side code.
+ */
+export function setAuthLogSink(sink: AuthLogSink | null): void {
+  _authLogSink = sink;
 }
 
 /**
@@ -144,6 +149,30 @@ export function logDatabaseError(params: {
       operation: params.operation,
       errorMessage: params.error.message,
       errorStack: params.error.stack,
+      ...params.metadata,
+    },
+  });
+}
+
+/**
+ * Log session missing / redirect to login (for diagnosing intermittent session drops).
+ * No PII (no userId/email when session is missing).
+ */
+export function logSessionMissing(params: {
+  source: "middleware" | "server" | "client" | "api";
+  path?: string;
+  route?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}): void {
+  logAuthEvent({
+    event: "SESSION_MISSING",
+    level: "warn",
+    message: params.message,
+    metadata: {
+      source: params.source,
+      ...(params.path != null && { path: params.path }),
+      ...(params.route != null && { route: params.route }),
       ...params.metadata,
     },
   });

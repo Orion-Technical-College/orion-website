@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { getSessionOr401 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAction, CAMPAIGN_ACTIONS } from "@/lib/audit";
 
@@ -20,10 +20,9 @@ export async function PATCH(
   { params }: { params: { sessionId: string; recipientId: string } }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getSessionOr401("PATCH /api/sessions/:sessionId/recipients/:recipientId");
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { sessionId, recipientId } = params;
     const body: UpdateRecipientRequest = await request.json();

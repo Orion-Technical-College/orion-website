@@ -8,6 +8,7 @@
  */
 
 import { WORKSPACE_KEYS } from "@/lib/workspace";
+import { logSessionMissing } from "@/lib/auth-logger";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -25,6 +26,11 @@ export default function MarketingWorkspacePage() {
       return;
     }
     if (status === "unauthenticated" && hasSeenSessionLoading.current) {
+      logSessionMissing({
+        source: "client",
+        path: "marketing",
+        message: "Session unauthenticated, redirecting to login",
+      });
       const t = setTimeout(() => router.push("/login"), 500);
       return () => clearTimeout(t);
     }

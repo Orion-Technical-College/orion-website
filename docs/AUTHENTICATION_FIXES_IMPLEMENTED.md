@@ -163,6 +163,7 @@ model RateLimit {
 - `RATE_LIMIT_EXCEEDED` - Rate limit triggered
 - `DATABASE_ERROR` - Database operation failures
 - `SYSTEM_ERROR` - Unexpected system errors
+- `SESSION_MISSING` - Session missing / redirect to login (for diagnosing intermittent session drops). See [Session drop diagnostic logging](SESSION_LOGGING.md) for where this is logged and how to search logs (local, Vercel, Azure).
 
 **Log Format:**
 ```json

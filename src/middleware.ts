@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { Role, ROLES } from "@/lib/permissions";
+import { logSessionMissing } from "@/lib/auth-logger";
 
 export default withAuth(
   function middleware(req) {
@@ -68,7 +69,15 @@ export default withAuth(
         }
 
         // Require authentication for all other routes
-        return !!token;
+        if (!token) {
+          logSessionMissing({
+            source: "middleware",
+            path,
+            message: "No token, redirecting to sign-in",
+          });
+          return false;
+        }
+        return true;
       },
     },
   }

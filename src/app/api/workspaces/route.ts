@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { getSessionOr401 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/permissions";
 import { WORKSPACE_KEYS, type WorkspaceKey } from "@/lib/workspace";
@@ -29,8 +29,10 @@ interface WorkspaceOption {
 
 export async function GET() {
   try {
-    const session = await requireAuth();
-    
+    const auth = await getSessionOr401("GET /api/workspaces");
+    if ("response" in auth) return auth.response;
+    const session = auth.user;
+
     const workspaces: WorkspaceOption[] = [];
 
     // Get the user's client (tenant) info if they have one

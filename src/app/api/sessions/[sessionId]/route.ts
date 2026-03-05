@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { getSessionOr401 } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tenantWhere } from "@/lib/tenant";
 
@@ -14,10 +14,9 @@ export async function GET(
   { params }: { params: { sessionId: string } }
 ) {
   try {
-    const user = await requireAuth();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getSessionOr401("GET /api/sessions/:sessionId");
+    if ("response" in auth) return auth.response;
+    const user = auth.user;
 
     const { sessionId } = params;
 

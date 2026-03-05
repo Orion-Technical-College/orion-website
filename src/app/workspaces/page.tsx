@@ -13,6 +13,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { logSessionMissing } from "@/lib/auth-logger";
 import { 
   Users, 
   GraduationCap, 
@@ -190,6 +191,11 @@ export default function WorkspacesPage() {
     }
     if (status === "unauthenticated") {
       if (hasSeenSessionLoading.current) {
+        logSessionMissing({
+          source: "client",
+          path: "workspaces",
+          message: "Session unauthenticated, redirecting to login",
+        });
         const t = setTimeout(() => router.push("/login"), 500);
         return () => clearTimeout(t);
       }
